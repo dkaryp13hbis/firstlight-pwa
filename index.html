@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FirstLight</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#061535">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="FirstLight">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Outfit', -apple-system, sans-serif;
+    background: #061535;
+    color: #fff;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* ── Loading ───────────────────────────────────────────── */
+  .loading {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 18px; min-height: 100vh;
+  }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 3px solid rgba(56,225,240,.18);
+    border-top-color: #38E1F0;
+    border-radius: 50%;
+    animation: spin .75s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { font-size: 13px; color: rgba(255,255,255,.35); letter-spacing: .04em; }
+
+  /* ── Login ─────────────────────────────────────────────── */
+  .login-page {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; min-height: 100dvh;
+    padding: 24px 20px;
+  }
+  .login-wrap { width: 100%; max-width: 360px; }
+
+  .brand { text-align: center; margin-bottom: 36px; }
+  .brand-name {
+    font-size: 32px; font-weight: 800; letter-spacing: -.03em;
+    background: linear-gradient(135deg, #2E7CF7, #38E1F0);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .brand-sub {
+    font-size: 11px; color: rgba(255,255,255,.3);
+    text-transform: uppercase; letter-spacing: .14em; margin-top: 6px;
+  }
+
+  .card {
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 18px;
+    padding: 28px 24px 24px;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: rgba(255,255,255,.45); text-transform: uppercase;
+    letter-spacing: .1em; margin-bottom: 7px;
+  }
+  .field input {
+    width: 100%;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.11);
+    border-radius: 11px;
+    padding: 14px 15px;
+    font-size: 16px; font-family: inherit;
+    color: #fff; outline: none;
+    transition: border-color .2s;
+    -webkit-appearance: none;
+  }
+  .field input:focus { border-color: rgba(56,225,240,.45); }
+  .field input::placeholder { color: rgba(255,255,255,.22); }
+
+  .btn {
+    width: 100%; padding: 15px;
+    border: none; border-radius: 11px;
+    background: linear-gradient(135deg, #2E7CF7, #38E1F0);
+    color: #fff; font-size: 16px; font-weight: 700;
+    font-family: inherit; cursor: pointer; margin-top: 4px;
+    letter-spacing: -.01em;
+    transition: opacity .2s;
+  }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .err {
+    color: #E07878; font-size: 13px;
+    text-align: center; margin-top: 14px; min-height: 18px;
+    line-height: 1.4;
+  }
+
+  /* ── Top bar (shown over briefing) ─────────────────────── */
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+    background: rgba(6,21,53,.93);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255,255,255,.07);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    padding-top: calc(10px + env(safe-area-inset-top));
+    height: calc(50px + env(safe-area-inset-top));
+  }
+  .tb-brand {
+    font-size: 16px; font-weight: 800; letter-spacing: -.02em;
+    background: linear-gradient(135deg, #2E7CF7, #38E1F0);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .tb-right { display: flex; align-items: center; gap: 10px; }
+  .tb-date {
+    font-size: 10px; color: rgba(255,255,255,.35);
+    font-family: 'IBM Plex Mono', monospace; letter-spacing: .04em;
+  }
+  .tb-btn {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.11);
+    border-radius: 8px; color: rgba(255,255,255,.7);
+    font-size: 11px; font-weight: 600;
+    padding: 6px 12px; cursor: pointer;
+    font-family: inherit;
+  }
+
+  /* ── Briefing frame ─────────────────────────────────────── */
+  .briefing-wrap {
+    padding-top: calc(50px + env(safe-area-inset-top));
+    height: 100vh; height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #briefing-iframe {
+    width: 100%; border: none; display: block;
+    height: 100%;
+  }
+
+  /* ── Error state ───────────────────────────────────────── */
+  .error-page {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh; gap: 16px; padding: 32px;
+    text-align: center;
+  }
+  .error-page p { font-size: 14px; color: rgba(255,255,255,.5); line-height: 1.6; }
+  .error-page button {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px; color: #fff;
+    padding: 10px 20px; font-size: 13px; cursor: pointer;
+    font-family: inherit;
+  }
+</style>
+</head>
+<body>
+
+<div id="root">
+  <div class="loading"><div class="spinner"></div><p>Loading…</p></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ── Config ────────────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://tqfupsvymisnskiwtjut.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxZnVwc3Z5bWlzbnNraXd0anV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5ODExMzgsImV4cCI6MjA5NTU1NzEzOH0.t__izStKHDZvhlUtnnfTW4CB7ZtI8SUIPU0qqWGaByQ';
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── Boot ──────────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await db.auth.getSession();
+  session ? await loadBriefing(session) : showLogin();
+
+  db.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN')  await loadBriefing(session);
+    if (event === 'SIGNED_OUT') showLogin();
+  });
+}
+
+// ── Login ─────────────────────────────────────────────────────────
+function showLogin() {
+  document.getElementById('root').innerHTML = `
+    <div class="login-page">
+      <div class="login-wrap">
+        <div class="brand">
+          <div class="brand-name">FirstLight</div>
+          <div class="brand-sub">Hotel Morning Briefing</div>
+        </div>
+        <div class="card">
+          <div class="field">
+            <label>Email</label>
+            <input id="fl-email" type="email" placeholder="you@hotel.com"
+                   autocomplete="email" inputmode="email">
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input id="fl-pass" type="password" placeholder="••••••••"
+                   autocomplete="current-password">
+          </div>
+          <button class="btn" id="fl-btn" onclick="signIn()">Sign in</button>
+          <div class="err" id="fl-err"></div>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(() => document.getElementById('fl-email')?.focus(), 80);
+
+  // Allow Enter key to submit
+  document.addEventListener('keydown', function handler(e) {
+    if (e.key === 'Enter') { signIn(); document.removeEventListener('keydown', handler); }
+  });
+}
+
+async function signIn() {
+  const email = document.getElementById('fl-email')?.value.trim();
+  const pass  = document.getElementById('fl-pass')?.value;
+  const btn   = document.getElementById('fl-btn');
+  if (!email || !pass) { document.getElementById('fl-err').textContent = 'Enter email and password.'; return; }
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  const { error } = await db.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    document.getElementById('fl-err').textContent = error.message;
+    btn.textContent = 'Sign in'; btn.disabled = false;
+  }
+}
+
+// ── Briefing ──────────────────────────────────────────────────────
+async function loadBriefing() {
+  showSpinner('Fetching briefing…');
+
+  // Look up which hotel this user belongs to
+  const { data: hu, error: huErr } = await db
+    .from('hotel_users').select('hotel_id').single();
+
+  if (huErr || !hu) {
+    showError('No hotel assigned to your account.<br>Contact your administrator.');
+    return;
+  }
+
+  // Fetch latest briefing
+  const { data: b, error: bErr } = await db
+    .from('briefings')
+    .select('report_date, rendered_html, generated_at')
+    .eq('hotel_id', hu.hotel_id)
+    .order('report_date', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (bErr || !b?.rendered_html) {
+    showError('No briefing available yet.<br>Check back after the next morning run.');
+    return;
+  }
+
+  renderBriefing(b);
+}
+
+function renderBriefing(b) {
+  document.getElementById('root').innerHTML = `
+    <div class="top-bar">
+      <span class="tb-brand">FirstLight</span>
+      <div class="tb-right">
+        <span class="tb-date">${b.report_date}</span>
+        <button class="tb-btn" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
+    <div class="briefing-wrap">
+      <iframe id="briefing-iframe" srcdoc="" scrolling="yes"></iframe>
+    </div>`;
+
+  document.getElementById('briefing-iframe').srcdoc = b.rendered_html;
+}
+
+async function signOut() {
+  await db.auth.signOut();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function showSpinner(msg) {
+  document.getElementById('root').innerHTML =
+    `<div class="loading"><div class="spinner"></div><p>${msg}</p></div>`;
+}
+
+function showError(msg) {
+  document.getElementById('root').innerHTML = `
+    <div class="error-page">
+      <p>${msg}</p>
+      <button onclick="init()">Try again</button>
+    </div>`;
+}
+
+init();
+</script>
+</body>
+</html>

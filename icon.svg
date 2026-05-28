@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#061535"/>
+  <!-- Sun rays -->
+  <circle cx="256" cy="220" r="64" fill="url(#sun)"/>
+  <line x1="256" y1="100" x2="256" y2="128" stroke="#38E1F0" stroke-width="14" stroke-linecap="round"/>
+  <line x1="256" y1="312" x2="256" y2="340" stroke="#38E1F0" stroke-width="14" stroke-linecap="round"/>
+  <line x1="136" y1="220" x2="164" y2="220" stroke="#38E1F0" stroke-width="14" stroke-linecap="round"/>
+  <line x1="348" y1="220" x2="376" y2="220" stroke="#38E1F0" stroke-width="14" stroke-linecap="round"/>
+  <line x1="173" y1="137" x2="193" y2="157" stroke="#38E1F0" stroke-width="14" stroke-linecap="round"/>
+  <line x1="319" y1="283" x2="339" y2="303" stroke="#38E1F0" stroke-width="14" stroke-linecap="round"/>
+  <line x1="339" y1="137" x2="319" y2="157" stroke="#38E1F0" stroke-width="14" stroke-linecap="round"/>
+  <line x1="193" y1="283" x2="173" y2="303" stroke="#38E1F0" stroke-width="14" stroke-linecap="round"/>
+  <!-- Horizon line -->
+  <rect x="96" y="352" width="320" height="14" rx="7" fill="url(#grad)"/>
+  <rect x="128" y="384" width="256" height="10" rx="5" fill="url(#grad)" opacity=".5"/>
+  <defs>
+    <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff" stop-opacity=".95"/>
+      <stop offset="60%" stop-color="#38E1F0"/>
+      <stop offset="100%" stop-color="#2E7CF7"/>
+    </radialGradient>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2E7CF7" stop-opacity="0"/>
+      <stop offset="30%" stop-color="#2E7CF7"/>
+      <stop offset="70%" stop-color="#38E1F0"/>
+      <stop offset="100%" stop-color="#38E1F0" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>

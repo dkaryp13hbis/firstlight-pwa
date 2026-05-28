@@ -1,0 +1,18 @@
+{
+  "name": "FirstLight",
+  "short_name": "FirstLight",
+  "description": "Hotel Morning Briefing",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#061535",
+  "theme_color": "#061535",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
