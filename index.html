@@ -108,10 +108,13 @@
     background: rgba(6,21,53,.93);
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid rgba(255,255,255,.07);
+    display: flex; flex-direction: column;
+    padding: 0 16px;
+    padding-top: env(safe-area-inset-top);
+  }
+  .tb-row1 {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 16px;
-    padding-top: calc(10px + env(safe-area-inset-top));
-    height: calc(50px + env(safe-area-inset-top));
+    height: 50px;
   }
   .tb-brand {
     font-size: 16px; font-weight: 800; letter-spacing: -.02em;
@@ -133,9 +136,36 @@
     font-family: inherit;
   }
 
+  /* ── Refresh action bar ─────────────────────────────────── */
+  .tb-row2 {
+    display: flex; align-items: center; gap: 8px;
+    padding-bottom: 10px;
+  }
+  .ref-btn {
+    flex: 1; padding: 8px 0;
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 8px;
+    background: rgba(255,255,255,.06);
+    color: rgba(255,255,255,.8);
+    font-size: 11px; font-weight: 600; font-family: inherit;
+    cursor: pointer; letter-spacing: .02em;
+    transition: opacity .2s, background .2s;
+  }
+  .ref-btn:disabled { opacity: .4; cursor: default; }
+  .ref-btn.active {
+    background: rgba(56,225,240,.12);
+    border-color: rgba(56,225,240,.35);
+    color: #38E1F0;
+  }
+  .ref-status {
+    font-size: 10px; color: rgba(255,255,255,.3);
+    font-family: 'IBM Plex Mono', monospace; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+
   /* ── Briefing frame ─────────────────────────────────────── */
   .briefing-wrap {
-    padding-top: calc(50px + env(safe-area-inset-top));
+    padding-top: calc(96px + env(safe-area-inset-top));
     height: 100vh; height: 100dvh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -247,6 +277,8 @@ async function loadBriefing() {
     return;
   }
 
+  _hotelId = hu.hotel_id;
+
   // Fetch latest briefing
   const { data: b, error: bErr } = await db
     .from('briefings')
@@ -264,13 +296,23 @@ async function loadBriefing() {
   renderBriefing(b);
 }
 
+let _hotelId = null;
+let _refreshSub = null;
+
 function renderBriefing(b) {
   document.getElementById('root').innerHTML = `
     <div class="top-bar">
-      <span class="tb-brand">FirstLight</span>
-      <div class="tb-right">
-        <span class="tb-date">${b.report_date}</span>
-        <button class="tb-btn" onclick="signOut()">Sign out</button>
+      <div class="tb-row1">
+        <span class="tb-brand">FirstLight</span>
+        <div class="tb-right">
+          <span class="tb-date">${b.report_date}</span>
+          <button class="tb-btn" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+      <div class="tb-row2">
+        <button class="ref-btn" id="btn-data" onclick="requestRefresh('data_only')">↻ Refresh Data</button>
+        <button class="ref-btn" id="btn-ai"   onclick="requestRefresh('full_ai')">✦ Refresh + AI</button>
+        <span class="ref-status" id="ref-status"></span>
       </div>
     </div>
     <div class="briefing-wrap">
@@ -278,9 +320,73 @@ function renderBriefing(b) {
     </div>`;
 
   document.getElementById('briefing-iframe').srcdoc = b.rendered_html;
+  subscribeRefreshStatus();
+}
+
+async function requestRefresh(type) {
+  if (!_hotelId) return;
+  setRefreshUI('queued', type);
+  await db.from('refresh_commands').insert({ hotel_id: _hotelId, type });
+}
+
+function setRefreshUI(state, type) {
+  const btnData   = document.getElementById('btn-data');
+  const btnAi     = document.getElementById('btn-ai');
+  const statusEl  = document.getElementById('ref-status');
+  if (!btnData) return;
+
+  const busy = state === 'queued' || state === 'running';
+  btnData.disabled = busy;
+  btnAi.disabled   = busy;
+
+  if (state === 'queued') {
+    const which = type === 'data_only' ? btnData : btnAi;
+    which.classList.add('active');
+    which.textContent = type === 'data_only' ? '↻ Queued…' : '✦ Queued…';
+    statusEl.textContent = 'waiting for hotel PC';
+  } else if (state === 'running') {
+    const which = type === 'data_only' ? btnData : btnAi;
+    which.textContent = type === 'data_only' ? '↻ Running…' : '✦ Running…';
+    statusEl.textContent = 'fetching data…';
+  } else if (state === 'done') {
+    statusEl.textContent = 'done — reloading';
+    setTimeout(() => loadBriefing(), 1500);
+  } else if (state === 'error') {
+    btnData.disabled = false; btnAi.disabled = false;
+    btnData.classList.remove('active'); btnAi.classList.remove('active');
+    btnData.textContent = '↻ Refresh Data'; btnAi.textContent = '✦ Refresh + AI';
+    statusEl.textContent = 'error — try again';
+  } else {
+    btnData.classList.remove('active'); btnAi.classList.remove('active');
+    btnData.textContent = '↻ Refresh Data'; btnAi.textContent = '✦ Refresh + AI';
+    statusEl.textContent = '';
+  }
+}
+
+function subscribeRefreshStatus() {
+  if (_refreshSub) { db.removeChannel(_refreshSub); _refreshSub = null; }
+  if (!_hotelId) return;
+
+  _refreshSub = db
+    .channel('refresh-cmds')
+    .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'refresh_commands',
+        filter: `hotel_id=eq.${_hotelId}`,
+      },
+      payload => {
+        const row = payload.new || {};
+        if (row.status === 'running') setRefreshUI('running', row.type);
+        if (row.status === 'done')    setRefreshUI('done',    row.type);
+        if (row.status === 'error')   setRefreshUI('error',   row.type);
+      }
+    )
+    .subscribe();
 }
 
 async function signOut() {
+  if (_refreshSub) db.removeChannel(_refreshSub);
   await db.auth.signOut();
 }
 
