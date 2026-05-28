@@ -138,11 +138,11 @@
 
   /* ── Refresh action bar ─────────────────────────────────── */
   .tb-row2 {
-    display: flex; align-items: center; gap: 8px;
-    padding-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 10px; gap: 12px;
   }
   .ref-btn {
-    flex: 1; padding: 8px 0;
+    padding: 7px 16px;
     border: 1px solid rgba(255,255,255,.13);
     border-radius: 8px;
     background: rgba(255,255,255,.06);
@@ -150,6 +150,7 @@
     font-size: 11px; font-weight: 600; font-family: inherit;
     cursor: pointer; letter-spacing: .02em;
     transition: opacity .2s, background .2s;
+    white-space: nowrap;
   }
   .ref-btn:disabled { opacity: .4; cursor: default; }
   .ref-btn.active {
@@ -157,10 +158,17 @@
     border-color: rgba(56,225,240,.35);
     color: #38E1F0;
   }
-  .ref-status {
-    font-size: 10px; color: rgba(255,255,255,.3);
+  .ref-meta {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  }
+  .ref-time {
+    font-size: 10px; color: rgba(255,255,255,.35);
     font-family: 'IBM Plex Mono', monospace; letter-spacing: .04em;
-    white-space: nowrap;
+  }
+  .ref-status {
+    font-size: 10px; color: #38E1F0;
+    font-family: 'IBM Plex Mono', monospace; letter-spacing: .04em;
+    min-height: 13px;
   }
 
   /* ── Briefing frame ─────────────────────────────────────── */
@@ -299,6 +307,12 @@ async function loadBriefing() {
 let _hotelId = null;
 let _refreshSub = null;
 
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 function renderBriefing(b) {
   document.getElementById('root').innerHTML = `
     <div class="top-bar">
@@ -311,8 +325,10 @@ function renderBriefing(b) {
       </div>
       <div class="tb-row2">
         <button class="ref-btn" id="btn-data" onclick="requestRefresh('data_only')">↻ Refresh Data</button>
-        <button class="ref-btn" id="btn-ai"   onclick="requestRefresh('full_ai')">✦ Refresh + AI</button>
-        <span class="ref-status" id="ref-status"></span>
+        <div class="ref-meta">
+          <span class="ref-time" id="ref-time">Last: ${fmtTime(b.generated_at)}</span>
+          <span class="ref-status" id="ref-status"></span>
+        </div>
       </div>
     </div>
     <div class="briefing-wrap">
@@ -325,40 +341,36 @@ function renderBriefing(b) {
 
 async function requestRefresh(type) {
   if (!_hotelId) return;
-  setRefreshUI('queued', type);
+  setRefreshUI('queued');
   await db.from('refresh_commands').insert({ hotel_id: _hotelId, type });
 }
 
-function setRefreshUI(state, type) {
-  const btnData   = document.getElementById('btn-data');
-  const btnAi     = document.getElementById('btn-ai');
-  const statusEl  = document.getElementById('ref-status');
-  if (!btnData) return;
+function setRefreshUI(state) {
+  const btn      = document.getElementById('btn-data');
+  const statusEl = document.getElementById('ref-status');
+  if (!btn) return;
 
   const busy = state === 'queued' || state === 'running';
-  btnData.disabled = busy;
-  btnAi.disabled   = busy;
+  btn.disabled = busy;
 
   if (state === 'queued') {
-    const which = type === 'data_only' ? btnData : btnAi;
-    which.classList.add('active');
-    which.textContent = type === 'data_only' ? '↻ Queued…' : '✦ Queued…';
-    statusEl.textContent = 'waiting for hotel PC';
+    btn.classList.add('active');
+    btn.textContent = '↻ Queued…';
+    statusEl.textContent = 'waiting for PC';
   } else if (state === 'running') {
-    const which = type === 'data_only' ? btnData : btnAi;
-    which.textContent = type === 'data_only' ? '↻ Running…' : '✦ Running…';
+    btn.textContent = '↻ Running…';
     statusEl.textContent = 'fetching data…';
   } else if (state === 'done') {
     statusEl.textContent = 'done — reloading';
     setTimeout(() => loadBriefing(), 1500);
   } else if (state === 'error') {
-    btnData.disabled = false; btnAi.disabled = false;
-    btnData.classList.remove('active'); btnAi.classList.remove('active');
-    btnData.textContent = '↻ Refresh Data'; btnAi.textContent = '✦ Refresh + AI';
+    btn.disabled = false;
+    btn.classList.remove('active');
+    btn.textContent = '↻ Refresh Data';
     statusEl.textContent = 'error — try again';
   } else {
-    btnData.classList.remove('active'); btnAi.classList.remove('active');
-    btnData.textContent = '↻ Refresh Data'; btnAi.textContent = '✦ Refresh + AI';
+    btn.classList.remove('active');
+    btn.textContent = '↻ Refresh Data';
     statusEl.textContent = '';
   }
 }
@@ -377,9 +389,9 @@ function subscribeRefreshStatus() {
       },
       payload => {
         const row = payload.new || {};
-        if (row.status === 'running') setRefreshUI('running', row.type);
-        if (row.status === 'done')    setRefreshUI('done',    row.type);
-        if (row.status === 'error')   setRefreshUI('error',   row.type);
+        if (row.status === 'running') setRefreshUI('running');
+        if (row.status === 'done')    setRefreshUI('done');
+        if (row.status === 'error')   setRefreshUI('error');
       }
     )
     .subscribe();
