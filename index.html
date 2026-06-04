@@ -399,6 +399,7 @@ function renderBriefing(b) {
             </svg>
             Share
           </button>
+          <button class="tb-btn" id="bell-btn" onclick="enableNotifications()" title="Enable notifications" style="font-size:14px;padding:4px 8px;">🔔</button>
           <button class="tb-btn" onclick="signOut()">Sign out</button>
         </div>
       </div>
@@ -422,9 +423,15 @@ function renderBriefing(b) {
 
   const iframe = document.getElementById('briefing-iframe');
   iframe.addEventListener('load', () => {
-    subscribeToPush();
+    injectSectionShareButtons(iframe.contentDocument, iframe.contentWindow);
     const hash = window.location.hash.replace('#', '');
     if (hash) navigateToSection(hash);
+    // Update bell icon state
+    const bell = document.getElementById('bell-btn');
+    if (bell && Notification.permission === 'granted') {
+      bell.style.color = '#38E1F0';
+      bell.title = 'Notifications on';
+    }
   }, { once: true });
   iframe.srcdoc = b.rendered_html;
 
@@ -562,15 +569,48 @@ function hideSharePanel() {
   document.getElementById('share-panel').classList.remove('open');
 }
 
+// Inject share buttons directly onto section labels inside the iframe
+function injectSectionShareButtons(iDoc, iWin) {
+  const style = iDoc.createElement('style');
+  style.textContent = `
+    .fl-share {
+      margin-left: auto; background: none;
+      border: 1px solid rgba(46,124,247,.4); border-radius: 6px;
+      color: #2E7CF7; font-size: 10px; font-weight: 600;
+      padding: 3px 9px; cursor: pointer; font-family: var(--font);
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .fl-share:active { background: rgba(46,124,247,.1); }
+  `;
+  iDoc.head.appendChild(style);
+
+  SHARE_SECTIONS.forEach(({ id, label }) => {
+    const anchor = iDoc.getElementById(id);
+    if (!anchor) return;
+    // Find the .sl section label right after the anchor
+    let sib = anchor.nextElementSibling;
+    while (sib && !sib.classList?.contains('sl')) sib = sib.nextElementSibling;
+    if (!sib) return;
+    const btn = iDoc.createElement('button');
+    btn.className = 'fl-share';
+    btn.textContent = '↑ Share';
+    btn.addEventListener('click', e => { e.preventDefault(); iWin.parent.shareSection(id, label); });
+    sib.appendChild(btn);
+  });
+}
+
 async function shareSection(sectionId, label) {
   hideSharePanel();
   const toast = document.getElementById('share-toast');
   toast.classList.add('show');
+  let wrapper = null;
+  const iframe = document.getElementById('briefing-iframe');
+  const iWin   = iframe?.contentWindow;
+  const iDoc   = iframe?.contentDocument;
   try {
-    const iframe  = document.getElementById('briefing-iframe');
-    const iWin    = iframe.contentWindow;
-    const iDoc    = iframe.contentDocument;
+    if (!iWin || !iDoc) { toast.classList.remove('show'); return; }
 
+    // Load html2canvas into the iframe context if not already loaded
     if (!iWin.html2canvas) {
       await new Promise((res, rej) => {
         const s = iDoc.createElement('script');
@@ -581,16 +621,43 @@ async function shareSection(sectionId, label) {
       });
     }
 
-    const el = iDoc.getElementById(sectionId);
-    if (!el) { toast.classList.remove('show'); return; }
+    const anchor = iDoc.getElementById(sectionId);
+    if (!anchor) { toast.classList.remove('show'); return; }
 
-    el.scrollIntoView();
-    await new Promise(r => setTimeout(r, 300));
+    // Clone all elements between this anchor and the next section anchor
+    // into an off-screen wrapper inside the SAME document so CSS applies
+    const anchorIds = new Set(['sec-overview','sec-pickup','sec-pace','sec-sources','sec-ai']);
+    wrapper = iDoc.createElement('div');
+    wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:640px;padding:12px 16px;background:#F0F2F7;';
+    let el = anchor.nextElementSibling;
+    while (el) {
+      if (el.id && anchorIds.has(el.id)) break;
+      // Skip injected share buttons from the clone
+      const clone = el.cloneNode(true);
+      clone.querySelectorAll?.('.fl-share').forEach(b => b.remove());
+      wrapper.appendChild(clone);
+      el = el.nextElementSibling;
+    }
+    iDoc.body.appendChild(wrapper);
+    await new Promise(r => setTimeout(r, 500));
 
-    const canvas = await iWin.html2canvas(el, {
-      backgroundColor: '#F0F2F7', scale: 2, useCORS: true, logging: false,
+    const canvas = await iWin.html2canvas(wrapper, {
+      backgroundColor: '#F0F2F7',
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,  // allow cross-origin fonts without blocking render
+      logging: false,
+      onclone: clonedDoc => {
+        // Remove Google Fonts to prevent canvas taint, use system fonts instead
+        clonedDoc.querySelectorAll('link[href*="fonts.googleapis"]').forEach(e => e.remove());
+        const s = clonedDoc.createElement('style');
+        s.textContent = '* { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !important; }';
+        clonedDoc.head.appendChild(s);
+      }
     });
 
+    iDoc.body.removeChild(wrapper);
+    wrapper = null;
     toast.classList.remove('show');
 
     await new Promise(res => canvas.toBlob(async blob => {
@@ -609,7 +676,24 @@ async function shareSection(sectionId, label) {
     }, 'image/png'));
   } catch (e) {
     console.warn('[share]', e);
+    if (wrapper) try { iDoc?.body?.removeChild(wrapper); } catch (_) {}
     toast.classList.remove('show');
+  }
+}
+
+// ── Notifications (user-triggered) ───────────────────────────────
+async function enableNotifications() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  await subscribeToPush();
+  const btn = document.getElementById('bell-btn');
+  if (btn) {
+    if (Notification.permission === 'granted') {
+      btn.textContent = '🔔';
+      btn.style.color = '#38E1F0';
+      btn.title = 'Notifications on';
+    } else {
+      btn.title = 'Notifications blocked';
+    }
   }
 }
 
