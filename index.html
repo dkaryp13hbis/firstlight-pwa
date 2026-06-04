@@ -526,28 +526,7 @@ function _b64ToUint8(b64) {
 }
 
 async function subscribeToPush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.startsWith('YOUR_')) return;
-  try {
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') return;
-    const reg = await navigator.serviceWorker.ready;
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: _b64ToUint8(VAPID_PUBLIC_KEY),
-      });
-    }
-    const { data: { session } } = await db.auth.getSession();
-    if (!session) return;
-    await db.from('push_subscriptions').upsert(
-      { hotel_id: _hotelId, user_id: session.user.id, subscription: sub.toJSON() },
-      { onConflict: 'user_id' }
-    );
-  } catch (e) {
-    console.warn('[push]', e);
-  }
+  // Kept for backwards compat — enableNotifications() is the user-facing entry point
 }
 
 // ── Navigate to section (from notification tap) ───────────────────
@@ -683,17 +662,37 @@ async function shareSection(sectionId, label) {
 
 // ── Notifications (user-triggered) ───────────────────────────────
 async function enableNotifications() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-  await subscribeToPush();
-  const btn = document.getElementById('bell-btn');
-  if (btn) {
-    if (Notification.permission === 'granted') {
-      btn.textContent = '🔔';
-      btn.style.color = '#38E1F0';
-      btn.title = 'Notifications on';
-    } else {
-      btn.title = 'Notifications blocked';
+  if (!('serviceWorker' in navigator)) { alert('Service workers not supported in this browser.'); return; }
+  if (!('Notification' in window))     { alert('Notifications not supported in this browser.\niOS: add to Home Screen first.'); return; }
+  if (!('PushManager' in window))      { alert('Push not supported.\niOS: add app to Home Screen first.'); return; }
+
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { alert('Notification permission denied.'); return; }
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _b64ToUint8(VAPID_PUBLIC_KEY),
+      });
     }
+
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) { alert('Not logged in — cannot save subscription.'); return; }
+
+    const { error } = await db.from('push_subscriptions').upsert(
+      { hotel_id: _hotelId, user_id: session.user.id, subscription: sub.toJSON() },
+      { onConflict: 'user_id' }
+    );
+    if (error) { alert('Supabase error: ' + error.message + '\n\nMake sure the push_subscriptions table exists.'); return; }
+
+    const btn = document.getElementById('bell-btn');
+    if (btn) { btn.style.color = '#38E1F0'; btn.title = 'Notifications on'; }
+    alert('Push notifications enabled!');
+  } catch (e) {
+    alert('Error: ' + e.message);
   }
 }
 
