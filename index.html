@@ -198,6 +198,61 @@
     padding: 10px 20px; font-size: 13px; cursor: pointer;
     font-family: inherit;
   }
+
+  /* ── Share button ───────────────────────────────────────── */
+  .share-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(56,225,240,.1);
+    border: 1px solid rgba(56,225,240,.25);
+    border-radius: 8px; color: #38E1F0;
+    font-size: 11px; font-weight: 600;
+    padding: 6px 12px; cursor: pointer;
+    font-family: inherit;
+  }
+
+  /* ── Share overlay + panel ──────────────────────────────── */
+  .share-overlay {
+    display: none; position: fixed; inset: 0; z-index: 9998;
+    background: rgba(0,0,0,.55);
+  }
+  .share-overlay.open { display: block; }
+
+  .share-panel {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+    background: #0A1F4D;
+    border-top: 1px solid rgba(255,255,255,.1);
+    border-radius: 18px 18px 0 0;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  }
+  .share-panel.open { display: block; }
+
+  .share-panel-title {
+    font-size: 11px; font-weight: 600; color: rgba(255,255,255,.35);
+    text-transform: uppercase; letter-spacing: .1em; margin-bottom: 14px;
+  }
+  .share-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .share-option {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 14px 16px;
+    color: #fff; font-size: 13px; font-weight: 600;
+    font-family: inherit; cursor: pointer; text-align: left;
+    transition: background .15s;
+  }
+  .share-option:active { background: rgba(56,225,240,.12); }
+  .share-opt-icon { font-size: 20px; display: block; margin-bottom: 6px; }
+  .share-opt-sub { display: block; font-size: 10px; color: rgba(255,255,255,.35); font-weight: 400; margin-top: 2px; }
+
+  /* ── Capturing toast ────────────────────────────────────── */
+  .share-toast {
+    display: none; position: fixed;
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: #0A1F4D; border: 1px solid rgba(255,255,255,.1);
+    border-radius: 14px; padding: 18px 24px; z-index: 99999;
+    text-align: center; font-size: 13px; color: rgba(255,255,255,.7);
+  }
+  .share-toast.show { display: block; }
 </style>
 </head>
 <body>
@@ -314,13 +369,36 @@ function fmtTime(iso) {
          d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+const SHARE_SECTIONS = [
+  { id: 'sec-overview', label: 'Overview',    icon: '📊', sub: 'Yesterday KPIs' },
+  { id: 'sec-pickup',   label: 'Pickup',      icon: '📈', sub: 'Activity cards' },
+  { id: 'sec-pace',     label: 'Pace Charts', icon: '📉', sub: 'OTB vs STLY' },
+  { id: 'sec-sources',  label: 'Sources',     icon: '🏨', sub: 'Top channels' },
+  { id: 'sec-ai',       label: 'AI Insights', icon: '✨', sub: 'Smart summary' },
+];
+
 function renderBriefing(b) {
+  const shareOpts = SHARE_SECTIONS.map(s =>
+    `<button class="share-option" onclick="shareSection('${s.id}','${s.label}')">
+      <span class="share-opt-icon">${s.icon}</span>${s.label}
+      <span class="share-opt-sub">${s.sub}</span>
+    </button>`
+  ).join('');
+
   document.getElementById('root').innerHTML = `
     <div class="top-bar">
       <div class="tb-row1">
         <span class="tb-brand">FirstLight</span>
         <div class="tb-right">
           <span class="tb-date">${b.report_date}</span>
+          <button class="share-btn" onclick="showSharePanel()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Share
+          </button>
           <button class="tb-btn" onclick="signOut()">Sign out</button>
         </div>
       </div>
@@ -334,9 +412,22 @@ function renderBriefing(b) {
     </div>
     <div class="briefing-wrap">
       <iframe id="briefing-iframe" srcdoc="" scrolling="yes"></iframe>
-    </div>`;
+    </div>
+    <div class="share-overlay" id="share-overlay" onclick="hideSharePanel()"></div>
+    <div class="share-panel" id="share-panel">
+      <div class="share-panel-title">Share visual</div>
+      <div class="share-options">${shareOpts}</div>
+    </div>
+    <div class="share-toast" id="share-toast">Preparing image…</div>`;
 
-  document.getElementById('briefing-iframe').srcdoc = b.rendered_html;
+  const iframe = document.getElementById('briefing-iframe');
+  iframe.addEventListener('load', () => {
+    subscribeToPush();
+    const hash = window.location.hash.replace('#', '');
+    if (hash) navigateToSection(hash);
+  }, { once: true });
+  iframe.srcdoc = b.rendered_html;
+
   subscribeRefreshStatus();
 }
 
@@ -415,6 +506,119 @@ function showError(msg) {
       <p>${msg}</p>
       <button onclick="init()">Try again</button>
     </div>`;
+}
+
+// ── Push notifications ────────────────────────────────────────────
+// Replace with your VAPID public key after running generate_vapid.py
+const VAPID_PUBLIC_KEY = 'YOUR_VAPID_PUBLIC_KEY_HERE';
+
+function _b64ToUint8(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function subscribeToPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.startsWith('YOUR_')) return;
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _b64ToUint8(VAPID_PUBLIC_KEY),
+      });
+    }
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) return;
+    await db.from('push_subscriptions').upsert(
+      { hotel_id: _hotelId, user_id: session.user.id, subscription: sub.toJSON() },
+      { onConflict: 'user_id' }
+    );
+  } catch (e) {
+    console.warn('[push]', e);
+  }
+}
+
+// ── Navigate to section (from notification tap) ───────────────────
+function navigateToSection(sectionId) {
+  const iframe = document.getElementById('briefing-iframe');
+  if (!iframe) return;
+  const scroll = () => iframe.contentDocument?.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+  iframe.contentDocument?.readyState === 'complete' ? scroll() : iframe.addEventListener('load', scroll, { once: true });
+}
+
+// ── Share ─────────────────────────────────────────────────────────
+function showSharePanel() {
+  document.getElementById('share-overlay').classList.add('open');
+  document.getElementById('share-panel').classList.add('open');
+}
+
+function hideSharePanel() {
+  document.getElementById('share-overlay').classList.remove('open');
+  document.getElementById('share-panel').classList.remove('open');
+}
+
+async function shareSection(sectionId, label) {
+  hideSharePanel();
+  const toast = document.getElementById('share-toast');
+  toast.classList.add('show');
+  try {
+    const iframe  = document.getElementById('briefing-iframe');
+    const iWin    = iframe.contentWindow;
+    const iDoc    = iframe.contentDocument;
+
+    if (!iWin.html2canvas) {
+      await new Promise((res, rej) => {
+        const s = iDoc.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        s.crossOrigin = 'anonymous';
+        s.onload = res; s.onerror = rej;
+        iDoc.head.appendChild(s);
+      });
+    }
+
+    const el = iDoc.getElementById(sectionId);
+    if (!el) { toast.classList.remove('show'); return; }
+
+    el.scrollIntoView();
+    await new Promise(r => setTimeout(r, 300));
+
+    const canvas = await iWin.html2canvas(el, {
+      backgroundColor: '#F0F2F7', scale: 2, useCORS: true, logging: false,
+    });
+
+    toast.classList.remove('show');
+
+    await new Promise(res => canvas.toBlob(async blob => {
+      const file = new File([blob], `firstlight-${label.toLowerCase().replace(/\s+/g,'-')}.png`, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `FirstLight — ${label}` });
+      } else {
+        const a = Object.assign(document.createElement('a'), {
+          href: URL.createObjectURL(blob),
+          download: `firstlight-${label.toLowerCase()}.png`,
+        });
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+      res();
+    }, 'image/png'));
+  } catch (e) {
+    console.warn('[share]', e);
+    toast.classList.remove('show');
+  }
+}
+
+// ── Service Worker ────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(e => console.warn('[sw]', e));
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'NAVIGATE') navigateToSection(event.data.sectionId);
+  });
 }
 
 init();
