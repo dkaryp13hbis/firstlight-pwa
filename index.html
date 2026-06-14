@@ -139,7 +139,7 @@
   /* ── Refresh action bar ─────────────────────────────────── */
   .tb-row2 {
     display: flex; align-items: center; justify-content: space-between;
-    padding-bottom: 10px; gap: 12px;
+    padding-bottom: 10px; gap: 10px;
   }
   .ref-btn {
     padding: 7px 16px;
@@ -158,8 +158,49 @@
     border-color: rgba(56,225,240,.35);
     color: #38E1F0;
   }
+
+  /* ── Hotel picker ───────────────────────────────────────── */
+  .hotel-pick {
+    position: relative;
+    display: flex; align-items: center; gap: 5px;
+    padding: 7px 12px;
+    border: 1px solid rgba(46,124,247,.35);
+    border-radius: 8px;
+    background: rgba(46,124,247,.1);
+    color: #fff;
+    font-size: 11px; font-weight: 600; font-family: inherit;
+    cursor: pointer; white-space: nowrap;
+    flex: 1; min-width: 0; max-width: 160px;
+    justify-content: space-between;
+  }
+  .hotel-pick-name {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .hotel-drop {
+    display: none;
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 1001;
+    background: #0A1F4D;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px;
+    overflow: hidden;
+    min-width: 190px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  }
+  .hotel-drop.open { display: block; }
+  .hotel-drop-item {
+    display: block; width: 100%;
+    background: none; border: none;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    color: rgba(255,255,255,.8); font-size: 12px; font-weight: 500;
+    font-family: inherit; padding: 12px 14px;
+    text-align: left; cursor: pointer;
+  }
+  .hotel-drop-item:last-child { border-bottom: none; }
+  .hotel-drop-item.active { color: #38E1F0; font-weight: 700; }
+
   .ref-meta {
     display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+    flex-shrink: 0;
   }
   .ref-time {
     font-size: 10px; color: rgba(255,255,255,.35);
@@ -308,7 +349,6 @@ function showLogin() {
     </div>`;
   setTimeout(() => document.getElementById('fl-email')?.focus(), 80);
 
-  // Allow Enter key to submit
   document.addEventListener('keydown', function handler(e) {
     if (e.key === 'Enter') { signIn(); document.removeEventListener('keydown', handler); }
   });
@@ -327,26 +367,44 @@ async function signIn() {
   }
 }
 
+// ── State ─────────────────────────────────────────────────────────
+let _hotelId = null;
+let _hotels  = [];   // [{id, name}] — all hotels for this user
+let _refreshSub = null;
+
 // ── Briefing ──────────────────────────────────────────────────────
 async function loadBriefing() {
   showSpinner('Fetching briefing…');
 
-  // Look up which hotel this user belongs to
-  const { data: hu, error: huErr } = await db
-    .from('hotel_users').select('hotel_id').single();
+  // Load hotel list once (persists across hotel switches)
+  if (_hotels.length === 0) {
+    const { data: huRows, error: huErr } = await db
+      .from('hotel_users')
+      .select('hotel_id');
 
-  if (huErr || !hu) {
-    showError('No hotel assigned to your account.<br>Contact your administrator.');
-    return;
+    if (huErr || !huRows?.length) {
+      showError('No hotel assigned to your account.<br>Contact your administrator.');
+      return;
+    }
+
+    const ids = huRows.map(r => r.hotel_id);
+    const { data: hotelRows } = await db
+      .from('hotels')
+      .select('id, name')
+      .in('id', ids);
+
+    _hotels = hotelRows?.length
+      ? hotelRows
+      : huRows.map(r => ({ id: r.hotel_id, name: 'Hotel' }));
+
+    if (!_hotelId) _hotelId = _hotels[0].id;
   }
 
-  _hotelId = hu.hotel_id;
-
-  // Fetch latest briefing
+  // Fetch latest briefing for the selected hotel
   const { data: b, error: bErr } = await db
     .from('briefings')
     .select('report_date, rendered_html, generated_at')
-    .eq('hotel_id', hu.hotel_id)
+    .eq('hotel_id', _hotelId)
     .order('report_date', { ascending: false })
     .limit(1)
     .single();
@@ -358,9 +416,6 @@ async function loadBriefing() {
 
   renderBriefing(b);
 }
-
-let _hotelId = null;
-let _refreshSub = null;
 
 function fmtTime(iso) {
   if (!iso) return '';
@@ -385,6 +440,21 @@ function renderBriefing(b) {
     </button>`
   ).join('');
 
+  const currentHotelName = _hotels.find(h => h.id === _hotelId)?.name || 'Hotel';
+
+  const hotelPickerHtml = _hotels.length > 1
+    ? `<div class="hotel-pick" id="hotel-pick" onclick="toggleHotelPicker(event)">
+        <span class="hotel-pick-name">${currentHotelName}</span>
+        <span>▾</span>
+        <div class="hotel-drop" id="hotel-drop">
+          ${_hotels.map(h =>
+            `<button class="hotel-drop-item${h.id === _hotelId ? ' active' : ''}"
+              onclick="switchHotel(event,'${h.id}')">${h.name}</button>`
+          ).join('')}
+        </div>
+      </div>`
+    : '';
+
   document.getElementById('root').innerHTML = `
     <div class="top-bar">
       <div class="tb-row1">
@@ -405,6 +475,7 @@ function renderBriefing(b) {
       </div>
       <div class="tb-row2">
         <button class="ref-btn" id="btn-data" onclick="requestRefresh('data_only')">↻ Refresh Data</button>
+        ${hotelPickerHtml}
         <div class="ref-meta">
           <span class="ref-time" id="ref-time">Last: ${fmtTime(b.generated_at)}</span>
           <span class="ref-status" id="ref-status"></span>
@@ -426,7 +497,6 @@ function renderBriefing(b) {
     injectSectionShareButtons(iframe.contentDocument, iframe.contentWindow);
     const hash = window.location.hash.replace('#', '');
     if (hash) navigateToSection(hash);
-    // Update bell icon state
     const bell = document.getElementById('bell-btn');
     if (bell && Notification.permission === 'granted') {
       bell.style.color = '#38E1F0';
@@ -438,6 +508,27 @@ function renderBriefing(b) {
   subscribeRefreshStatus();
 }
 
+// ── Hotel switcher ─────────────────────────────────────────────────
+function toggleHotelPicker(e) {
+  e.stopPropagation();
+  document.getElementById('hotel-drop')?.classList.toggle('open');
+}
+
+function switchHotel(e, hotelId) {
+  e.stopPropagation();
+  document.getElementById('hotel-drop')?.classList.remove('open');
+  if (hotelId === _hotelId) return;
+  _hotelId = hotelId;
+  if (_refreshSub) { db.removeChannel(_refreshSub); _refreshSub = null; }
+  loadBriefing();
+}
+
+// Close picker when clicking anywhere else
+document.addEventListener('click', () => {
+  document.getElementById('hotel-drop')?.classList.remove('open');
+});
+
+// ── Refresh ───────────────────────────────────────────────────────
 async function requestRefresh(type) {
   if (!_hotelId) return;
   setRefreshUI('queued');
@@ -498,6 +589,8 @@ function subscribeRefreshStatus() {
 
 async function signOut() {
   if (_refreshSub) db.removeChannel(_refreshSub);
+  _hotels  = [];
+  _hotelId = null;
   await db.auth.signOut();
 }
 
@@ -516,17 +609,12 @@ function showError(msg) {
 }
 
 // ── Push notifications ────────────────────────────────────────────
-// Replace with your VAPID public key after running generate_vapid.py
 const VAPID_PUBLIC_KEY = 'BNhurScgTQdq7pGz55B3_0TVKYvNEstr2XVhZ9Q84Nake5-r-Ujas9QBlrlTPRR1sIWFLO_naItavzS_-0ZmgTM';
 
 function _b64ToUint8(b64) {
   const pad = '='.repeat((4 - b64.length % 4) % 4);
   const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
   return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-}
-
-async function subscribeToPush() {
-  // Kept for backwards compat — enableNotifications() is the user-facing entry point
 }
 
 // ── Navigate to section (from notification tap) ───────────────────
@@ -548,7 +636,6 @@ function hideSharePanel() {
   document.getElementById('share-panel').classList.remove('open');
 }
 
-// Inject share buttons directly onto section labels inside the iframe
 function injectSectionShareButtons(iDoc, iWin) {
   const style = iDoc.createElement('style');
   style.textContent = `
@@ -566,7 +653,6 @@ function injectSectionShareButtons(iDoc, iWin) {
   SHARE_SECTIONS.forEach(({ id, label }) => {
     const anchor = iDoc.getElementById(id);
     if (!anchor) return;
-    // Find the .sl section label right after the anchor
     let sib = anchor.nextElementSibling;
     while (sib && !sib.classList?.contains('sl')) sib = sib.nextElementSibling;
     if (!sib) return;
@@ -589,7 +675,6 @@ async function shareSection(sectionId, label) {
   try {
     if (!iWin || !iDoc) { toast.classList.remove('show'); return; }
 
-    // Load html2canvas into the iframe context if not already loaded
     if (!iWin.html2canvas) {
       await new Promise((res, rej) => {
         const s = iDoc.createElement('script');
@@ -603,15 +688,12 @@ async function shareSection(sectionId, label) {
     const anchor = iDoc.getElementById(sectionId);
     if (!anchor) { toast.classList.remove('show'); return; }
 
-    // Clone all elements between this anchor and the next section anchor
-    // into an off-screen wrapper inside the SAME document so CSS applies
     const anchorIds = new Set(['sec-overview','sec-pickup','sec-pace','sec-sources','sec-ai']);
     wrapper = iDoc.createElement('div');
     wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:640px;padding:12px 16px;background:#F0F2F7;';
     let el = anchor.nextElementSibling;
     while (el) {
       if (el.id && anchorIds.has(el.id)) break;
-      // Skip injected share buttons from the clone
       const clone = el.cloneNode(true);
       clone.querySelectorAll?.('.fl-share').forEach(b => b.remove());
       wrapper.appendChild(clone);
@@ -624,10 +706,9 @@ async function shareSection(sectionId, label) {
       backgroundColor: '#F0F2F7',
       scale: 2,
       useCORS: true,
-      allowTaint: true,  // allow cross-origin fonts without blocking render
+      allowTaint: true,
       logging: false,
       onclone: clonedDoc => {
-        // Remove Google Fonts to prevent canvas taint, use system fonts instead
         clonedDoc.querySelectorAll('link[href*="fonts.googleapis"]').forEach(e => e.remove());
         const s = clonedDoc.createElement('style');
         s.textContent = '* { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !important; }';
@@ -660,7 +741,7 @@ async function shareSection(sectionId, label) {
   }
 }
 
-// ── Notifications (user-triggered) ───────────────────────────────
+// ── Notifications ─────────────────────────────────────────────────
 async function enableNotifications() {
   if (!('serviceWorker' in navigator)) { alert('Service workers not supported in this browser.'); return; }
   if (!('Notification' in window))     { alert('Notifications not supported in this browser.\niOS: add to Home Screen first.'); return; }
@@ -682,15 +763,17 @@ async function enableNotifications() {
     const { data: { session } } = await db.auth.getSession();
     if (!session) { alert('Not logged in — cannot save subscription.'); return; }
 
-    const { error } = await db.from('push_subscriptions').upsert(
-      { hotel_id: _hotelId, user_id: session.user.id, subscription: sub.toJSON() },
-      { onConflict: 'user_id' }
-    );
-    if (error) { alert('Supabase error: ' + error.message + '\n\nMake sure the push_subscriptions table exists.'); return; }
+    // Register subscription for every hotel this user has access to
+    for (const hotel of _hotels) {
+      await db.from('push_subscriptions').upsert(
+        { hotel_id: hotel.id, user_id: session.user.id, subscription: sub.toJSON() },
+        { onConflict: 'user_id,hotel_id' }
+      );
+    }
 
     const btn = document.getElementById('bell-btn');
     if (btn) { btn.style.color = '#38E1F0'; btn.title = 'Notifications on'; }
-    alert('Push notifications enabled!');
+    alert(`Push notifications enabled for ${_hotels.length} hotel${_hotels.length > 1 ? 's' : ''}!`);
   } catch (e) {
     alert('Error: ' + e.message);
   }
