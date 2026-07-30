@@ -170,7 +170,7 @@
     color: #fff;
     font-size: 11px; font-weight: 600; font-family: inherit;
     cursor: pointer; white-space: nowrap;
-    flex: 1; min-width: 0; max-width: 160px;
+    flex: 1; min-width: 0;
     justify-content: space-between;
   }
   .hotel-pick-name {
@@ -457,8 +457,8 @@ function renderBriefing(b) {
 
   document.getElementById('root').innerHTML = `
     <div class="top-bar">
-      <div class="tb-row1" style="position:relative;justify-content:flex-end">
-        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px">
+      <div class="tb-row1">
+        <div style="display:flex;align-items:center;gap:10px">
           <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="fl-lock-b" x1="16" y1="44" x2="84" y2="14" gradientUnits="userSpaceOnUse">
@@ -499,11 +499,12 @@ function renderBriefing(b) {
       </div>
       <div class="tb-row2">
         <button class="ref-btn" id="btn-data" onclick="requestRefresh('data_only')">↻ Refresh Data</button>
+        <span class="ref-status" id="ref-status"></span>
         ${hotelPickerHtml}
-        <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
-          <div class="ref-meta">
-            <span class="ref-time" id="ref-time">Last: ${fmtTime(b.generated_at)}</span>
-            <span class="ref-status" id="ref-status"></span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:1px">
+            <button class="tb-btn" id="lang-en" style="padding:6px 8px;border-radius:8px 0 0 8px" onclick="setLang('en')">EN</button>
+            <button class="tb-btn" id="lang-el" style="padding:6px 8px;border-radius:0 8px 8px 0" onclick="setLang('el')">ΕΛ</button>
           </div>
           <div style="display:flex;align-items:center;gap:2px">
             <button class="tb-btn" style="padding:6px 9px" onclick="setTextSize(-1)" title="Smaller text">A−</button>
@@ -527,6 +528,7 @@ function renderBriefing(b) {
   iframe.addEventListener('load', () => {
     injectSectionShareButtons(iframe.contentDocument, iframe.contentWindow);
     applyTextSize(iframe.contentDocument);
+    applyLangState();
     injectFeedbackButtons(iframe.contentDocument, b.report_date);
     const hash = window.location.hash.replace('#', '');
     if (hash) navigateToSection(hash);
@@ -595,6 +597,35 @@ function injectFeedbackButtons(doc, reportDate) {
     if (prev) wrap.querySelectorAll('button').forEach(o => { o.disabled = true; });
     foot.appendChild(wrap);
   });
+}
+
+// ── Briefing language (per hotel; applies from the NEXT morning AI run) ──
+function langKey() { return `fl_lang_${_hotelId}`; }
+function applyLangState() {
+  const cur = localStorage.getItem(langKey()) || 'en';
+  ['en', 'el'].forEach(l => {
+    const btn = document.getElementById(`lang-${l}`);
+    if (btn) {
+      btn.style.background = l === cur ? 'rgba(56,225,240,.25)' : 'rgba(255,255,255,.08)';
+      btn.style.color = l === cur ? '#38E1F0' : 'rgba(255,255,255,.7)';
+    }
+  });
+}
+async function setLang(lang) {
+  try {
+    await db.from('hotel_prefs').upsert({ hotel_id: _hotelId, language: lang,
+                                          updated_at: new Date().toISOString() });
+    localStorage.setItem(langKey(), lang);
+    applyLangState();
+    const toast = document.getElementById('share-toast');
+    if (toast) {
+      toast.textContent = lang === 'el'
+        ? 'Η γλώσσα αποθηκεύτηκε — ισχύει από το αυριανό πρωινό briefing.'
+        : 'Language saved — applies from tomorrow\'s morning briefing.';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+  } catch (err) { console.warn('lang save failed', err); }
 }
 
 // ── Hotel switcher ─────────────────────────────────────────────────
