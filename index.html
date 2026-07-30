@@ -501,6 +501,11 @@ function renderBriefing(b) {
       <div class="tb-row2">
         <button class="ref-btn" id="btn-data" onclick="requestRefresh('data_only')">↻ Refresh Data</button>
         ${hotelPickerHtml}
+        <div style="display:flex;align-items:center;gap:2px">
+          <button class="tb-btn" style="padding:6px 9px" onclick="setTextSize(-1)" title="Smaller text">A−</button>
+          <span id="ts-lvl" style="font-size:10px;color:rgba(255,255,255,.55);min-width:14px;text-align:center"></span>
+          <button class="tb-btn" style="padding:6px 9px" onclick="setTextSize(1)" title="Larger text">A+</button>
+        </div>
         <div class="ref-meta">
           <span class="ref-time" id="ref-time">Last: ${fmtTime(b.generated_at)}</span>
           <span class="ref-status" id="ref-status"></span>
@@ -520,6 +525,8 @@ function renderBriefing(b) {
   const iframe = document.getElementById('briefing-iframe');
   iframe.addEventListener('load', () => {
     injectSectionShareButtons(iframe.contentDocument, iframe.contentWindow);
+    applyTextSize(iframe.contentDocument);
+    injectFeedbackButtons(iframe.contentDocument, b.report_date);
     const hash = window.location.hash.replace('#', '');
     if (hash) navigateToSection(hash);
     const bell = document.getElementById('bell-btn');
@@ -531,6 +538,62 @@ function renderBriefing(b) {
   iframe.srcdoc = b.rendered_html;
 
   subscribeRefreshStatus();
+}
+
+// ── Text size (levels 1–5, like phone accessibility sizing) ────────
+const TS_ZOOM = { 1: 0.85, 2: 1, 3: 1.12, 4: 1.25, 5: 1.4 };
+function tsLevel() {
+  const n = parseInt(localStorage.getItem('fl_textsize') || '2', 10);
+  return Math.min(5, Math.max(1, isNaN(n) ? 2 : n));
+}
+function setTextSize(delta) {
+  const n = Math.min(5, Math.max(1, tsLevel() + delta));
+  localStorage.setItem('fl_textsize', String(n));
+  const doc = document.getElementById('briefing-iframe')?.contentDocument;
+  if (doc) applyTextSize(doc);
+}
+function applyTextSize(doc) {
+  const n = tsLevel();
+  if (doc?.body) doc.body.style.zoom = TS_ZOOM[n];
+  const lbl = document.getElementById('ts-lvl');
+  if (lbl) lbl.textContent = n;
+}
+
+// ── Insight feedback (👍/👎 per AI card → insight_feedback table) ───
+function injectFeedbackButtons(doc, reportDate) {
+  if (!doc) return;
+  doc.querySelectorAll('.icard[data-card-id]').forEach(card => {
+    const foot = card.querySelector('.icard-foot');
+    if (!foot || foot.querySelector('.fl-fb')) return;
+    const cardId = card.getAttribute('data-card-id');
+    const key = `fl_fb_${_hotelId}_${reportDate}_${cardId}`;
+    const prev = localStorage.getItem(key);
+    const wrap = doc.createElement('span');
+    wrap.className = 'fl-fb';
+    wrap.style.cssText = 'display:inline-flex;gap:6px;margin-left:10px;align-items:center';
+    [['1', '👍'], ['-1', '👎']].forEach(([v, glyph]) => {
+      const btn = doc.createElement('button');
+      btn.textContent = glyph;
+      btn.style.cssText = 'border:1.5px solid #E2E7F0;background:#fff;border-radius:999px;'
+        + 'width:30px;height:30px;font-size:14px;cursor:pointer;padding:0;'
+        + (prev === v ? 'border-color:#2E7CF7;background:#E8F0FE;' : '');
+      btn.onclick = async () => {
+        if (localStorage.getItem(key)) return;
+        try {
+          await db.from('insight_feedback').insert({
+            hotel_id: _hotelId, report_date: reportDate,
+            card_id: cardId, verdict: parseInt(v, 10),
+          });
+          localStorage.setItem(key, v);
+          btn.style.borderColor = '#2E7CF7'; btn.style.background = '#E8F0FE';
+          wrap.querySelectorAll('button').forEach(o => { o.disabled = true; o.style.cursor = 'default'; });
+        } catch (err) { console.warn('feedback failed', err); }
+      };
+      wrap.appendChild(btn);
+    });
+    if (prev) wrap.querySelectorAll('button').forEach(o => { o.disabled = true; });
+    foot.appendChild(wrap);
+  });
 }
 
 // ── Hotel switcher ─────────────────────────────────────────────────
@@ -545,6 +608,10 @@ function switchHotel(e, hotelId) {
   if (hotelId === _hotelId) return;
   _hotelId = hotelId;
   if (_refreshSub) { db.removeChannel(_refreshSub); _refreshSub = null; }
+  // Always land at the TOP of the new hotel's report — a stale #section hash
+  // (e.g. from a notification tap) must not survive the switch.
+  history.replaceState(null, '', window.location.pathname);
+  window.scrollTo(0, 0);
   loadBriefing();
 }
 
