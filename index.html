@@ -457,9 +457,9 @@ function renderBriefing(b) {
 
   document.getElementById('root').innerHTML = `
     <div class="top-bar">
-      <div class="tb-row1">
-        <div style="display:flex;align-items:center;gap:8px">
-          <svg width="26" height="26" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <div class="tb-row1" style="position:relative;justify-content:flex-end">
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px">
+          <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="fl-lock-b" x1="16" y1="44" x2="84" y2="14" gradientUnits="userSpaceOnUse">
                 <stop offset="0" stop-color="#2E7CF7"/>
@@ -482,10 +482,9 @@ function renderBriefing(b) {
               <rect x="62" y="78" width="24" height="8"  rx="4" fill="#fff"/>
             </g>
           </svg>
-          <span style="font:700 17px/1 'Outfit',sans-serif;letter-spacing:-.02em;color:#fff;margin-top:2px">First<span style="color:#38E1F0">Light</span></span>
+          <span style="font:700 19px/1 'Outfit',sans-serif;letter-spacing:-.02em;color:#fff;margin-top:2px">First<span style="color:#38E1F0">Light</span></span>
         </div>
         <div class="tb-right">
-          <span class="tb-date">${b.report_date}</span>
           <button class="share-btn" onclick="showSharePanel()">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -501,14 +500,16 @@ function renderBriefing(b) {
       <div class="tb-row2">
         <button class="ref-btn" id="btn-data" onclick="requestRefresh('data_only')">↻ Refresh Data</button>
         ${hotelPickerHtml}
-        <div style="display:flex;align-items:center;gap:2px">
-          <button class="tb-btn" style="padding:6px 9px" onclick="setTextSize(-1)" title="Smaller text">A−</button>
-          <span id="ts-lvl" style="font-size:10px;color:rgba(255,255,255,.55);min-width:14px;text-align:center"></span>
-          <button class="tb-btn" style="padding:6px 9px" onclick="setTextSize(1)" title="Larger text">A+</button>
-        </div>
-        <div class="ref-meta">
-          <span class="ref-time" id="ref-time">Last: ${fmtTime(b.generated_at)}</span>
-          <span class="ref-status" id="ref-status"></span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+          <div class="ref-meta">
+            <span class="ref-time" id="ref-time">Last: ${fmtTime(b.generated_at)}</span>
+            <span class="ref-status" id="ref-status"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:2px">
+            <button class="tb-btn" style="padding:6px 9px" onclick="setTextSize(-1)" title="Smaller text">A−</button>
+            <span id="ts-lvl" style="font-size:10px;color:rgba(255,255,255,.55);min-width:14px;text-align:center"></span>
+            <button class="tb-btn" style="padding:6px 9px" onclick="setTextSize(1)" title="Larger text">A+</button>
+          </div>
         </div>
       </div>
     </div>
