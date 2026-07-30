@@ -458,7 +458,32 @@ function renderBriefing(b) {
   document.getElementById('root').innerHTML = `
     <div class="top-bar">
       <div class="tb-row1">
-        <span class="tb-brand">FirstLight</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <svg width="26" height="26" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="fl-lock-b" x1="16" y1="44" x2="84" y2="14" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#2E7CF7"/>
+                <stop offset="1" stop-color="#38E1F0"/>
+              </linearGradient>
+            </defs>
+            <g stroke="#38E1F0" stroke-width="3" stroke-linecap="round" opacity=".22">
+              <path d="M50 -2 50 6"/><path d="M96 14 89 18"/><path d="M102 50 94 50"/>
+              <path d="M96 86 89 82"/><path d="M50 102 50 94"/><path d="M4 86 11 82"/>
+              <path d="M-2 50 6 50"/><path d="M4 14 11 18"/>
+            </g>
+            <g transform="translate(50,50) scale(.78) translate(-52,-50)">
+              <path d="M18 38 38 28 54 33 74 16" stroke="url(#fl-lock-b)" stroke-width="8"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="74" cy="16" r="5" fill="#38E1F0"/>
+              <rect x="18" y="50" width="8"  height="36" rx="4" fill="#fff"/>
+              <rect x="18" y="50" width="26" height="8"  rx="4" fill="#fff"/>
+              <rect x="18" y="64" width="19" height="8"  rx="4" fill="#fff"/>
+              <rect x="62" y="50" width="8"  height="36" rx="4" fill="#fff"/>
+              <rect x="62" y="78" width="24" height="8"  rx="4" fill="#fff"/>
+            </g>
+          </svg>
+          <span style="font:700 17px/1 'Outfit',sans-serif;letter-spacing:-.02em;color:#fff;margin-top:2px">First<span style="color:#38E1F0">Light</span></span>
+        </div>
         <div class="tb-right">
           <span class="tb-date">${b.report_date}</span>
           <button class="share-btn" onclick="showSharePanel()">
