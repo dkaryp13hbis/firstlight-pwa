@@ -139,7 +139,8 @@
   /* ── Refresh action bar ─────────────────────────────────── */
   .tb-row2 {
     display: flex; align-items: center; justify-content: space-between;
-    padding-bottom: 10px; gap: 10px;
+    padding-bottom: 10px; gap: 8px; row-gap: 8px;
+    flex-wrap: wrap;   /* narrow phones: EN/ΕΛ + A−/A+ wrap to their own line */
   }
   .ref-btn {
     padding: 7px 16px;
