@@ -135,6 +135,49 @@
     padding: 6px 12px; cursor: pointer;
     font-family: inherit;
   }
+  .tb-ico {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.11);
+    color: rgba(255,255,255,.85);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 14px; padding: 0; font-family: inherit;
+  }
+
+  /* ── Settings sheet ─────────────────────────────────────── */
+  .set-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(4,10,26,.55); z-index: 1100;
+  }
+  .set-overlay.open { display: block; }
+  .set-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 1101;
+    background: #fff; border-radius: 22px 22px 0 0;
+    padding: 8px 22px calc(24px + env(safe-area-inset-bottom));
+    transform: translateY(105%); transition: transform .25s ease;
+    color: #1B2A4A;
+  }
+  .set-sheet.open { transform: translateY(0); }
+  .set-handle { width: 44px; height: 4px; border-radius: 2px; background: #D5DAE6; margin: 8px auto 16px; }
+  .set-title { font-size: 20px; font-weight: 800; letter-spacing: -.02em; color: #0F2860; margin-bottom: 4px; }
+  .set-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0; border-bottom: 1px solid #EDF0F6;
+  }
+  .set-row:last-child { border-bottom: none; }
+  .set-label { font-size: 15px; font-weight: 600; color: #1B2A4A; }
+  .seg { display: flex; background: #F1F3F8; border-radius: 10px; padding: 3px; }
+  .seg button {
+    border: none; background: transparent; font-family: inherit;
+    font-size: 13px; font-weight: 700; padding: 8px 16px;
+    border-radius: 8px; color: #5A6780; cursor: pointer;
+  }
+  .seg button.on { background: #0F2860; color: #fff; }
+  .ts-btn {
+    width: 44px; height: 38px; border: none; border-radius: 10px;
+    background: #F1F3F8; font-family: inherit;
+    font-size: 15px; font-weight: 800; color: #0F2860; cursor: pointer;
+  }
 
   /* ── Refresh action bar ─────────────────────────────────── */
   .tb-row2 {
@@ -486,37 +529,50 @@ function renderBriefing(b) {
           <span style="font:700 19px/1 'Outfit',sans-serif;letter-spacing:-.02em;color:#fff;margin-top:2px">First<span style="color:#38E1F0">Light</span></span>
         </div>
         <div class="tb-right">
-          <button class="share-btn" onclick="showSharePanel()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <button class="tb-ico" id="bell-btn" onclick="enableNotifications()" title="Enable notifications">🔔</button>
+          <button class="tb-ico" onclick="showSharePanel()" title="Share">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
               <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
               <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg>
-            Share
           </button>
-          <button class="tb-btn" id="bell-btn" onclick="enableNotifications()" title="Enable notifications" style="font-size:14px;padding:4px 8px;">🔔</button>
-          <button class="tb-btn" onclick="signOut()">Sign out</button>
+          <button class="tb-ico" onclick="openSettings()" title="Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
         </div>
       </div>
       <div class="tb-row2">
-        <button class="ref-btn" id="btn-data" onclick="requestRefresh('data_only')">↻ Refresh Data</button>
-        <span class="ref-status" id="ref-status"></span>
         ${hotelPickerHtml}
-        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-          <div style="display:flex;align-items:center;gap:1px">
-            <button class="tb-btn" id="lang-en" style="padding:6px 8px;border-radius:8px 0 0 8px" onclick="setLang('en')">EN</button>
-            <button class="tb-btn" id="lang-el" style="padding:6px 8px;border-radius:0 8px 8px 0" onclick="setLang('el')">ΕΛ</button>
-          </div>
-          <div style="display:flex;align-items:center;gap:2px">
-            <button class="tb-btn" style="padding:6px 9px" onclick="setTextSize(-1)" title="Smaller text">A−</button>
-            <span id="ts-lvl" style="font-size:10px;color:rgba(255,255,255,.55);min-width:14px;text-align:center"></span>
-            <button class="tb-btn" style="padding:6px 9px" onclick="setTextSize(1)" title="Larger text">A+</button>
-          </div>
-        </div>
+        <button class="ref-btn" id="btn-data" onclick="requestRefresh('data_only')">↻ Refresh</button>
+        <span class="ref-status" id="ref-status"></span>
       </div>
     </div>
     <div class="briefing-wrap">
       <iframe id="briefing-iframe" srcdoc="" scrolling="yes"></iframe>
+    </div>
+    <div class="set-overlay" id="set-overlay" onclick="closeSettings()"></div>
+    <div class="set-sheet" id="set-sheet">
+      <div class="set-handle"></div>
+      <div class="set-title">Settings</div>
+      <div class="set-row">
+        <span class="set-label">Language</span>
+        <div class="seg">
+          <button id="lang-en" onclick="setLang('en')">EN</button>
+          <button id="lang-el" onclick="setLang('el')">ΕΛ</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label">Text size</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="ts-btn" onclick="setTextSize(-1)" title="Smaller text">A−</button>
+          <span id="ts-lvl" style="font-size:13px;font-weight:600;color:#5A6780;min-width:34px;text-align:center"></span>
+          <button class="ts-btn" onclick="setTextSize(1)" title="Larger text">A+</button>
+        </div>
+      </div>
     </div>
     <div class="share-overlay" id="share-overlay" onclick="hideSharePanel()"></div>
     <div class="share-panel" id="share-panel">
@@ -560,7 +616,7 @@ function applyTextSize(doc) {
   const n = tsLevel();
   if (doc?.body) doc.body.style.zoom = TS_ZOOM[n];
   const lbl = document.getElementById('ts-lvl');
-  if (lbl) lbl.textContent = n;
+  if (lbl) lbl.textContent = n + ' / 5';
 }
 
 // ── Insight feedback (👍/👎 per AI card → insight_feedback table) ───
@@ -606,11 +662,19 @@ function applyLangState() {
   const cur = localStorage.getItem(langKey()) || 'en';
   ['en', 'el'].forEach(l => {
     const btn = document.getElementById(`lang-${l}`);
-    if (btn) {
-      btn.style.background = l === cur ? 'rgba(56,225,240,.25)' : 'rgba(255,255,255,.08)';
-      btn.style.color = l === cur ? '#38E1F0' : 'rgba(255,255,255,.7)';
-    }
+    if (btn) btn.classList.toggle('on', l === cur);
   });
+}
+function openSettings() {
+  applyLangState();
+  const lbl = document.getElementById('ts-lvl');
+  if (lbl) lbl.textContent = tsLevel() + ' / 5';
+  document.getElementById('set-overlay').classList.add('open');
+  document.getElementById('set-sheet').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('set-overlay').classList.remove('open');
+  document.getElementById('set-sheet').classList.remove('open');
 }
 async function setLang(lang) {
   try {
