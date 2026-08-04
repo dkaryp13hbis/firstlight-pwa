@@ -814,10 +814,7 @@ function _b64ToUint8(b64) {
 function navigateToSection(sectionId) {
   const iframe = document.getElementById('briefing-iframe');
   if (!iframe) return;
-  const scroll = () => {
-    iframe.contentWindow?.flExpandAll?.();
-    iframe.contentDocument?.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const scroll = () => iframe.contentDocument?.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
   iframe.contentDocument?.readyState === 'complete' ? scroll() : iframe.addEventListener('load', scroll, { once: true });
 }
 
@@ -869,7 +866,6 @@ async function shareSection(sectionId, label) {
   const iWin   = iframe?.contentWindow;
   const iDoc   = iframe?.contentDocument;
   try {
-    iWin?.flExpandAll?.();
     if (!iWin || !iDoc) { toast.classList.remove('show'); return; }
 
     if (!iWin.html2canvas) {
