@@ -487,7 +487,8 @@ function renderBriefing(b) {
   const currentHotelName = _hotels.find(h => h.id === _hotelId)?.name || 'Hotel';
 
   const hotelPickerHtml = _hotels.length > 1
-    ? `<div class="hotel-pick" id="hotel-pick" onclick="toggleHotelPicker(event)">
+    ? `<span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);flex-shrink:0">Hotel</span>
+      <div class="hotel-pick" id="hotel-pick" onclick="toggleHotelPicker(event)">
         <span class="hotel-pick-name">${currentHotelName}</span>
         <span>▾</span>
         <div class="hotel-drop" id="hotel-drop">
