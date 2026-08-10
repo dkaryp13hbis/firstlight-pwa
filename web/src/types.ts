@@ -1,0 +1,90 @@
+/** Briefing payload contract (subset of HotelDataSnapshot the UI reads).
+ *  Mirrors GET /briefing/latest from the FirstLight API (Phase A). */
+
+export interface DayBlock {
+  revenue: number;
+  revenueLY: number;
+  roomNights: number;
+  roomNightsLY: number;
+  adr: number;
+  adrLY: number;
+  occupancy: number;      // 0..1
+  occupancyLY: number;
+}
+
+export interface MtdBlock extends DayBlock {
+  month_name: string;
+}
+
+export interface PaceMonth {
+  month: string;          // "Aug"
+  month_num: number;
+  rn: number;
+  rn_stly: number;
+  rn_final_ly: number;
+  rev: number;
+  rev_stly: number;
+  rev_final: number;
+  adr: number;
+  adr_stly: number;
+  occ: number;            // 0..1
+  stly: number;
+  final: number;
+  status: 'ahead' | 'behind' | 'on_track';
+}
+
+export interface PickupWindow { revenue: number; roomNights: number; }
+
+export interface PickupBlock {
+  today: PickupWindow;
+  last1d: PickupWindow;
+  last3d: PickupWindow;
+  last7d: PickupWindow;
+  date1d: string;
+  date3d: string;
+  date7d: string;
+  cancellationsToday: number;
+  cancellations1d: number;
+  cancellations3d: number;
+  cancellations7d: number;
+  cancellationRevenueToday: number;
+  cancellationRevenue: number;
+  cancellationRevenue3d: number;
+  cancellationRevenue7d: number;
+}
+
+export interface Insight {
+  id?: string;
+  tag?: 'ALERT' | 'OPPORTUNITY' | 'MONITOR';
+  type?: string;
+  headline?: string;
+  title?: string;
+  what_happened?: string;
+  why_it_matters?: string;
+  recommended_action?: string;
+  by_when?: string;
+  at_stake?: { value: string };
+  evidence?: { label: string; value: string; sub?: string }[];
+  kpis?: { label: string; value: string; sub?: string; direction?: string }[];
+}
+
+export interface BriefingData {
+  hotel_name: string;
+  report_date: string;
+  generated_at: string;   // "HH:MM" Athens
+  total_rooms: number;
+  yesterday: DayBlock;
+  mtd: MtdBlock;
+  pace: PaceMonth[];
+  pace_current: PaceMonth[];
+  pickup: PickupBlock;
+  topChannels?: { name: string; rev: number; rev_stly: number; pct: number; var: number | null; trend: string }[];
+}
+
+export interface Briefing {
+  report_date: string;
+  generated_at: string;   // ISO
+  data: BriefingData;
+  ai_insights: { executive_summary?: string; insights?: Insight[] };
+  kpi_summary?: unknown;
+}

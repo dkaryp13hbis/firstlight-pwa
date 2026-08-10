@@ -1,0 +1,55 @@
+/* FirstLight design system — ported from the canon (design-v2.1-final).
+   ONE type system: Manrope only. Values 800 / deltas 700 / captions 600. */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Outfit:wght@700&display=swap');
+
+:root {
+  /* surfaces (spec 6c) */
+  --page: #F1F3F8;
+  --card-bg: #FFFFFF;
+  --card-shadow: 0 1px 2px rgba(15, 40, 96, .06), 0 8px 24px -12px rgba(15, 40, 96, .16);
+  --r-lg: 14px;
+  --r-card: 18px;
+
+  /* palette */
+  --navy: #0F2860;
+  --navy-deep: #0A1F4D;
+  --app-top: #061535;
+  --blue: #2E7CF7;
+  --cyan: #38E1F0;
+  --green: #1A7A50;
+  --red: #BA1A1A;
+  --coral: #B83A1B;
+
+  /* text */
+  --n800: #1D1B20;
+  --n600: #4D5A74;
+  --n500: #5A6780;
+  --cap: #79747E;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'Manrope', -apple-system, sans-serif;
+  background: var(--page);
+  color: var(--n800);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100dvh; }
+
+button { font-family: inherit; cursor: pointer; }
+
+/* type groups (GLOBAL TYPE RULES equivalents) */
+.t-value { font-weight: 800; }
+.t-delta { font-weight: 700; }
+.t-cap   { font-size: 10.5px; font-weight: 600; color: var(--cap); letter-spacing: .02em; }
+
+.card {
+  background: var(--card-bg);
+  border: none;
+  border-radius: var(--r-card);
+  box-shadow: var(--card-shadow);
+}
