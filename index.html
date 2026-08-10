@@ -532,7 +532,7 @@ function renderBriefing(b) {
           <span style="font:700 19px/1 'Outfit',sans-serif;letter-spacing:-.02em;color:#fff;margin-top:2px">First<span style="color:#38E1F0">Light</span></span>
         </div>
         <div class="tb-right">
-          <button class="tb-ico" id="bell-btn" onclick="enableNotifications()" title="Enable notifications">🔔</button>
+          <button class="tb-ico" id="bell-btn" onclick="toggleNotifications()" title="Notifications">🔔</button>
           <button class="tb-ico" onclick="showSharePanel()" title="Share">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -605,11 +605,15 @@ function renderBriefing(b) {
     injectFeedbackButtons(iframe.contentDocument, b.report_date);
     const hash = window.location.hash.replace('#', '');
     if (hash) navigateToSection(hash);
-    const bell = document.getElementById('bell-btn');
-    if (bell && Notification.permission === 'granted') {
-      bell.style.color = '#38E1F0';
-      bell.title = 'Notifications on';
-    }
+    // Bell state = the device's ACTUAL push subscription, not just permission
+    navigator.serviceWorker?.ready
+      .then(r => r.pushManager.getSubscription())
+      .then(s => {
+        const on = !!s && Notification.permission === 'granted';
+        localStorage.setItem('fl_push', on ? 'on' : 'off');
+        _setBellState(on);
+      })
+      .catch(() => _setBellState(false));
   }, { once: true });
   iframe.srcdoc = b.rendered_html;
 
@@ -999,6 +1003,43 @@ async function shareSection(sectionId, label) {
 }
 
 // ── Notifications ─────────────────────────────────────────────────
+function _setBellState(on) {
+  const btn = document.getElementById('bell-btn');
+  if (!btn) return;
+  btn.style.color = on ? '#38E1F0' : '';
+  btn.style.borderColor = on ? 'rgba(56,225,240,.4)' : '';
+  btn.title = on ? 'Notifications on — tap to turn off' : 'Notifications off — tap to turn on';
+}
+function _pushToast(msg) {
+  const toast = document.getElementById('share-toast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+async function toggleNotifications() {
+  if (localStorage.getItem('fl_push') === 'on') {
+    // ── Unsubscribe ──
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+      const { data: { session } } = await db.auth.getSession();
+      if (session) {
+        const { error } = await db.from('push_subscriptions')
+          .delete().eq('user_id', session.user.id);
+        if (error) console.warn('[push] server unsubscribe', error);
+      }
+    } catch (e) { console.warn('[push] unsubscribe', e); }
+    localStorage.setItem('fl_push', 'off');
+    _setBellState(false);
+    _pushToast('Notifications off');
+    return;
+  }
+  await enableNotifications();
+}
+
 async function enableNotifications() {
   if (!('serviceWorker' in navigator)) { alert('Service workers not supported in this browser.'); return; }
   if (!('Notification' in window))     { alert('Notifications not supported in this browser.\niOS: add to Home Screen first.'); return; }
@@ -1028,9 +1069,9 @@ async function enableNotifications() {
       );
     }
 
-    const btn = document.getElementById('bell-btn');
-    if (btn) { btn.style.color = '#38E1F0'; btn.title = 'Notifications on'; }
-    alert(`Push notifications enabled for ${_hotels.length} hotel${_hotels.length > 1 ? 's' : ''}!`);
+    localStorage.setItem('fl_push', 'on');
+    _setBellState(true);
+    _pushToast(`Notifications on — morning briefing for ${_hotels.length} hotel${_hotels.length > 1 ? 's' : ''}`);
   } catch (e) {
     alert('Error: ' + e.message);
   }
