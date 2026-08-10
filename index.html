@@ -627,8 +627,21 @@ function applyTextSize(doc) {
 function injectFeedbackButtons(doc, reportDate) {
   if (!doc) return;
   doc.querySelectorAll('.icard[data-card-id]').forEach(card => {
-    const foot = card.querySelector('.icard-foot');
-    if (!foot || foot.querySelector('.fl-fb')) return;
+    let foot = card.querySelector('.icard-foot');
+    if (!foot) {
+      // The card template has no footer element — build one at the end of
+      // the card body (visible when the card is expanded).
+      const body = card.querySelector('.icard-body');
+      if (!body) return;
+      foot = doc.createElement('div');
+      foot.className = 'icard-foot';
+      foot.style.cssText = 'display:flex;align-items:center;margin-top:12px;'
+        + 'padding-top:10px;border-top:1px solid #EDF0F6;font-size:12px;'
+        + 'font-weight:600;color:#79747E';
+      foot.textContent = 'Was this useful?';
+      body.appendChild(foot);
+    }
+    if (foot.querySelector('.fl-fb')) return;
     const cardId = card.getAttribute('data-card-id');
     const key = `fl_fb_${_hotelId}_${reportDate}_${cardId}`;
     const prev = localStorage.getItem(key);
