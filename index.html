@@ -447,7 +447,7 @@ async function loadBriefing() {
   // Fetch latest briefing for the selected hotel
   const { data: b, error: bErr } = await db
     .from('briefings')
-    .select('report_date, rendered_html, generated_at')
+    .select('report_date, rendered_html, generated_at, ai_insights')
     .eq('hotel_id', _hotelId)
     .order('report_date', { ascending: false })
     .limit(1)
@@ -458,6 +458,8 @@ async function loadBriefing() {
     return;
   }
 
+  // Kept for feedback: the full card JSON is stored alongside each vote.
+  window._aiInsights = b.ai_insights?.insights || [];
   renderBriefing(b);
 }
 
@@ -707,11 +709,16 @@ async function submitFeedback() {
   const btnEl = document.getElementById('fb-submit');
   if (btnEl) btnEl.disabled = true;
   try {
-    await db.from('insight_feedback').insert({
+    const row = {
       hotel_id: _hotelId, report_date: p.reportDate,
       card_id: p.cardId, verdict: parseInt(p.verdict, 10),
       reason: reason || null,
-    });
+    };
+    const cardObj = (window._aiInsights || []).find(i => i.id === p.cardId) || null;
+    let { error } = await db.from('insight_feedback')
+      .insert({ ...row, card_content: cardObj });
+    if (error) ({ error } = await db.from('insight_feedback').insert(row));
+    if (error) throw error;
     localStorage.setItem(p.key, p.verdict);
     p.btn.style.borderColor = '#2E7CF7'; p.btn.style.background = '#E8F0FE';
     p.wrap.querySelectorAll('button').forEach(o => { o.disabled = true; o.style.cursor = 'default'; });
