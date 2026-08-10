@@ -618,6 +618,7 @@ function renderBriefing(b) {
   iframe.srcdoc = b.rendered_html;
 
   subscribeRefreshStatus();
+  restoreRefreshState();
 }
 
 // ── Text size (levels 1–5, like phone accessibility sizing) ────────
@@ -790,9 +791,14 @@ document.addEventListener('click', () => {
 });
 
 // ── Refresh ───────────────────────────────────────────────────────
+const REFRESH_KEY = 'fl_refreshing';
+let _refreshPoll = null;
+
 async function requestRefresh(type) {
   if (!_hotelId) return;
+  localStorage.setItem(REFRESH_KEY, JSON.stringify({ h: _hotelId, at: Date.now() }));
   setRefreshUI('queued');
+  _startRefreshWatch();
   await db.from('refresh_commands').insert({ hotel_id: _hotelId, type });
 }
 
@@ -803,11 +809,15 @@ function setRefreshUI(state) {
 
   const busy = state === 'queued' || state === 'running';
   btn.disabled = busy;
+  if (!busy) {
+    localStorage.removeItem(REFRESH_KEY);
+    if (_refreshPoll) { clearInterval(_refreshPoll); _refreshPoll = null; }
+  }
 
   if (state === 'queued') {
     btn.classList.add('active');
     btn.textContent = '↻ Refreshing…';
-    statusEl.textContent = 'Refreshing…';
+    statusEl.textContent = '';
   } else if (state === 'running') {
     btn.textContent = '↻ Refreshing…';
     statusEl.textContent = 'fetching data…';
@@ -825,6 +835,43 @@ function setRefreshUI(state) {
     statusEl.textContent = '';
   }
 }
+
+// Realtime can miss events while iOS suspends the page — a light poll is the
+// safety net, and localStorage lets a reopened page pick the state back up.
+function _startRefreshWatch() {
+  if (_refreshPoll) clearInterval(_refreshPoll);
+  _refreshPoll = setInterval(async () => {
+    const raw = localStorage.getItem(REFRESH_KEY);
+    if (!raw) { clearInterval(_refreshPoll); _refreshPoll = null; return; }
+    const p = JSON.parse(raw);
+    if (Date.now() - p.at > 4 * 60 * 1000) { setRefreshUI('idle'); return; }
+    const since = new Date(p.at - 5000).toISOString();
+    const { data } = await db.from('refresh_commands')
+      .select('status').eq('hotel_id', p.h)
+      .gte('requested_at', since)
+      .order('requested_at', { ascending: false }).limit(1);
+    const st = data?.[0]?.status;
+    if (st === 'done') setRefreshUI('done');
+    else if (st === 'error') setRefreshUI('error');
+  }, 12000);
+}
+
+function restoreRefreshState() {
+  const raw = localStorage.getItem(REFRESH_KEY);
+  if (!raw) return;
+  try {
+    const p = JSON.parse(raw);
+    if (p.h === _hotelId && Date.now() - p.at < 4 * 60 * 1000) {
+      setRefreshUI('queued');
+      _startRefreshWatch();
+    } else {
+      localStorage.removeItem(REFRESH_KEY);
+    }
+  } catch { localStorage.removeItem(REFRESH_KEY); }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') restoreRefreshState();
+});
 
 function subscribeRefreshStatus() {
   if (_refreshSub) { db.removeChannel(_refreshSub); _refreshSub = null; }
