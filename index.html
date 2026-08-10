@@ -578,6 +578,16 @@ function renderBriefing(b) {
         <button onclick="signOut()" style="border:none;background:none;padding:0;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;color:#D64545">Sign out</button>
       </div>
     </div>
+    <div class="set-overlay" id="fb-overlay" onclick="closeFeedbackSheet()"></div>
+    <div class="set-sheet" id="fb-sheet">
+      <div class="set-handle"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="set-title" style="margin:0">Feedback <span id="fb-verdict"></span></div>
+        <button onclick="closeFeedbackSheet()" title="Close" style="border:none;background:#F1F3F8;border-radius:50%;width:32px;height:32px;font-size:14px;color:#5A6780;cursor:pointer;font-family:inherit">✕</button>
+      </div>
+      <textarea id="fb-text" placeholder="Add a note (optional) — what was right or wrong?" style="width:100%;min-height:90px;border:1.5px solid #E2E7F0;border-radius:12px;padding:12px;font-family:inherit;font-size:15px;color:#1B2A4A;resize:none;outline:none;background:#fff"></textarea>
+      <button class="btn" id="fb-submit" style="margin-top:14px" onclick="submitFeedback()">Submit</button>
+    </div>
     <div class="share-overlay" id="share-overlay" onclick="hideSharePanel()"></div>
     <div class="share-panel" id="share-panel">
       <div class="share-panel-title">Share visual</div>
@@ -654,17 +664,9 @@ function injectFeedbackButtons(doc, reportDate) {
       btn.style.cssText = 'border:1.5px solid #E2E7F0;background:#fff;border-radius:999px;'
         + 'width:30px;height:30px;font-size:14px;cursor:pointer;padding:0;'
         + (prev === v ? 'border-color:#2E7CF7;background:#E8F0FE;' : '');
-      btn.onclick = async () => {
+      btn.onclick = () => {
         if (localStorage.getItem(key)) return;
-        try {
-          await db.from('insight_feedback').insert({
-            hotel_id: _hotelId, report_date: reportDate,
-            card_id: cardId, verdict: parseInt(v, 10),
-          });
-          localStorage.setItem(key, v);
-          btn.style.borderColor = '#2E7CF7'; btn.style.background = '#E8F0FE';
-          wrap.querySelectorAll('button').forEach(o => { o.disabled = true; o.style.cursor = 'default'; });
-        } catch (err) { console.warn('feedback failed', err); }
+        openFeedbackSheet({ cardId, reportDate, verdict: v, key, btn, wrap });
       };
       wrap.appendChild(btn);
     });
@@ -682,6 +684,48 @@ function applyLangState() {
     if (btn) btn.classList.toggle('on', l === cur);
   });
 }
+// ── Feedback sheet (thumb tap → optional note → submit) ─────────
+let _fbPending = null;
+function openFeedbackSheet(p) {
+  _fbPending = p;
+  const ta = document.getElementById('fb-text');
+  if (ta) ta.value = '';
+  const vd = document.getElementById('fb-verdict');
+  if (vd) vd.textContent = p.verdict === '1' ? '👍' : '👎';
+  document.getElementById('fb-overlay').classList.add('open');
+  document.getElementById('fb-sheet').classList.add('open');
+}
+function closeFeedbackSheet() {
+  _fbPending = null;
+  document.getElementById('fb-overlay').classList.remove('open');
+  document.getElementById('fb-sheet').classList.remove('open');
+}
+async function submitFeedback() {
+  const p = _fbPending;
+  if (!p) return;
+  const reason = (document.getElementById('fb-text')?.value || '').trim();
+  const btnEl = document.getElementById('fb-submit');
+  if (btnEl) btnEl.disabled = true;
+  try {
+    await db.from('insight_feedback').insert({
+      hotel_id: _hotelId, report_date: p.reportDate,
+      card_id: p.cardId, verdict: parseInt(p.verdict, 10),
+      reason: reason || null,
+    });
+    localStorage.setItem(p.key, p.verdict);
+    p.btn.style.borderColor = '#2E7CF7'; p.btn.style.background = '#E8F0FE';
+    p.wrap.querySelectorAll('button').forEach(o => { o.disabled = true; o.style.cursor = 'default'; });
+    const toast = document.getElementById('share-toast');
+    if (toast) {
+      toast.textContent = 'Thanks for the feedback';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+  } catch (err) { console.warn('feedback failed', err); }
+  if (btnEl) btnEl.disabled = false;
+  closeFeedbackSheet();
+}
+
 function openSettings() {
   applyLangState();
   const lbl = document.getElementById('ts-lvl');
