@@ -643,7 +643,7 @@ function applyTextSize(doc) {
 // ── Insight feedback (👍/👎 per AI card → insight_feedback table) ───
 function injectFeedbackButtons(doc, reportDate) {
   if (!doc) return;
-  doc.querySelectorAll('.icard[data-card-id]').forEach(card => {
+  doc.querySelectorAll('.icard').forEach((card, idx) => {
     let foot = card.querySelector('.icard-foot');
     if (!foot) {
       // The card template has no footer element — build one at the end of
@@ -659,7 +659,8 @@ function injectFeedbackButtons(doc, reportDate) {
       body.appendChild(foot);
     }
     if (foot.querySelector('.fl-fb')) return;
-    const cardId = card.getAttribute('data-card-id');
+    // First-day / legacy cards can lack an id — fall back to position
+    const cardId = card.getAttribute('data-card-id') || `card_${idx + 1}`;
     const key = `fl_fb_${_hotelId}_${reportDate}_${cardId}`;
     const prev = localStorage.getItem(key);
     const wrap = doc.createElement('span');
@@ -672,7 +673,7 @@ function injectFeedbackButtons(doc, reportDate) {
         + 'width:30px;height:30px;font-size:14px;cursor:pointer;padding:0;'
         + (prev === v ? 'border-color:#2E7CF7;background:#E8F0FE;' : '');
       btn.onclick = () => {
-        openFeedbackSheet({ cardId, reportDate, verdict: v, key, btn, wrap });
+        openFeedbackSheet({ cardId, idx, reportDate, verdict: v, key, btn, wrap });
       };
       wrap.appendChild(btn);
     });
@@ -717,7 +718,8 @@ async function submitFeedback() {
       card_id: p.cardId, verdict: parseInt(p.verdict, 10),
       reason: reason || null,
     };
-    const cardObj = (window._aiInsights || []).find(i => i.id === p.cardId) || null;
+    const cardObj = (window._aiInsights || []).find(i => i.id === p.cardId)
+      || (window._aiInsights || [])[p.idx] || null;
     const CONFLICT = { onConflict: 'hotel_id,report_date,card_id,user_id' };
     let { error } = await db.from('insight_feedback')
       .upsert({ ...row, card_content: cardObj }, CONFLICT);
