@@ -667,12 +667,10 @@ function injectFeedbackButtons(doc, reportDate) {
         + 'width:30px;height:30px;font-size:14px;cursor:pointer;padding:0;'
         + (prev === v ? 'border-color:#2E7CF7;background:#E8F0FE;' : '');
       btn.onclick = () => {
-        if (localStorage.getItem(key)) return;
         openFeedbackSheet({ cardId, reportDate, verdict: v, key, btn, wrap });
       };
       wrap.appendChild(btn);
     });
-    if (prev) wrap.querySelectorAll('button').forEach(o => { o.disabled = true; });
     foot.appendChild(wrap);
   });
 }
@@ -715,16 +713,18 @@ async function submitFeedback() {
       reason: reason || null,
     };
     const cardObj = (window._aiInsights || []).find(i => i.id === p.cardId) || null;
+    const CONFLICT = { onConflict: 'hotel_id,report_date,card_id,user_id' };
     let { error } = await db.from('insight_feedback')
-      .insert({ ...row, card_content: cardObj });
-    if (error) ({ error } = await db.from('insight_feedback').insert(row));
+      .upsert({ ...row, card_content: cardObj }, CONFLICT);
+    if (error) ({ error } = await db.from('insight_feedback').upsert(row, CONFLICT));
     if (error) throw error;
+    const changed = localStorage.getItem(p.key) && localStorage.getItem(p.key) !== p.verdict;
     localStorage.setItem(p.key, p.verdict);
+    p.wrap.querySelectorAll('button').forEach(o => { o.style.borderColor = '#E2E7F0'; o.style.background = '#fff'; });
     p.btn.style.borderColor = '#2E7CF7'; p.btn.style.background = '#E8F0FE';
-    p.wrap.querySelectorAll('button').forEach(o => { o.disabled = true; o.style.cursor = 'default'; });
     const toast = document.getElementById('share-toast');
     if (toast) {
-      toast.textContent = 'Thanks for the feedback';
+      toast.textContent = changed ? 'Feedback updated' : 'Thanks for the feedback';
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 1800);
     }
