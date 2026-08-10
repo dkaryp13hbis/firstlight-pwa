@@ -806,10 +806,10 @@ function setRefreshUI(state) {
 
   if (state === 'queued') {
     btn.classList.add('active');
-    btn.textContent = '↻ Queued…';
-    statusEl.textContent = 'waiting for PC';
+    btn.textContent = '↻ Refreshing…';
+    statusEl.textContent = 'Refreshing…';
   } else if (state === 'running') {
-    btn.textContent = '↻ Running…';
+    btn.textContent = '↻ Refreshing…';
     statusEl.textContent = 'fetching data…';
   } else if (state === 'done') {
     statusEl.textContent = 'done — reloading';
@@ -817,11 +817,11 @@ function setRefreshUI(state) {
   } else if (state === 'error') {
     btn.disabled = false;
     btn.classList.remove('active');
-    btn.textContent = '↻ Refresh Data';
+    btn.textContent = '↻ Refresh';
     statusEl.textContent = 'error — try again';
   } else {
     btn.classList.remove('active');
-    btn.textContent = '↻ Refresh Data';
+    btn.textContent = '↻ Refresh';
     statusEl.textContent = '';
   }
 }
