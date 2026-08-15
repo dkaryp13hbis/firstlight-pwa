@@ -2,7 +2,7 @@
  *  info + Share pill, Yesterday 2x2 KPI grid with gradient top borders,
  *  MTD as 4 discrete cards, OTB months stacked full-width. */
 import type { Briefing } from '../types';
-import { euro, pct, signedPct, varPct } from '../api';
+import { euro, signedPct, varPct } from '../api';
 import { InfoButton } from './Info';
 
 export const ICONS: Record<string, React.ReactNode> = {
@@ -56,14 +56,12 @@ const KIcons = {
   rev: <KIcon><path d="M4 19l5-6 4 3 7-9" /><path d="M15 7h5v5" /></KIcon>,
 };
 
-const kiloK = (v: number) => (v >= 1000 ? `€${(v / 1000).toFixed(1)}K` : `€${Math.round(v)}`);
-
 export function KpiRow({ briefing }: { briefing: Briefing }) {
   const y = briefing.data.yesterday;
   const dt = new Date(briefing.report_date + 'T00:00:00Z');
   const subtitle = `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getUTCDay()]}, ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getUTCMonth()]} ${dt.getUTCDate()} vs same day LY`;
   const kpis = [
-    { icon: KIcons.rev, label: 'TOTAL REVENUE', value: kiloK(y.revenue), ly: kiloK(y.revenueLY), v: varPct(y.revenue, y.revenueLY) },
+    { icon: KIcons.rev, label: 'REVENUE', value: euro(y.revenue), ly: euro(y.revenueLY), v: varPct(y.revenue, y.revenueLY) },
     { icon: KIcons.occ, label: 'OCCUPANCY', value: `${Math.round(y.occupancy * 100)}%`, ly: `${Math.round(y.occupancyLY * 100)}%`, v: varPct(y.occupancy, y.occupancyLY) },
     { icon: KIcons.adr, label: 'ADR', value: `€${Math.round(y.adr)}`, ly: `€${Math.round(y.adrLY)}`, v: varPct(y.adr, y.adrLY) },
     { icon: KIcons.rooms, label: 'ROOM NIGHTS', value: String(y.roomNights), ly: String(y.roomNightsLY), v: varPct(y.roomNights, y.roomNightsLY) },
@@ -82,9 +80,10 @@ export function KpiRow({ briefing }: { briefing: Briefing }) {
               {k.icon}
               <span style={{ fontSize: 11, letterSpacing: '.08em', color: KC.sub, fontWeight: 800 }}>{k.label}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 29, fontWeight: 800, color: KC.ink }}>{k.value}</span>
-              <span style={{ fontSize: 13, color: KC.muted, fontWeight: 600 }}>vs {k.ly}</span>
+              <span style={{ fontSize: 13, color: KC.muted, fontWeight: 600 }}>vs</span>
+              <span style={{ fontSize: 13, color: KC.muted, fontWeight: 600 }}>{k.ly}</span>
             </div>
             <div style={{
               fontSize: 12.5, fontWeight: 800, borderRadius: 99, padding: '2px 10px',
@@ -103,10 +102,10 @@ export function MtdStrip({ briefing }: { briefing: Briefing }) {
   const dt = new Date(briefing.report_date + 'T00:00:00Z');
   const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getUTCMonth()];
   const kpis = [
-    { label: 'REVENUE', value: (m.revenue >= 1000 ? `€${Math.round(m.revenue / 1000)}K` : `€${Math.round(m.revenue)}`), v: varPct(m.revenue, m.revenueLY) },
+    { label: 'REVENUE', value: euro(m.revenue), v: varPct(m.revenue, m.revenueLY) },
     { label: 'OCC', value: `${(m.occupancy * 100).toFixed(1)}%`, v: varPct(m.occupancy, m.occupancyLY) },
     { label: 'ADR', value: `€${Math.round(m.adr)}`, v: varPct(m.adr, m.adrLY) },
-    { label: 'ROOMS', value: String(m.roomNights), v: varPct(m.roomNights, m.roomNightsLY) },
+    { label: 'ROOM NIGHTS', value: String(m.roomNights), v: varPct(m.roomNights, m.roomNightsLY) },
   ];
   return (
     <div style={{ background: '#fff', border: `1px solid ${KC.border}`, borderRadius: 18, padding: '14px 0 16px', marginBottom: 22 }}>
@@ -131,27 +130,51 @@ export function MtdStrip({ briefing }: { briefing: Briefing }) {
 export function OtbCards({ briefing }: { briefing: Briefing }) {
   const months = briefing.data.pace_current ?? [];
   if (!months.length) return null;
+  const MC = { up: '#1a7a50', upBg: 'rgba(26,122,80,.12)', down: '#c7411b', downBg: 'rgba(199,65,27,.12)', zebra: '#f6f8fc' };
+  const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: `1.1fr repeat(${months.length}, 1fr)`, gap: 0 };
+  const Cell = ({ value, v }: { value: string; v: number }) => (
+    <span style={{ textAlign: 'center', borderLeft: '2px solid #fff', padding: '0 4px' }}>
+      <span style={{ fontSize: 12.5, fontWeight: 800, color: KC.ink, whiteSpace: 'nowrap' }}>{value}</span>
+      <br />
+      <span style={{
+        fontSize: 9.5, fontWeight: 800, borderRadius: 99, padding: '1px 6px', whiteSpace: 'nowrap',
+        color: v >= 0 ? MC.up : MC.down, background: v >= 0 ? MC.upBg : MC.downBg,
+      }}>{v >= 0 ? '▲' : '▼'}{Math.abs(v).toFixed(1)}%</span>
+    </span>
+  );
+  const rows = [
+    { icon: KIcons.rev, label: 'Revenue', cells: months.map(p => ({ value: euro(p.rev), v: varPct(p.rev, p.rev_stly) })) },
+    { icon: KIcons.occ, label: 'Occupancy', cells: months.map(p => ({ value: `${Math.round(p.occ * 100)}%`, v: varPct(p.occ, p.stly) })) },
+    { icon: KIcons.adr, label: 'ADR', cells: months.map(p => ({ value: `€${Math.round(p.adr)}`, v: varPct(p.adr, p.adr_stly) })) },
+  ];
   return (
-    <>
-      <SectionLabel icon="cal" info="otb3" title="On The Books">On The Books — Next 3 Months</SectionLabel>
-      {months.map(p => {
-        const vs = p.rev_stly ? ((p.rev - p.rev_stly) / p.rev_stly) * 100 : 0;
-        const col = p.status === 'ahead' ? 'var(--green)' : p.status === 'behind' ? 'var(--red)' : 'var(--n500)';
-        const bar = p.status === 'ahead' ? 'var(--grad-cyan)' : p.status === 'behind' ? 'var(--red)' : 'var(--n500)';
-        return (
-          <div key={p.month} className="card" style={{ padding: '0 0 16px', textAlign: 'center', overflow: 'hidden', marginBottom: 10 }}>
-            <div style={{ height: 4, background: bar }} />
-            <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--n500)', textTransform: 'uppercase', letterSpacing: '.06em', margin: '14px 0 6px' }}>{p.month}</div>
-            <div className="t-value" style={{ fontSize: 26, letterSpacing: '-.03em', lineHeight: 1, color: 'var(--text)' }}>{euro(p.rev)}</div>
-            <div style={{ fontSize: 12, color: 'var(--n500)', fontWeight: 700, marginTop: 8 }}>
-              <b style={{ fontWeight: 800, color: 'var(--text)' }}>{p.rn}</b> rn · <span style={{ color: col }}>{pct(p.occ)}</span> occ
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 700, marginTop: 5, color: vs >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {vs >= 0 ? '▲' : '▼'} {signedPct(vs, 0)} vs STLY
-            </div>
-          </div>
-        );
-      })}
-    </>
+    <div style={{ background: '#fff', border: `1px solid ${KC.border}`, borderRadius: 20, padding: 16, marginBottom: 22 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        {ICONS.cal}
+        <span style={{ fontSize: 13, fontWeight: 800, color: KC.ink }}>On The Books — Next 3 Months</span>
+        <span style={{ fontSize: 10, color: KC.sub, fontWeight: 600 }}>· vs STLY</span>
+        <InfoButton k="otb3" />
+      </div>
+      <div style={{ ...grid, padding: '0 0 6px' }}>
+        <span />
+        {months.map(p => (
+          <span key={p.month} style={{ textAlign: 'center', fontSize: 10, fontWeight: 800, color: '#2e7cf7', letterSpacing: '.06em', padding: '0 4px' }}>
+            {p.month.toUpperCase()}
+          </span>
+        ))}
+      </div>
+      {rows.map((row, i) => (
+        <div key={row.label} style={{
+          ...grid, padding: '10px 0', alignItems: 'center',
+          background: i % 2 === 0 ? MC.zebra : 'transparent', borderRadius: 12,
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px' }}>
+            {row.icon}
+            <span style={{ fontSize: 11, fontWeight: 800, color: KC.ink }}>{row.label}</span>
+          </span>
+          {row.cells.map((c, j) => <Cell key={j} {...c} />)}
+        </div>
+      ))}
+    </div>
   );
 }
