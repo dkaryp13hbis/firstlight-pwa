@@ -54,7 +54,7 @@ export default function App() {
   /* briefing */
   const load = useCallback(() => {
     if (!hotelId) return;
-    fetchLatestBriefing().then(setBriefing).catch(e => setError(String(e)));
+    fetchLatestBriefing(hotelId).then(setBriefing).catch(e => setError(String(e)));
   }, [hotelId]);
   useEffect(load, [load]);
 
