@@ -27,6 +27,7 @@ export interface PaceMonth {
   rev_final: number;
   adr: number;
   adr_stly: number;
+  adr_final_ly: number;
   occ: number;            // 0..1
   stly: number;
   final: number;

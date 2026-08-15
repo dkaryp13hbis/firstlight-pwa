@@ -9,12 +9,13 @@ const AX = { fontSize: 11, fontWeight: 700, fill: '#4D5A74' } as const;
 
 /* ── Pace charts: revenue / ADR grouped bars + occupancy lines ─────────── */
 
-function BarPace({ months, field, fieldStly, fmt }: {
-  months: PaceMonth[]; field: 'rev' | 'adr'; fieldStly: 'rev_stly' | 'adr_stly'; fmt: (v: number) => string;
+function BarPace({ months, field, fieldStly, fieldFinal, fmt }: {
+  months: PaceMonth[]; field: 'rev' | 'adr'; fieldStly: 'rev_stly' | 'adr_stly';
+  fieldFinal: 'rev_final' | 'adr_final_ly'; fmt: (v: number) => string;
 }) {
   const W = 560, H = 192, bot = 145, ch = 131;
   const n = months.length, step = 440 / n, bw = n > 6 ? 12 : 13;
-  const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number))) * 1.1;
+  const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.1;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
       {months.map((m, i) => {
@@ -26,6 +27,11 @@ function BarPace({ months, field, fieldStly, fmt }: {
             <rect x={x - bw - 1.5} y={bot - vTy} width={bw} height={vTy} rx={3}
               fill={m.status === 'behind' ? '#B83A1B' : '#2E7CF7'} />
             <rect x={x + 1.5} y={bot - vLy} width={bw} height={vLy} rx={3} fill="#C9D2E3" />
+            {(m[fieldFinal] as number) > 0 && (
+              <line x1={x - bw - 3} y1={bot - (m[fieldFinal] as number) / mx * ch}
+                x2={x + bw + 3} y2={bot - (m[fieldFinal] as number) / mx * ch}
+                stroke="#1A7A50" strokeWidth={1.5} strokeDasharray="3,2.5" />
+            )}
             <text x={x} y={bot + 18} textAnchor="middle" {...AX}>{m.month}</text>
             <text x={x} y={bot - vTy - 6} textAnchor="middle" style={{ fontSize: 10.5, fontWeight: 800, fill: '#1D1B20' }}>
               {fmt(m[field] as number)}
@@ -51,7 +57,7 @@ function OccPace({ months }: { months: PaceMonth[] }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
       <path d={path(stlyPts)} fill="none" stroke="#C9D2E3" strokeWidth={2.5} />
-      {finPts.length > 1 && <path d={path(finPts)} fill="none" stroke="#0F2860" strokeWidth={2} strokeDasharray="5 4" />}
+      {finPts.length > 1 && <path d={path(finPts)} fill="none" stroke="#1A7A50" strokeWidth={1.5} strokeDasharray="4,3" strokeLinecap="round" />}
       <path d={path(occPts)} fill="none" stroke="#2E7CF7" strokeWidth={3} />
       {months.map((m, i) => (
         <g key={m.month}>
@@ -338,15 +344,15 @@ export function OtbTab({ briefing }: { briefing: Briefing }) {
     <>
       <SectionLabel>Pace — OTB vs STLY vs Final LY</SectionLabel>
       <ChartCard title="Revenue by month">
-        <Legend items={[['#2E7CF7', 'on the books'], ['#C9D2E3', 'STLY']]} />
-        <BarPace months={pace} field="rev" fieldStly="rev_stly" fmt={v => kilo(v)} />
+        <Legend items={[['#2E7CF7', 'on the books'], ['#C9D2E3', 'STLY'], ['#1A7A50', 'final LY', true]]} />
+        <BarPace months={pace} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} />
       </ChartCard>
       <ChartCard title="ADR by month">
-        <Legend items={[['#2E7CF7', 'on the books'], ['#C9D2E3', 'STLY']]} />
-        <BarPace months={pace} field="adr" fieldStly="adr_stly" fmt={v => `€${Math.round(v)}`} />
+        <Legend items={[['#2E7CF7', 'on the books'], ['#C9D2E3', 'STLY'], ['#1A7A50', 'final LY', true]]} />
+        <BarPace months={pace} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} />
       </ChartCard>
       <ChartCard title="Occupancy by month">
-        <Legend items={[['#2E7CF7', 'on the books'], ['#C9D2E3', 'STLY'], ['#0F2860', 'final LY', true]]} />
+        <Legend items={[['#2E7CF7', 'on the books'], ['#C9D2E3', 'STLY'], ['#1A7A50', 'final LY', true]]} />
         <OccPace months={pace} />
       </ChartCard>
       <CurveMeter months={fwd} />
