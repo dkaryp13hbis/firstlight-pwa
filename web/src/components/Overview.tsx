@@ -60,16 +60,16 @@ const kiloK = (v: number) => (v >= 1000 ? `€${(v / 1000).toFixed(1)}K` : `€$
 
 export function KpiRow({ briefing }: { briefing: Briefing }) {
   const y = briefing.data.yesterday;
-  const dt = new Date(briefing.data.report_date + 'T00:00:00Z');
+  const dt = new Date(briefing.report_date + 'T00:00:00Z');
   const subtitle = `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getUTCDay()]}, ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getUTCMonth()]} ${dt.getUTCDate()} vs same day LY`;
   const kpis = [
-    { icon: KIcons.rooms, label: 'ROOMS SOLD', value: String(y.roomNights), ly: String(y.roomNightsLY), v: varPct(y.roomNights, y.roomNightsLY) },
+    { icon: KIcons.rev, label: 'TOTAL REVENUE', value: kiloK(y.revenue), ly: kiloK(y.revenueLY), v: varPct(y.revenue, y.revenueLY) },
     { icon: KIcons.occ, label: 'OCCUPANCY', value: `${Math.round(y.occupancy * 100)}%`, ly: `${Math.round(y.occupancyLY * 100)}%`, v: varPct(y.occupancy, y.occupancyLY) },
     { icon: KIcons.adr, label: 'ADR', value: `€${Math.round(y.adr)}`, ly: `€${Math.round(y.adrLY)}`, v: varPct(y.adr, y.adrLY) },
-    { icon: KIcons.rev, label: 'REVENUE', value: kiloK(y.revenue), ly: kiloK(y.revenueLY), v: varPct(y.revenue, y.revenueLY) },
+    { icon: KIcons.rooms, label: 'ROOM NIGHTS', value: String(y.roomNights), ly: String(y.roomNightsLY), v: varPct(y.roomNights, y.roomNightsLY) },
   ];
   return (
-    <div style={{ background: KC.panelBg, borderRadius: 20, padding: 16, marginBottom: 22 }}>
+    <div style={{ marginBottom: 22 }}>
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
         <span style={{ fontSize: 13, fontWeight: 800, color: KC.ink }}>Yesterday</span>
         <span style={{ fontSize: 11, color: KC.sub, fontWeight: 600 }}>· {subtitle}</span>
@@ -77,18 +77,18 @@ export function KpiRow({ briefing }: { briefing: Briefing }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {kpis.map(k => (
-          <div key={k.label} style={{ background: '#fff', borderRadius: 16, padding: 13, boxShadow: '0 2px 8px rgba(15,40,96,.06)' }}>
+          <div key={k.label} style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 2px 8px rgba(15,40,96,.06)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {k.icon}
-              <span style={{ fontSize: 10, letterSpacing: '.08em', color: KC.sub, fontWeight: 800 }}>{k.label}</span>
+              <span style={{ fontSize: 11, letterSpacing: '.08em', color: KC.sub, fontWeight: 800 }}>{k.label}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-              <span style={{ fontSize: 24, fontWeight: 800, color: KC.ink }}>{k.value}</span>
-              <span style={{ fontSize: 12, color: KC.muted, fontWeight: 600 }}>vs {k.ly}</span>
+              <span style={{ fontSize: 29, fontWeight: 800, color: KC.ink }}>{k.value}</span>
+              <span style={{ fontSize: 13, color: KC.muted, fontWeight: 600 }}>vs {k.ly}</span>
             </div>
             <div style={{
-              fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '1px 8px',
-              display: 'inline-block', marginTop: 3,
+              fontSize: 12.5, fontWeight: 800, borderRadius: 99, padding: '2px 10px',
+              display: 'inline-block', marginTop: 5,
               color: k.v >= 0 ? KC.up : KC.down, background: k.v >= 0 ? KC.upBg : KC.downBg,
             }}>{signedPct(k.v)} vs LY</div>
           </div>
@@ -100,15 +100,13 @@ export function KpiRow({ briefing }: { briefing: Briefing }) {
 
 export function MtdStrip({ briefing }: { briefing: Briefing }) {
   const m = briefing.data.mtd;
-  const dt = new Date(briefing.data.report_date + 'T00:00:00Z');
+  const dt = new Date(briefing.report_date + 'T00:00:00Z');
   const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getUTCMonth()];
-  const revpar = m.adr * m.occupancy;
-  const revparLY = m.adrLY * m.occupancyLY;
   const kpis = [
+    { label: 'REVENUE', value: (m.revenue >= 1000 ? `€${Math.round(m.revenue / 1000)}K` : `€${Math.round(m.revenue)}`), v: varPct(m.revenue, m.revenueLY) },
     { label: 'OCC', value: `${(m.occupancy * 100).toFixed(1)}%`, v: varPct(m.occupancy, m.occupancyLY) },
     { label: 'ADR', value: `€${Math.round(m.adr)}`, v: varPct(m.adr, m.adrLY) },
-    { label: 'REVPAR', value: `€${Math.round(revpar)}`, v: varPct(revpar, revparLY) },
-    { label: 'REVENUE', value: (m.revenue >= 1000 ? `€${Math.round(m.revenue / 1000)}K` : `€${Math.round(m.revenue)}`), v: varPct(m.revenue, m.revenueLY) },
+    { label: 'ROOMS', value: String(m.roomNights), v: varPct(m.roomNights, m.roomNightsLY) },
   ];
   return (
     <div style={{ background: '#fff', border: `1px solid ${KC.border}`, borderRadius: 18, padding: '14px 0 16px', marginBottom: 22 }}>
