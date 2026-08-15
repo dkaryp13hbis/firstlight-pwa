@@ -4,7 +4,7 @@
  *  no longer happens server-side). */
 import { useMemo, useState } from 'react';
 import type { Briefing } from '../types';
-import { euro, kilo, pct, signedPct, varPct } from '../api';
+import { euro, kilo, signedPct, varPct } from '../api';
 import { InfoButton } from './Info';
 
 function speak(text: string, btn: HTMLButtonElement) {
@@ -150,30 +150,6 @@ export function SmartSummary({ briefing }: { briefing: Briefing }) {
           )}
         </>
       )}
-    </div>
-  );
-}
-
-export function KpiRow({ briefing }: { briefing: Briefing }) {
-  const y = briefing.data.yesterday;
-  const cells: [string, string, number, string][] = [
-    ['Total Revenue', euro(y.revenue), varPct(y.revenue, y.revenueLY), `vs LY ${euro(y.revenueLY)}`],
-    ['Occupancy', pct(y.occupancy), varPct(y.occupancy, y.occupancyLY), `vs LY ${pct(y.occupancyLY)}`],
-    ['ADR', `${Math.round(y.adr)} €`, varPct(y.adr, y.adrLY), `vs LY ${Math.round(y.adrLY)} €`],
-    ['Room Nights', String(y.roomNights), varPct(y.roomNights, y.roomNightsLY), `vs LY ${y.roomNightsLY}`],
-  ];
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 14 }}>
-      {cells.map(([label, value, v, sub]) => (
-        <div key={label} className="card" style={{ padding: '14px 6px 12px', textAlign: 'center' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--n700)', marginBottom: 6 }}>{label}</div>
-          <div className="t-value" style={{ fontSize: 22, letterSpacing: '-.03em', lineHeight: 1, marginBottom: 8, color: 'var(--text)' }}>{value}</div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: v >= 0 ? 'var(--green)' : 'var(--red)' }}>
-            {v >= 0 ? '▲' : '▼'} {signedPct(v)}
-          </div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--cap)', marginTop: 2 }}>{sub}</div>
-        </div>
-      ))}
     </div>
   );
 }
