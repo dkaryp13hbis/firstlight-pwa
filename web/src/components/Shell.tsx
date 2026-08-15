@@ -1,5 +1,6 @@
 /** App chrome: navy top bar with the CANONICAL lockup B (verbatim geometry —
- *  never redraw), icon cluster, hotel row, tab bar. */
+ *  never redraw), icon cluster, hotel row with picker, refresh, tab bar. */
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 
 export function LogoLockup() {
@@ -42,42 +43,78 @@ export function LogoLockup() {
 const TABS = ['Overview', 'Pickup', 'OTB', 'AI Insights'] as const;
 export type Tab = typeof TABS[number];
 
+const icoStyle: React.CSSProperties = {
+  width: 36, height: 36, borderRadius: '50%',
+  background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.11)',
+  color: 'rgba(255,255,255,.85)', fontSize: 14,
+};
+
 export function Shell(props: {
-  hotelName: string;
+  hotels: { id: string; name: string }[];
+  hotelId: string;
+  onHotel: (id: string) => void;
   tab: Tab;
   onTab: (t: Tab) => void;
   aiCount?: number;
+  refreshState: 'idle' | 'busy' | 'done' | 'error';
+  onRefresh: () => void;
+  bellOn: boolean;
+  onBell: () => void;
+  onSettings: () => void;
   children: ReactNode;
 }) {
+  const [pickOpen, setPickOpen] = useState(false);
+  const current = props.hotels.find(h => h.id === props.hotelId)?.name ?? 'Hotel';
+  const busy = props.refreshState === 'busy';
   return (
     <div>
       <header style={{ background: 'var(--app-top)', padding: '12px 16px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <LogoLockup />
           <div style={{ display: 'flex', gap: 10 }}>
-            {['🔔', '⇪', '⚙'].map(g => (
-              <button key={g} style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.11)',
-                color: 'rgba(255,255,255,.85)', fontSize: 14,
-              }}>{g}</button>
-            ))}
+            <button style={{ ...icoStyle, color: props.bellOn ? '#38E1F0' : icoStyle.color, borderColor: props.bellOn ? 'rgba(56,225,240,.4)' : undefined }}
+              onClick={props.onBell} title={props.bellOn ? 'Notifications on' : 'Notifications off'}>🔔</button>
+            <button style={icoStyle} onClick={props.onSettings} title="Settings">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, position: 'relative' }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.7)' }}>Hotel</span>
-          <div style={{
+          <div onClick={() => props.hotels.length > 1 && setPickOpen(!pickOpen)} style={{
             flex: 1, padding: '7px 12px', borderRadius: 8, color: '#fff',
             border: '1px solid rgba(46,124,247,.35)', background: 'rgba(46,124,247,.1)',
             fontSize: 11, fontWeight: 600, display: 'flex', justifyContent: 'space-between',
+            cursor: props.hotels.length > 1 ? 'pointer' : 'default',
           }}>
-            <span>{props.hotelName}</span><span>▾</span>
+            <span>{current}</span>{props.hotels.length > 1 && <span>▾</span>}
           </div>
-          <button style={{
+          {pickOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 6px)', left: 40, zIndex: 1001,
+              background: '#0A1F4D', border: '1px solid rgba(255,255,255,.12)',
+              borderRadius: 10, overflow: 'hidden', minWidth: 190, boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+            }}>
+              {props.hotels.map(h => (
+                <button key={h.id} onClick={() => { setPickOpen(false); props.onHotel(h.id); }} style={{
+                  display: 'block', width: '100%', background: 'none', border: 'none',
+                  borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'left',
+                  color: h.id === props.hotelId ? '#38E1F0' : 'rgba(255,255,255,.8)',
+                  fontSize: 12, fontWeight: h.id === props.hotelId ? 700 : 500, padding: '12px 14px',
+                }}>{h.name}</button>
+              ))}
+            </div>
+          )}
+          <button onClick={props.onRefresh} disabled={busy} style={{
             padding: '7px 16px', borderRadius: 8, whiteSpace: 'nowrap',
-            border: '1px solid rgba(255,255,255,.13)', background: 'rgba(255,255,255,.06)',
-            color: 'rgba(255,255,255,.8)', fontSize: 11, fontWeight: 600,
-          }}>↻ Refresh</button>
+            border: busy ? '1px solid rgba(56,225,240,.35)' : '1px solid rgba(255,255,255,.13)',
+            background: busy ? 'rgba(56,225,240,.12)' : 'rgba(255,255,255,.06)',
+            color: busy ? '#38E1F0' : 'rgba(255,255,255,.8)', fontSize: 11, fontWeight: 600,
+            opacity: busy ? 1 : undefined,
+          }}>{busy ? '↻ Refreshing…' : '↻ Refresh'}</button>
         </div>
       </header>
 

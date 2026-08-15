@@ -97,7 +97,7 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
   return (
     <>
       <style>{`@keyframes pwring{0%{background-position:0 0,0% 50%}50%{background-position:0 0,100% 50%}100%{background-position:0 0,0% 50%}}`}</style>
-      <SectionLabel>Pickup Activity</SectionLabel>
+      <SectionLabel info="pickup">Pickup Activity</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
         {boxes.map(b => (
           <div key={b.key} className="card" onClick={() => setWin(b.key)}

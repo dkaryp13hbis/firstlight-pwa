@@ -30,12 +30,14 @@ export function MtdStrip({ briefing }: { briefing: Briefing }) {
   );
 }
 
-export function SectionLabel({ children }: { children: React.ReactNode }) {
+import { InfoButton } from './Info';
+
+export function SectionLabel({ children, info }: { children: React.ReactNode; info?: string }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700,
-      color: '#0F2860', margin: '18px 0 8px', letterSpacing: '-.01em',
-    }}>{children}</div>
+      color: '#0F2860', margin: '18px 0 8px', letterSpacing: '-.01em', flexWrap: 'wrap',
+    }}>{children}{info && <InfoButton k={info} />}</div>
   );
 }
 
@@ -44,7 +46,7 @@ export function OtbCards({ briefing }: { briefing: Briefing }) {
   if (!months.length) return null;
   return (
     <>
-      <SectionLabel>On The Books — Next 3 Months</SectionLabel>
+      <SectionLabel info="otb3">On The Books — Next 3 Months</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${months.length}, 1fr)`, gap: 8, marginBottom: 14 }}>
         {months.map(p => {
           const vs = p.rev_stly ? ((p.rev - p.rev_stly) / p.rev_stly) * 100 : 0;

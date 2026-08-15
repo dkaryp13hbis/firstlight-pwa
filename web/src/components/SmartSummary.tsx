@@ -5,6 +5,32 @@
 import { useMemo, useState } from 'react';
 import type { Briefing } from '../types';
 import { euro, kilo, pct, signedPct, varPct } from '../api';
+import { InfoButton } from './Info';
+
+function speak(text: string, btn: HTMLButtonElement) {
+  const s = window.speechSynthesis;
+  if (!s) return;
+  if (s.speaking) { s.cancel(); btn.textContent = '🔊'; return; }
+  const go = () => {
+    const vs = s.getVoices();
+    const fem = /samantha|karen|moira|tessa|martha|serena|victoria|zira|aria|jenny|susan|catherine|nicky|female|woman/i;
+    let pick = vs.find(v => v.lang?.startsWith('en') && fem.test(v.name))
+      ?? vs.find(v => /google us english|google uk english female/i.test(v.name))
+      ?? vs.find(v => v.lang?.startsWith('en'));
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 1.0; u.pitch = 1.05;
+    if (pick) u.voice = pick;
+    u.onend = () => { btn.textContent = '🔊'; };
+    u.onerror = () => { btn.textContent = '🔊'; };
+    btn.textContent = '⏹';
+    s.speak(u);
+  };
+  if (s.getVoices().length) go();
+  else {
+    s.onvoiceschanged = () => { s.onvoiceschanged = null; go(); };
+    setTimeout(() => { if (btn.textContent !== '⏹') go(); }, 300);
+  }
+}
 
 /* bold €/%/numbers on the navy surface, mirroring highlight_dark */
 function Rich({ text }: { text: string }) {
@@ -68,16 +94,24 @@ export function SmartSummary({ briefing }: { briefing: Briefing }) {
         'radial-gradient(90% 100% at 92% 0%, rgba(56,225,240,.4) 0%, rgba(46,124,247,.16) 40%, rgba(10,31,77,0) 70%),' +
         'linear-gradient(160deg, #0F2860, #0A1F4D)',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10,
           letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--cyan)', fontWeight: 600,
         }}>
           <span style={{ width: 5, height: 5, background: 'var(--cyan)', borderRadius: '50%' }} />
           Smart Summary
+          <InfoButton k="hero" dark />
         </span>
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,.55)', fontWeight: 600 }}>
-          Last refresh {briefing.data.report_date} · {d.generated_at}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.55)', fontWeight: 600 }}>
+            Last refresh {briefing.data.report_date} · {d.generated_at}
+          </span>
+          <button title="Listen to the briefing" onClick={e => speak(hero, e.currentTarget)} style={{
+            background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.2)',
+            borderRadius: 999, width: 32, height: 32, fontSize: 14,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+          }}>🔊</button>
         </span>
       </div>
 

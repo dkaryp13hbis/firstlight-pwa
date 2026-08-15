@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import type { Briefing, Insight } from '../types';
 import { SectionLabel } from './Overview';
+export interface FeedbackRequest { cardId: string; verdict: 1 | -1; card: Insight | null }
 
 const STRIPE: Record<string, string> = {
   ALERT: 'linear-gradient(180deg,#C7411B 0%,#E0A82E 100%)',
@@ -21,8 +22,18 @@ const TAG_STYLE: Record<string, { bg: string; fg: string; bd: string; label: str
   MONITOR:     { bg: 'rgba(124,91,255,.10)', fg: '#6344D9', bd: 'rgba(124,91,255,.22)', label: 'Monitor' },
 };
 
-function Card({ ins }: { ins: Insight }) {
+function Card({ ins, cardId, voted, onFeedback }: {
+  ins: Insight; cardId: string; voted: string | null;
+  onFeedback: (r: FeedbackRequest) => void;
+}) {
   const [open, setOpen] = useState(false);
+  const thumb = (v: 1 | -1, glyph: string) => (
+    <button key={glyph} onClick={() => onFeedback({ cardId, verdict: v, card: ins })} style={{
+      border: voted === String(v) ? '1.5px solid #2E7CF7' : '1.5px solid #E2E7F0',
+      background: voted === String(v) ? '#E8F0FE' : '#fff',
+      borderRadius: 999, width: 30, height: 30, fontSize: 14, padding: 0,
+    }}>{glyph}</button>
+  );
   const tag = TAG_STYLE[ins.tag ?? ins.type ?? 'MONITOR'] ?? TAG_STYLE.MONITOR;
   const kpis = ins.evidence ?? ins.kpis ?? [];
   return (
@@ -77,21 +88,37 @@ function Card({ ins }: { ins: Insight }) {
               )}
             </div>
           )}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6, marginTop: 12,
+            paddingTop: 10, borderTop: '1px solid #EDF0F6',
+            fontSize: 12, fontWeight: 600, color: '#79747E',
+          }}>
+            Was this useful?
+            <span style={{ display: 'inline-flex', gap: 6, marginLeft: 10 }}>
+              {thumb(1, '👍')}{thumb(-1, '👎')}
+            </span>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-export function AiTab({ briefing }: { briefing: Briefing }) {
+export function AiTab({ briefing, hotelId, onFeedback }: {
+  briefing: Briefing; hotelId: string; onFeedback: (r: FeedbackRequest) => void;
+}) {
   const insights = briefing.ai_insights?.insights ?? [];
   if (!insights.length) {
     return <p style={{ textAlign: 'center', color: 'var(--n500)', padding: 24, fontSize: 13 }}>No insights for today.</p>;
   }
   return (
     <>
-      <SectionLabel>AI Insights</SectionLabel>
-      {insights.map((ins, i) => <Card key={ins.id || i} ins={ins} />)}
+      <SectionLabel info="ai">AI Insights</SectionLabel>
+      {insights.map((ins, i) => {
+        const cardId = ins.id || `card_${i + 1}`;
+        const voted = localStorage.getItem(`fl_fb_${hotelId}_${briefing.report_date}_${cardId}`);
+        return <Card key={cardId} ins={ins} cardId={cardId} voted={voted} onFeedback={onFeedback} />;
+      })}
     </>
   );
 }

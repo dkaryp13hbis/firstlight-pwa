@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import type { Briefing, PaceMonth } from '../types';
 import { euro, kilo, pct, signedPct } from '../api';
 import { SectionLabel } from './Overview';
+import { InfoButton } from './Info';
 
 const AX = { fontSize: 11, fontWeight: 700, fill: '#4D5A74' } as const;
 
@@ -95,10 +96,10 @@ const Legend = ({ items }: { items: [string, string, boolean?][] }) => (
   </div>
 );
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({ title, info, children }: { title: string; info?: string; children: React.ReactNode }) {
   return (
     <div className="card" style={{ padding: '16px 16px 12px', marginBottom: 8 }}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{title}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>{title}{info && <InfoButton k={info} />}</div>
       {children}
     </div>
   );
@@ -108,7 +109,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 
 function CurveMeter({ months }: { months: PaceMonth[] }) {
   return (
-    <ChartCard title="Curve position — room nights vs last year">
+    <ChartCard title="Curve position — room nights vs last year" info="meter">
       {months.map(m => {
         const maxRef = Math.max(m.rn, m.rn_final_ly, m.rn_stly, 1) * 1.05;
         const w = (v: number) => `${Math.min(v / maxRef, 1) * 100}%`;
@@ -166,7 +167,7 @@ function BookingSpeed({ months, daily }: { months: PaceMonth[]; daily: DailyRow[
   if (!rows.length) return null;
   const mx = Math.max(1, ...rows.flatMap(r => [r.s7, r.s14, r.needed])) * 1.1;
   return (
-    <ChartCard title="Booking speed — rooms per day">
+    <ChartCard title="Booking speed — rooms per day" info="vel">
       {rows.map(r => (
         <div key={r.month} style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, fontWeight: 700, color: 'var(--n600)', marginBottom: 4 }}>
@@ -216,7 +217,7 @@ function DemandHeat({ briefing }: { briefing: Briefing }) {
     prevMonth = d.getUTCMonth();
   }
   return (
-    <ChartCard title="Demand calendar — next 60 days">
+    <ChartCard title="Demand calendar — next 60 days" info="heat">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
         {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(w => (
           <div key={w} className="t-cap" style={{ textAlign: 'center' }}>{w}</div>
@@ -274,7 +275,7 @@ function AdrBridge({ briefing }: { briefing: Briefing }) {
   if (!model) return null;
   const sgn = (v: number) => `${v >= 0 ? '+' : '−'}€${Math.abs(v).toFixed(0)}`;
   return (
-    <ChartCard title="ADR bridge — month to date vs last year">
+    <ChartCard title="ADR bridge — month to date vs last year" info="bridge">
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
         <span className="t-value" style={{ fontSize: 20 }}>€{model.adrT.toFixed(0)}</span>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--n600)' }}>vs €{model.adrL.toFixed(0)} LY</span>
@@ -315,7 +316,7 @@ function TopSources({ briefing }: { briefing: Briefing }) {
   if (!chans.length) return null;
   const totalRev = chans[0].pct ? chans[0].rev / chans[0].pct : 1;
   return (
-    <ChartCard title="Top Sources — OTB Full Year">
+    <ChartCard title="Top Sources — OTB Full Year" info="sources">
       {chans.map(ch => {
         const w = Math.round(ch.pct * 100);
         const stly = Math.min(100, Math.max(0, (ch.rev_stly / totalRev) * 100));
@@ -350,16 +351,16 @@ export function OtbTab({ briefing }: { briefing: Briefing }) {
   const fwd = pace.filter(m => m.month_num >= curM).slice(0, 3);
   return (
     <>
-      <SectionLabel>Pace — OTB vs STLY vs Final LY</SectionLabel>
-      <ChartCard title="Revenue by month">
+      <SectionLabel info="pace">Pace — OTB vs STLY vs Final LY</SectionLabel>
+      <ChartCard title="Revenue by month" info="crev">
         <Legend items={[['#2E7CF7', 'on the books'], ['#C9D2E3', 'STLY'], ['#1A7A50', 'final LY', true]]} />
         <BarPace months={pace} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} />
       </ChartCard>
-      <ChartCard title="ADR by month">
+      <ChartCard title="ADR by month" info="cadr">
         <Legend items={[['#2E7CF7', 'on the books'], ['#C9D2E3', 'STLY'], ['#1A7A50', 'final LY', true]]} />
         <BarPace months={pace} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} />
       </ChartCard>
-      <ChartCard title="Occupancy by month">
+      <ChartCard title="Occupancy by month" info="cocc">
         <Legend items={[['#2E7CF7', 'on the books'], ['#C9D2E3', 'STLY'], ['#1A7A50', 'final LY', true]]} />
         <OccPace months={pace} />
       </ChartCard>
