@@ -15,6 +15,7 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt }: {
 }) {
   const W = 560, H = 192, bot = 145, ch = 131;
   const n = months.length, step = 440 / n, bw = n > 6 ? 12 : 13;
+  const curM = new Date().getMonth() + 1;
   const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.1;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
@@ -28,7 +29,7 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt }: {
             <rect x={x - bw - 1} y={bot - vTy} width={bw} height={vTy} rx={1.5}
               fill={(m[field] as number) >= ((m[fieldFinal] as number) || Infinity) ? '#1A7A50' : '#0F2860'} />
             <rect x={x + 1} y={bot - vLy} width={bw} height={vLy} rx={1.5} fill="#CDD4E0" />
-            {(m[fieldFinal] as number) > 0 && (
+            {(m[fieldFinal] as number) > 0 && m.month_num >= curM && (
               <line x1={x - bw - 3} y1={bot - (m[fieldFinal] as number) / mx * ch}
                 x2={x + bw + 3} y2={bot - (m[fieldFinal] as number) / mx * ch}
                 stroke="#1A7A50" strokeWidth={1.5} strokeDasharray="3,2.5" />
