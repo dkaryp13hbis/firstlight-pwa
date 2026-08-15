@@ -227,17 +227,21 @@ function DemandHeat({ briefing }: { briefing: Briefing }) {
             borderRadius: 7, padding: '6px 0 5px', textAlign: 'center',
             background: RAMP[bucket(c.occ)],
             color: bucket(c.occ) >= 4 ? '#fff' : '#1D1B20',
-            boxShadow: [
-              c.newMonth ? 'inset 2px 0 0 #1D1B20' : '',
-              c.ring ? '0 0 0 2px #BA1A1A' : '',
-            ].filter(Boolean).join(', ') || undefined,
+            boxShadow: c.ring ? 'inset 0 0 0 2px #BA1A1A'
+              : c.newMonth ? 'inset 2px 0 0 #1D1B20' : undefined,
           }}>
-            <div style={{ fontSize: 13.5, fontWeight: 800 }}>{Math.round(c.occ * 100)}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 800 }}>{Math.round(c.occ * 100)}%</div>
             <div style={{ fontSize: 9.5, fontWeight: 600, opacity: .75 }}>
               {String(c.d.getUTCDate()).padStart(2, '0')}/{String(c.d.getUTCMonth() + 1).padStart(2, '0')}
             </div>
           </div>
         ))}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 10, fontSize: 10, fontWeight: 600, color: 'var(--n600)' }}>
+        empty {RAMP.map(c => <span key={c} style={{ width: 12, height: 12, borderRadius: 3, background: c, display: 'inline-block' }} />)} full
+        <span style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ width: 12, height: 12, borderRadius: 3, background: '#F2F2F7', boxShadow: 'inset 0 0 0 2px #BA1A1A', display: 'inline-block' }} /> behind LY
+        </span>
       </div>
     </ChartCard>
   );
