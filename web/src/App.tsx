@@ -137,13 +137,18 @@ export default function App() {
       else if (dy <= 0) setP(0);
     };
     const onEnd = () => { setP(0); active = false; };
+    const onScroll = () => { if (window.scrollY > 2 && pullRef.current > 0) { setP(0); active = false; } };
     window.addEventListener('touchstart', onStart, { passive: true });
     window.addEventListener('touchmove', onMove, { passive: true });
     window.addEventListener('touchend', onEnd, { passive: true });
+    window.addEventListener('touchcancel', onEnd, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       window.removeEventListener('touchstart', onStart);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
+      window.removeEventListener('touchcancel', onEnd);
+      window.removeEventListener('scroll', onScroll);
     };
   }, []);
 
@@ -164,7 +169,7 @@ export default function App() {
 
   return (
     <>
-      <div style={{
+      {pull > 4 && <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, height: pull,
         background: '#fff', zIndex: 998, overflow: 'hidden',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
@@ -183,7 +188,7 @@ export default function App() {
           color: '#9AA4B8', fontSize: 14, fontWeight: 700, display: 'inline-block',
           transform: `rotate(${pull * 3.2}deg)`,
         }}>↻</span>
-      </div>
+      </div>}
       <div style={{ transform: `translateY(${pull}px)`, transition: pull === 0 ? 'transform .2s' : 'none' }}>
       <Shell
         hotels={hotels} hotelId={hotelId} onHotel={changeHotel}
@@ -204,8 +209,8 @@ export default function App() {
         <OtbTab briefing={briefing} />
         <div id="sec-ai" style={{ scrollMarginTop: 46 }} />
         <AiTab briefing={briefing} hotelId={hotelId} onFeedback={setFb} />
-        <div className="card" style={{
-          marginTop: 28, padding: '12px 16px',
+        <div style={{
+          marginTop: 28, padding: '14px 4px 6px', borderTop: '1px solid #E2E7F0',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
         }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
@@ -218,14 +223,14 @@ export default function App() {
               <rect x="62" y="50" width="8" height="36" rx="4" fill="#0A1F4D" />
               <rect x="62" y="78" width="24" height="8" rx="4" fill="#0A1F4D" />
             </svg>
-            <span style={{ font: "700 15px/1 'Outfit', sans-serif", letterSpacing: '-.02em', color: '#0A1F4D' }}>
-              First<span style={{ color: 'var(--blue)' }}>Light</span>
+            <span style={{ font: "700 14px/1 'Outfit', sans-serif", letterSpacing: '-.02em', color: '#3D4C6F' }}>
+              First<span style={{ color: 'var(--blue)', opacity: .85 }}>Light</span>
             </span>
           </span>
-          <span style={{ fontSize: 11, color: '#9AA4B8', fontWeight: 600 }}>© 2026 · All rights reserved</span>
+          <span style={{ fontSize: 10.5, color: '#A8B1C2', fontWeight: 600 }}>© 2026 · All rights reserved</span>
           <a href="https://hbis.io" style={{
-            background: 'rgba(46,124,247,.1)', color: 'var(--blue)', textDecoration: 'none',
-            borderRadius: 999, padding: '5px 12px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+            background: 'rgba(46,124,247,.08)', color: 'var(--blue)', textDecoration: 'none',
+            borderRadius: 999, padding: '4px 11px', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap',
           }}>an HBIS app</a>
         </div>
       </Shell>
