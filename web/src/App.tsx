@@ -29,7 +29,6 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [pull, setPull] = useState(0);
   const pullRef = useRef(0);
-  const refreshRef = useRef<() => void>(() => undefined);
 
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2000); };
 
@@ -137,10 +136,7 @@ export default function App() {
       if (dy > 0 && window.scrollY <= 0) setP(Math.min(dy * 0.45, 96));
       else if (dy <= 0) setP(0);
     };
-    const onEnd = () => {
-      if (pullRef.current > 64) refreshRef.current();
-      setP(0); active = false;
-    };
+    const onEnd = () => { setP(0); active = false; };
     window.addEventListener('touchstart', onStart, { passive: true });
     window.addEventListener('touchmove', onMove, { passive: true });
     window.addEventListener('touchend', onEnd, { passive: true });
@@ -162,8 +158,6 @@ export default function App() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  refreshRef.current = requestRefresh;
-
   if (!session) return <Login />;
   if (error) return <p style={{ padding: 32, textAlign: 'center' }}>Could not load briefing: {error}</p>;
   if (!briefing) return <p style={{ padding: 32, textAlign: 'center', color: 'var(--n500)' }}>Loading briefing…</p>;
@@ -171,28 +165,26 @@ export default function App() {
   return (
     <>
       <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, height: Math.max(pull, refreshState === 'busy' ? 54 : 0),
-        background: 'var(--app-top)', zIndex: 998, overflow: 'hidden',
+        position: 'fixed', top: 0, left: 0, right: 0, height: pull,
+        background: '#fff', zIndex: 998, overflow: 'hidden',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
         paddingBottom: 8, transition: pull === 0 ? 'height .2s' : 'none',
       }}>
         <svg width="26" height="26" viewBox="0 0 100 100" fill="none" style={{ marginBottom: 4 }}>
           <path d="M18 38 38 28 54 33 74 16" stroke="#2E7CF7" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
           <circle cx="74" cy="16" r="5" fill="#38E1F0" />
-          <rect x="18" y="50" width="8" height="36" rx="4" fill="#fff" />
-          <rect x="18" y="50" width="26" height="8" rx="4" fill="#fff" />
-          <rect x="18" y="64" width="19" height="8" rx="4" fill="#fff" />
-          <rect x="62" y="50" width="8" height="36" rx="4" fill="#fff" />
-          <rect x="62" y="78" width="24" height="8" rx="4" fill="#fff" />
+          <rect x="18" y="50" width="8" height="36" rx="4" fill="#0A1F4D" />
+          <rect x="18" y="50" width="26" height="8" rx="4" fill="#0A1F4D" />
+          <rect x="18" y="64" width="19" height="8" rx="4" fill="#0A1F4D" />
+          <rect x="62" y="50" width="8" height="36" rx="4" fill="#0A1F4D" />
+          <rect x="62" y="78" width="24" height="8" rx="4" fill="#0A1F4D" />
         </svg>
         <span style={{
-          color: '#38E1F0', fontSize: 15, fontWeight: 700, display: 'inline-block',
-          transform: refreshState === 'busy' ? undefined : `rotate(${pull * 3.2}deg)`,
-          animation: refreshState === 'busy' ? 'flspin .8s linear infinite' : undefined,
+          color: '#9AA4B8', fontSize: 14, fontWeight: 700, display: 'inline-block',
+          transform: `rotate(${pull * 3.2}deg)`,
         }}>↻</span>
-        <style>{`@keyframes flspin{to{transform:rotate(360deg)}}`}</style>
       </div>
-      <div style={{ transform: `translateY(${Math.max(pull, refreshState === 'busy' ? 54 : 0)}px)`, transition: pull === 0 ? 'transform .2s' : 'none' }}>
+      <div style={{ transform: `translateY(${pull}px)`, transition: pull === 0 ? 'transform .2s' : 'none' }}>
       <Shell
         hotels={hotels} hotelId={hotelId} onHotel={changeHotel}
         tab={tab} onTab={nav}
@@ -212,24 +204,31 @@ export default function App() {
         <OtbTab briefing={briefing} />
         <div id="sec-ai" style={{ scrollMarginTop: 46 }} />
         <AiTab briefing={briefing} hotelId={hotelId} onFeedback={setFb} />
-        <div style={{ marginTop: 28 }}>
-          <a href="https://app.hbis.io" style={{
-            display: 'block', textAlign: 'center', textDecoration: 'none',
-            background: 'linear-gradient(135deg, #2E7CF7, #38E1F0)', color: '#fff',
-            borderRadius: 12, padding: '15px 10px', fontSize: 14.5, fontWeight: 700, letterSpacing: '-.01em',
-          }}>Open Hotel BI for full report →</a>
-          <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--n500)', fontWeight: 600, marginTop: 10 }}>
-            Booking curves · Channel detail · Room type breakdown · Lead time &amp; LOS
-          </div>
-          <div style={{ textAlign: 'center', fontSize: 10, letterSpacing: '.14em', color: 'var(--cap)', fontWeight: 600, marginTop: 18 }}>
-            FIRSTLIGHT · AI MORNING BRIEFING V2.0
-          </div>
-          <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--cap)', fontWeight: 600, marginTop: 4 }}>
-            Data from Protel PMS · Generated {briefing.data.generated_at} · <a href="#" style={{ color: 'var(--blue)' }}>Manage preferences</a>
-          </div>
+        <div className="card" style={{
+          marginTop: 28, padding: '12px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
+        }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+              <path d="M18 38 38 28 54 33 74 16" stroke="#2E7CF7" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="74" cy="16" r="5" fill="#38E1F0" />
+              <rect x="18" y="50" width="8" height="36" rx="4" fill="#0A1F4D" />
+              <rect x="18" y="50" width="26" height="8" rx="4" fill="#0A1F4D" />
+              <rect x="18" y="64" width="19" height="8" rx="4" fill="#0A1F4D" />
+              <rect x="62" y="50" width="8" height="36" rx="4" fill="#0A1F4D" />
+              <rect x="62" y="78" width="24" height="8" rx="4" fill="#0A1F4D" />
+            </svg>
+            <span style={{ font: "700 15px/1 'Outfit', sans-serif", letterSpacing: '-.02em', color: '#0A1F4D' }}>
+              First<span style={{ color: 'var(--blue)' }}>Light</span>
+            </span>
+          </span>
+          <span style={{ fontSize: 11, color: '#9AA4B8', fontWeight: 600 }}>© 2026 · All rights reserved</span>
+          <a href="https://hbis.io" style={{
+            background: 'rgba(46,124,247,.1)', color: 'var(--blue)', textDecoration: 'none',
+            borderRadius: 999, padding: '5px 12px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+          }}>an HBIS app</a>
         </div>
       </Shell>
-      <div style={{ height: 34, background: 'var(--app-top)' }} />
       </div>
       <SettingsSheet
         open={settingsOpen} onClose={() => setSettingsOpen(false)}
