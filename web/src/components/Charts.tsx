@@ -84,7 +84,7 @@ const Legend = ({ items }: { items: [string, string, boolean?][] }) => (
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="card" style={{ padding: '16px 16px 12px', marginBottom: 8 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{title}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{title}</div>
       {children}
     </div>
   );
@@ -308,16 +308,17 @@ function TopSources({ briefing }: { briefing: Briefing }) {
         const v = ch.var != null ? ch.var * 100 : 0;
         return (
           <div key={ch.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0' }}>
-            <span style={{ width: 64, fontSize: 11.5, fontWeight: 700, color: 'var(--n600)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ch.name}</span>
-            <div style={{ flex: 1, height: 8, background: '#EDF0F6', borderRadius: 4, position: 'relative' }}>
-              <div style={{ width: `${w}%`, height: '100%', background: 'linear-gradient(90deg,#2E7CF7,#38E1F0)', borderRadius: 4 }} />
+            <span style={{ width: 88, fontSize: 13, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ch.name}</span>
+            <div style={{ flex: 1, height: 6, background: 'var(--grey-100)', borderRadius: 4, position: 'relative' }}>
+              <div style={{ width: `${w}%`, height: '100%', background: 'var(--grad-cyan)', borderRadius: 4 }} />
               <div style={{ position: 'absolute', left: `${stly}%`, top: -3, width: 2, height: 14, background: 'var(--blue)', opacity: .5, borderRadius: 1 }} />
             </div>
             <b style={{ fontSize: 11.5, fontWeight: 800, width: 52, textAlign: 'right' }}>{kilo(ch.rev)}</b>
             <span className="t-cap" style={{ width: 48, textAlign: 'right' }}>{kilo(ch.rev_stly)}</span>
-            <span className="t-delta" style={{
-              fontSize: 10.5, width: 52, textAlign: 'right',
-              color: ch.trend === 'up' ? 'var(--green)' : 'var(--red)',
+            <span style={{
+              fontSize: 10.5, fontWeight: 700, padding: '2px 6px', borderRadius: 7,
+              background: ch.trend === 'up' ? 'var(--green-bg)' : 'var(--red-bg)',
+              color: ch.trend === 'up' ? 'var(--green)' : 'var(--red)', whiteSpace: 'nowrap',
             }}>{ch.trend === 'up' ? '▲' : '▼'} {signedPct(v)}</span>
           </div>
         );

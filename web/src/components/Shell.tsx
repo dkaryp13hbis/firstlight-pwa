@@ -88,9 +88,10 @@ export function Shell(props: {
       }}>
         {TABS.map(t => (
           <button key={t} onClick={() => props.onTab(t)} style={{
-            border: 'none', background: props.tab === t ? 'rgba(46,124,247,.1)' : 'transparent',
-            color: props.tab === t ? 'var(--blue)' : 'var(--n500)',
-            fontWeight: 700, fontSize: 12.5, padding: '7px 12px', borderRadius: 8,
+            border: 'none', background: 'transparent',
+            borderBottom: props.tab === t ? '2px solid #2E7CF7' : '2px solid transparent',
+            color: props.tab === t ? '#1E5FD0' : 'var(--n500)',
+            fontWeight: 700, fontSize: 12.5, padding: '7px 10px 6px', borderRadius: 0,
           }}>
             {t}{t === 'AI Insights' && props.aiCount ? (
               <span style={{

@@ -5,12 +5,12 @@ import { useState } from 'react';
 import type { Briefing, Insight } from '../types';
 import { SectionLabel } from './Overview';
 
-const TAG_STYLE: Record<string, { bg: string; fg: string; label: string }> = {
-  ALERT:       { bg: '#FBE9E4', fg: '#A33418', label: 'Alert' },
-  warning:     { bg: '#FBE9E4', fg: '#A33418', label: 'Alert' },
-  OPPORTUNITY: { bg: '#E4F4EC', fg: '#146B46', label: 'Opportunity' },
-  opportunity: { bg: '#E4F4EC', fg: '#146B46', label: 'Opportunity' },
-  MONITOR:     { bg: '#EDF0F6', fg: '#4D5A74', label: 'Monitor' },
+const TAG_STYLE: Record<string, { bg: string; fg: string; bd: string; label: string }> = {
+  ALERT:       { bg: 'rgba(199,65,27,.10)', fg: '#C7411B', bd: 'rgba(199,65,27,.22)', label: 'Alert' },
+  warning:     { bg: 'rgba(199,65,27,.10)', fg: '#C7411B', bd: 'rgba(199,65,27,.22)', label: 'Alert' },
+  OPPORTUNITY: { bg: 'rgba(46,124,247,.10)', fg: '#1E6DD8', bd: 'rgba(46,124,247,.22)', label: 'Opportunity' },
+  opportunity: { bg: 'rgba(46,124,247,.10)', fg: '#1E6DD8', bd: 'rgba(46,124,247,.22)', label: 'Opportunity' },
+  MONITOR:     { bg: 'rgba(124,91,255,.10)', fg: '#6344D9', bd: 'rgba(124,91,255,.22)', label: 'Monitor' },
 };
 
 function Card({ ins }: { ins: Insight }) {
@@ -20,12 +20,12 @@ function Card({ ins }: { ins: Insight }) {
   return (
     <div className="card" style={{ padding: '14px 16px', marginBottom: 8 }}>
       <div onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-        <h2 style={{ flex: 1, fontSize: 14, fontWeight: 800, letterSpacing: '-.01em', lineHeight: 1.35 }}>
+        <h2 style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#0A1F4D', lineHeight: 1.38 }}>
           {ins.headline ?? ins.title}
         </h2>
         <span style={{
           fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 7,
-          background: tag.bg, color: tag.fg, whiteSpace: 'nowrap',
+          background: tag.bg, color: tag.fg, border: '1px solid ' + tag.bd, whiteSpace: 'nowrap',
         }}>{tag.label}</span>
         <span style={{ color: 'var(--cap)', fontSize: 12, transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }}>▾</span>
       </div>

@@ -15,12 +15,13 @@ export function MtdStrip({ briefing }: { briefing: Briefing }) {
     <div className="card" style={{
       display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
       borderRadius: 'var(--r-lg)', marginBottom: 14, overflow: 'hidden',
+      background: 'var(--grey-50)',
     }}>
       {cells.map(([label, value, v]) => (
         <div key={label} style={{ padding: '12px 8px', textAlign: 'center' }}>
-          <div className="t-cap">{label}</div>
-          <div className="t-value" style={{ fontSize: 15, margin: '3px 0 1px' }}>{value}</div>
-          <div className="t-delta" style={{ fontSize: 11, color: v >= 0 ? 'var(--green)' : 'var(--red)' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--n500)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>{label}</div>
+          <div className="t-value" style={{ fontSize: 14, letterSpacing: '-.02em', color: 'var(--text)' }}>{value}</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: v >= 0 ? 'var(--green)' : 'var(--red)' }}>
             {v >= 0 ? '▲' : '▼'} {signedPct(v)}
           </div>
         </div>
@@ -54,10 +55,10 @@ export function OtbCards({ briefing }: { briefing: Briefing }) {
           return (
             <div key={p.month} className="card" style={{ borderRadius: 'var(--r-lg)', padding: '0 0 12px', textAlign: 'center', overflow: 'hidden' }}>
               <div style={{ height: 4, background: bar }} />
-              <div className="t-cap" style={{ marginTop: 10 }}>{p.month}</div>
-              <div className="t-value" style={{ fontSize: 16, margin: '3px 0 2px' }}>{euro(p.rev)}</div>
-              <div style={{ fontSize: 11, color: 'var(--n600)', fontWeight: 600 }}>
-                <b style={{ fontWeight: 800 }}>{p.rn}</b> rn · <span style={{ color: col, fontWeight: 700 }}>{pct(p.occ)}</span> occ
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--n500)', textTransform: 'uppercase', letterSpacing: '.06em', margin: '10px 0 4px' }}>{p.month}</div>
+              <div className="t-value" style={{ fontSize: 20, letterSpacing: '-.03em', lineHeight: 1, color: 'var(--text)' }}>{euro(p.rev)}</div>
+              <div style={{ fontSize: 11, color: 'var(--n500)', fontWeight: 700, marginTop: 6 }}>
+                <b style={{ fontWeight: 800, color: 'var(--text)' }}>{p.rn}</b> rn · <span style={{ color: col, fontWeight: 700 }}>{pct(p.occ)}</span> occ
               </div>
               <div className="t-delta" style={{ fontSize: 11, marginTop: 3, color: vs >= 0 ? 'var(--green)' : 'var(--red)' }}>
                 {vs >= 0 ? '▲' : '▼'} {signedPct(vs, 0)} vs STLY

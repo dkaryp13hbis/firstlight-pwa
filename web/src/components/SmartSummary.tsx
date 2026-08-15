@@ -131,13 +131,13 @@ export function KpiRow({ briefing }: { briefing: Briefing }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 14 }}>
       {cells.map(([label, value, v, sub]) => (
-        <div key={label} className="card" style={{ padding: '14px 8px 12px', textAlign: 'center' }}>
-          <div className="t-cap">{label}</div>
-          <div className="t-value" style={{ fontSize: 17, margin: '4px 0 2px' }}>{value}</div>
-          <div className="t-delta" style={{ fontSize: 11, color: v >= 0 ? 'var(--green)' : 'var(--red)' }}>
+        <div key={label} className="card" style={{ padding: '14px 6px 12px', textAlign: 'center' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--n700)', marginBottom: 6 }}>{label}</div>
+          <div className="t-value" style={{ fontSize: 22, letterSpacing: '-.03em', lineHeight: 1, marginBottom: 8, color: 'var(--text)' }}>{value}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: v >= 0 ? 'var(--green)' : 'var(--red)' }}>
             {v >= 0 ? '▲' : '▼'} {signedPct(v)}
           </div>
-          <div className="t-cap" style={{ marginTop: 3 }}>{sub}</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--cap)', marginTop: 2 }}>{sub}</div>
         </div>
       ))}
     </div>

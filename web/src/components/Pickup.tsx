@@ -110,10 +110,10 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
 
       {fly && (
         <div className="card" style={{ padding: '16px 18px', marginBottom: 6 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
             Booked vs cancelled <span style={{ fontWeight: 600, color: 'var(--n600)' }}>· {fly.ranges[win]}</span>
           </div>
-          <div style={{ display: 'flex', gap: 14, fontSize: 11, fontWeight: 600, color: 'var(--n600)', marginBottom: 8 }}>
+          <div style={{ display: 'flex', gap: 12, fontSize: 10, fontWeight: 600, color: 'var(--n600)', margin: '6px 0 8px' }}>
             <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: '#0F2860', marginRight: 5 }} />booked · {LABELS[win]}</span>
             <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: '#B83A1B', marginRight: 5 }} />cancelled · {LABELS[win]}</span>
           </div>
@@ -122,7 +122,7 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
             const warn = v.b > 0 && v.c > 0.6 * v.b;
             return (
               <div key={mo.m} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
-                <div style={{ width: 42, fontSize: 11.5, fontWeight: 700, color: 'var(--n600)' }}>{mo.m}</div>
+                <div style={{ width: 42, fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>{mo.m}</div>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
                   <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
                     <div style={{ width: `${(v.c / mx) * 100}%`, background: '#B83A1B', height: 13, borderRadius: '7px 0 0 7px', transition: 'width .25s' }} />
@@ -136,7 +136,7 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
                   <span className="t-value" style={{ fontSize: 13, color: v.n < 0 || warn ? 'var(--coral)' : 'var(--green)' }}>
                     {v.n >= 0 ? '+' : ''}{v.n}
                   </span>
-                  <span className="t-cap"> net</span>
+                  <span style={{ fontSize: 9.5, color: 'var(--cap)', fontWeight: 400, marginLeft: 3 }}> net</span>
                 </div>
               </div>
             );
