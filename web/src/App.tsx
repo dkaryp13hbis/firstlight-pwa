@@ -17,6 +17,12 @@ export default function App() {
     fetchLatestBriefing().then(setBriefing).catch(e => setError(String(e)));
   }, []);
 
+  const nav = (t: Tab) => {
+    setTab(t);
+    const id = { Overview: 'sec-overview', Pickup: 'sec-pickup', OTB: 'sec-pace', 'AI Insights': 'sec-ai' }[t];
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   if (error) return <p style={{ padding: 32, textAlign: 'center' }}>Could not load briefing: {error}</p>;
   if (!briefing) return <p style={{ padding: 32, textAlign: 'center', color: 'var(--n500)' }}>Loading briefing…</p>;
 
@@ -24,20 +30,20 @@ export default function App() {
     <Shell
       hotelName={briefing.data.hotel_name}
       tab={tab}
-      onTab={setTab}
+      onTab={nav}
       aiCount={briefing.ai_insights?.insights?.length ?? 0}
     >
-      {tab === 'Overview' && (
-        <>
-          <SmartSummary briefing={briefing} />
-          <KpiRow briefing={briefing} />
-          <MtdStrip briefing={briefing} />
-          <OtbCards briefing={briefing} />
-        </>
-      )}
-      {tab === 'Pickup' && <PickupSection briefing={briefing} />}
-      {tab === 'OTB' && <OtbTab briefing={briefing} />}
-      {tab === 'AI Insights' && <AiTab briefing={briefing} />}
+      <div id="sec-overview" style={{ scrollMarginTop: 46 }} />
+      <SmartSummary briefing={briefing} />
+      <KpiRow briefing={briefing} />
+      <MtdStrip briefing={briefing} />
+      <OtbCards briefing={briefing} />
+      <div id="sec-pickup" style={{ scrollMarginTop: 46 }} />
+      <PickupSection briefing={briefing} />
+      <div id="sec-pace" style={{ scrollMarginTop: 46 }} />
+      <OtbTab briefing={briefing} />
+      <div id="sec-ai" style={{ scrollMarginTop: 46 }} />
+      <AiTab briefing={briefing} />
     </Shell>
   );
 }

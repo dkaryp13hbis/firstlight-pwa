@@ -83,12 +83,14 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
     (d as unknown as { cancel_daily?: CancelRow[] }).cancel_daily ?? [],
   ), [d]);
 
-  const boxes: { key: WinKey; title: string; rn: number; rev: number; cxl: number; sub?: string }[] = [
-    { key: 'today', title: 'Today', rn: pu.today.roomNights, rev: pu.today.revenue, cxl: pu.cancellationsToday },
-    { key: '1d', title: 'Yesterday', rn: pu.last1d.roomNights, rev: pu.last1d.revenue, cxl: pu.cancellations1d, sub: pu.date1d },
-    { key: '3d', title: '3-Day', rn: pu.last3d.roomNights, rev: pu.last3d.revenue, cxl: pu.cancellations3d, sub: pu.date3d },
-    { key: '7d', title: '7-Day', rn: pu.last7d.roomNights, rev: pu.last7d.revenue, cxl: pu.cancellations7d, sub: pu.date7d },
+  const boxes: { key: WinKey; title: string; tCol: string; sub?: string;
+    bRn: number; bRev: number; cRn: number; cRev: number }[] = [
+    { key: 'today', title: 'Today', tCol: 'var(--green)', bRn: pu.today.roomNights, bRev: pu.today.revenue, cRn: pu.cancellationsToday, cRev: pu.cancellationRevenueToday },
+    { key: '1d', title: 'Yesterday', tCol: 'var(--blue)', sub: pu.date1d, bRn: pu.last1d.roomNights, bRev: pu.last1d.revenue, cRn: pu.cancellations1d, cRev: pu.cancellationRevenue },
+    { key: '3d', title: '3-Day', tCol: 'var(--blue)', sub: pu.date3d, bRn: pu.last3d.roomNights, bRev: pu.last3d.revenue, cRn: pu.cancellations3d, cRev: pu.cancellationRevenue3d },
+    { key: '7d', title: '7-Day', tCol: 'var(--blue)', sub: pu.date7d, bRn: pu.last7d.roomNights, bRev: pu.last7d.revenue, cRn: pu.cancellations7d, cRev: pu.cancellationRevenue7d },
   ];
+  const puLbl: React.CSSProperties = { fontSize: 10, color: 'var(--n500)', textTransform: 'uppercase', letterSpacing: '.05em' };
 
   const mx = fly ? Math.max(1, ...fly.months.map(mo => Math.max(mo.w[win].b, mo.w[win].c))) * 1.08 : 1;
 
@@ -100,10 +102,21 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
         {boxes.map(b => (
           <div key={b.key} className="card" onClick={() => setWin(b.key)}
             style={{ padding: 12, cursor: 'pointer', ...(win === b.key ? ringStyle : { border: '1.5px solid transparent' }) }}>
-            <div className="t-cap">{b.title}{b.sub ? ` · ${b.sub}` : ''}</div>
-            <div className="t-value" style={{ fontSize: 17, margin: '4px 0 1px' }}>+{b.rn} <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--cap)' }}>rn</span></div>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--n600)' }}>{kilo(b.rev)}</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--coral)', marginTop: 2 }}>−{b.cxl} cancelled</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: b.tCol, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
+              {b.title}{b.sub ? <span style={{ color: 'var(--cap)', marginLeft: 4 }}>{b.sub}</span> : null}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+              <span style={puLbl}>Booked</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)' }}>+{b.bRn} rn · {kilo(b.bRev)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <span style={puLbl}>Cancel</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)' }}>-{b.cRn} rn · -{kilo(b.cRev)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 6, borderTop: '1px solid var(--grey-100)' }}>
+              <span style={{ ...puLbl, fontWeight: 700, color: 'var(--n600)' }}>Net</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{b.bRn - b.cRn} rn · {kilo(b.bRev - b.cRev)}</span>
+            </div>
           </div>
         ))}
       </div>

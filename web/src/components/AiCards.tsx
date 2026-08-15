@@ -5,6 +5,14 @@ import { useState } from 'react';
 import type { Briefing, Insight } from '../types';
 import { SectionLabel } from './Overview';
 
+const STRIPE: Record<string, string> = {
+  ALERT: 'linear-gradient(180deg,#C7411B 0%,#E0A82E 100%)',
+  warning: 'linear-gradient(180deg,#C7411B 0%,#E0A82E 100%)',
+  OPPORTUNITY: 'linear-gradient(180deg,#2E7CF7 0%,#38E1F0 100%)',
+  opportunity: 'linear-gradient(180deg,#2E7CF7 0%,#38E1F0 100%)',
+  MONITOR: 'linear-gradient(180deg,#7C5BFF 0%,#38E1F0 100%)',
+};
+
 const TAG_STYLE: Record<string, { bg: string; fg: string; bd: string; label: string }> = {
   ALERT:       { bg: 'rgba(199,65,27,.10)', fg: '#C7411B', bd: 'rgba(199,65,27,.22)', label: 'Alert' },
   warning:     { bg: 'rgba(199,65,27,.10)', fg: '#C7411B', bd: 'rgba(199,65,27,.22)', label: 'Alert' },
@@ -18,7 +26,15 @@ function Card({ ins }: { ins: Insight }) {
   const tag = TAG_STYLE[ins.tag ?? ins.type ?? 'MONITOR'] ?? TAG_STYLE.MONITOR;
   const kpis = ins.evidence ?? ins.kpis ?? [];
   return (
-    <div className="card" style={{ padding: '14px 16px', marginBottom: 8 }}>
+    <div style={{
+      background: '#fff', border: '1px solid rgba(10,31,77,.08)', borderRadius: 16,
+      padding: '20px 20px 14px 24px', marginBottom: 12, overflow: 'hidden', position: 'relative',
+      boxShadow: '0 6px 20px rgba(10,31,77,.07), 0 2px 4px rgba(10,31,77,.04)',
+    }}>
+      <div style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, borderRadius: '3px 0 0 3px',
+        background: STRIPE[ins.tag ?? ins.type ?? 'MONITOR'] ?? STRIPE.MONITOR,
+      }} />
       <div onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
         <h2 style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#0A1F4D', lineHeight: 1.38 }}>
           {ins.headline ?? ins.title}

@@ -34,7 +34,7 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700,
-      color: 'var(--n800)', margin: '18px 0 8px', letterSpacing: '-.01em',
+      color: '#0F2860', margin: '18px 0 8px', letterSpacing: '-.01em',
     }}>{children}</div>
   );
 }

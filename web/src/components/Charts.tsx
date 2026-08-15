@@ -22,19 +22,25 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt }: {
         const x = 70 + i * step + step / 2;
         const vTy = (m[field] as number) / mx * ch;
         const vLy = (m[fieldStly] as number) / mx * ch;
+        const vsPct = (m[fieldStly] as number) ? (((m[field] as number) - (m[fieldStly] as number)) / (m[fieldStly] as number)) * 100 : 0;
         return (
           <g key={m.month}>
-            <rect x={x - bw - 1.5} y={bot - vTy} width={bw} height={vTy} rx={3}
-              fill={m.status === 'behind' ? '#B83A1B' : '#2E7CF7'} />
-            <rect x={x + 1.5} y={bot - vLy} width={bw} height={vLy} rx={3} fill="#C9D2E3" />
+            <rect x={x - bw - 1} y={bot - vTy} width={bw} height={vTy} rx={1.5}
+              fill={(m[field] as number) >= ((m[fieldFinal] as number) || Infinity) ? '#1A7A50' : '#0F2860'} />
+            <rect x={x + 1} y={bot - vLy} width={bw} height={vLy} rx={1.5} fill="#CDD4E0" />
             {(m[fieldFinal] as number) > 0 && (
               <line x1={x - bw - 3} y1={bot - (m[fieldFinal] as number) / mx * ch}
                 x2={x + bw + 3} y2={bot - (m[fieldFinal] as number) / mx * ch}
                 stroke="#1A7A50" strokeWidth={1.5} strokeDasharray="3,2.5" />
             )}
             <text x={x} y={bot + 18} textAnchor="middle" {...AX}>{m.month}</text>
-            <text x={x} y={bot - vTy - 6} textAnchor="middle" style={{ fontSize: 10.5, fontWeight: 800, fill: '#1D1B20' }}>
+            <text x={x} y={bot - vTy - 6} textAnchor="middle" style={{ fontSize: 10.5, fontWeight: 800, fill: '#1A2540' }}>
               {fmt(m[field] as number)}
+            </text>
+            <rect x={x - 18} y={167} width={36} height={13} rx={3}
+              fill={vsPct >= 0 ? 'rgba(26,122,80,0.10)' : 'rgba(184,58,27,0.10)'} />
+            <text x={x} y={177} textAnchor="middle" style={{ fontSize: 9, fontWeight: 700, fill: vsPct >= 0 ? '#1A7A50' : '#B83A1B' }}>
+              {vsPct >= 0 ? '+' : ''}{Math.round(vsPct)}%
             </text>
           </g>
         );
@@ -62,7 +68,8 @@ function OccPace({ months }: { months: PaceMonth[] }) {
       {months.map((m, i) => (
         <g key={m.month}>
           <circle cx={x(i)} cy={y(m.occ)} r={4} fill="#2E7CF7" />
-          <text x={x(i)} y={y(m.occ) - 9} textAnchor="middle" style={{ fontSize: 10.5, fontWeight: 800, fill: '#1D1B20' }}>
+          <rect x={x(i) - 16} y={y(m.occ) - 20} width={32} height={14} rx={3} fill="white" />
+          <text x={x(i)} y={y(m.occ) - 9} textAnchor="middle" style={{ fontSize: 10.5, fontWeight: 800, fill: '#1A2540' }}>
             {Math.round(m.occ * 100)}%
           </text>
           <text x={x(i)} y={bot + 18} textAnchor="middle" {...AX}>{m.month}</text>
