@@ -128,7 +128,7 @@ export default function App() {
 
   const nav = (t: Tab) => {
     setTab(t);
-    const id = { Overview: 'sec-overview', Pickup: 'sec-pickup', OTB: 'sec-pace', 'AI Insights': 'sec-ai' }[t];
+    const id = { Overview: 'sec-overview', Pickup: 'sec-pickup', Pace: 'sec-pace', 'AI Insights': 'sec-ai' }[t];
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -157,7 +157,24 @@ export default function App() {
         <OtbTab briefing={briefing} />
         <div id="sec-ai" style={{ scrollMarginTop: 46 }} />
         <AiTab briefing={briefing} hotelId={hotelId} onFeedback={setFb} />
+        <div style={{ marginTop: 28 }}>
+          <a href="https://app.hbis.io" style={{
+            display: 'block', textAlign: 'center', textDecoration: 'none',
+            background: 'linear-gradient(135deg, #2E7CF7, #38E1F0)', color: '#fff',
+            borderRadius: 12, padding: '15px 10px', fontSize: 14.5, fontWeight: 700, letterSpacing: '-.01em',
+          }}>Open Hotel BI for full report →</a>
+          <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--n500)', fontWeight: 600, marginTop: 10 }}>
+            Booking curves · Channel detail · Room type breakdown · Lead time &amp; LOS
+          </div>
+          <div style={{ textAlign: 'center', fontSize: 10, letterSpacing: '.14em', color: 'var(--cap)', fontWeight: 600, marginTop: 18 }}>
+            FIRSTLIGHT · AI MORNING BRIEFING V2.0
+          </div>
+          <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--cap)', fontWeight: 600, marginTop: 4 }}>
+            Data from Protel PMS · Generated {briefing.data.generated_at} · <a href="#" style={{ color: 'var(--blue)' }}>Manage preferences</a>
+          </div>
+        </div>
       </Shell>
+      <div style={{ height: 34, background: 'var(--app-top)' }} />
       <SettingsSheet
         open={settingsOpen} onClose={() => setSettingsOpen(false)}
         lang={lang} onLang={changeLang}

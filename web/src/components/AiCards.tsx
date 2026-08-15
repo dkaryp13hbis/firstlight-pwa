@@ -39,7 +39,7 @@ function Card({ ins, cardId, voted, onFeedback }: {
   return (
     <div style={{
       background: '#fff', border: '1px solid rgba(10,31,77,.08)', borderRadius: 16,
-      padding: '20px 20px 14px 24px', marginBottom: 12, overflow: 'hidden', position: 'relative',
+      padding: '20px 20px 16px 24px', marginBottom: 12, overflow: 'hidden', position: 'relative',
       boxShadow: '0 6px 20px rgba(10,31,77,.07), 0 2px 4px rgba(10,31,77,.04)',
     }}>
       <div style={{
@@ -51,10 +51,13 @@ function Card({ ins, cardId, voted, onFeedback }: {
           {ins.headline ?? ins.title}
         </h2>
         <span style={{
-          fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 7,
+          fontSize: 9.5, fontWeight: 700, padding: '5px 10px', borderRadius: 7,
+          textTransform: 'uppercase', letterSpacing: '.08em',
           background: tag.bg, color: tag.fg, border: '1px solid ' + tag.bd, whiteSpace: 'nowrap',
         }}>{tag.label}</span>
-        <span style={{ color: 'var(--cap)', fontSize: 12, transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }}>▾</span>
+        <span style={{ color: 'var(--cap)', display: 'inline-flex', transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+        </span>
       </div>
       {open && (
         <div style={{ marginTop: 12 }}>
@@ -113,7 +116,7 @@ export function AiTab({ briefing, hotelId, onFeedback }: {
   }
   return (
     <>
-      <SectionLabel info="ai">AI Insights</SectionLabel>
+      <SectionLabel icon="star" info="ai" title="AI Insights">AI Insights</SectionLabel>
       {insights.map((ins, i) => {
         const cardId = ins.id || `card_${i + 1}`;
         const voted = localStorage.getItem(`fl_fb_${hotelId}_${briefing.report_date}_${cardId}`);

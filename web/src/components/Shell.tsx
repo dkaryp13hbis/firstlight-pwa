@@ -40,7 +40,7 @@ export function LogoLockup() {
   );
 }
 
-const TABS = ['Overview', 'Pickup', 'OTB', 'AI Insights'] as const;
+const TABS = ['Overview', 'Pickup', 'Pace', 'AI Insights'] as const;
 export type Tab = typeof TABS[number];
 
 const icoStyle: React.CSSProperties = {
@@ -68,12 +68,20 @@ export function Shell(props: {
   const busy = props.refreshState === 'busy';
   return (
     <div>
-      <header style={{ background: 'var(--app-top)', padding: '12px 16px 12px' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 999 }}>
+      <header style={{ background: 'var(--app-top)', padding: 'calc(10px + env(safe-area-inset-top)) 16px 10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <LogoLockup />
           <div style={{ display: 'flex', gap: 10 }}>
-            <button style={{ ...icoStyle, color: props.bellOn ? '#38E1F0' : icoStyle.color, borderColor: props.bellOn ? 'rgba(56,225,240,.4)' : undefined }}
+            <button style={{ ...icoStyle, color: props.bellOn ? '#38E1F0' : icoStyle.color, borderColor: 'rgba(56,225,240,.4)' }}
               onClick={props.onBell} title={props.bellOn ? 'Notifications on' : 'Notifications off'}>🔔</button>
+            <button style={icoStyle} title="Share"
+              onClick={() => { if (navigator.share) navigator.share({ title: 'FirstLight — Morning Briefing', url: location.href }).catch(() => undefined); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+            </button>
             <button style={icoStyle} onClick={props.onSettings} title="Settings">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />
@@ -119,9 +127,8 @@ export function Shell(props: {
       </header>
 
       <nav style={{
-        display: 'flex', justifyContent: 'center', gap: 4, background: '#fff',
+        display: 'flex', justifyContent: 'space-around', background: '#fff',
         padding: '8px 10px', borderBottom: '1px solid #E8EBF2',
-        position: 'sticky', top: 0, zIndex: 10,
       }}>
         {TABS.map(t => (
           <button key={t} onClick={() => props.onTab(t)} style={{
@@ -139,6 +146,7 @@ export function Shell(props: {
           </button>
         ))}
       </nav>
+      </div>
 
       <main style={{ maxWidth: 560, margin: '0 auto', padding: '14px 14px 40px' }}>
         {props.children}

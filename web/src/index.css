@@ -4,11 +4,12 @@
 
 :root {
   /* surfaces (spec 6c) */
-  --page: #F1F3F8;
+  --page: #EAEDF1;
   --card-bg: #FFFFFF;
-  --card-shadow: 0 1px 2px rgba(15, 40, 96, .06), 0 8px 24px -12px rgba(15, 40, 96, .16);
+  --card-shadow: 0 1px 3px rgba(10, 20, 45, .08), 0 8px 20px rgba(10, 20, 45, .05);
   --r-lg: 14px;
   --r-card: 18px;
+  --sec-gap: 22px;
 
   /* palette */
   --navy: #0F2860;

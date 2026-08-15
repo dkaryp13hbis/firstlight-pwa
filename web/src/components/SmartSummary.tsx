@@ -104,8 +104,8 @@ export function SmartSummary({ briefing }: { briefing: Briefing }) {
           <InfoButton k="hero" dark />
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.55)', fontWeight: 600 }}>
-            Last refresh {briefing.data.report_date} · {d.generated_at}
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.55)', fontWeight: 600, letterSpacing: '.04em' }}>
+            Last refresh {(() => { const dt = new Date(briefing.data.report_date + 'T00:00:00Z'); return `${String(dt.getUTCDate()).padStart(2, '0')} ${['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][dt.getUTCMonth()]}`; })()} · {d.generated_at}
           </span>
           <button title="Listen to the briefing" onClick={e => speak(hero, e.currentTarget)} style={{
             background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.2)',

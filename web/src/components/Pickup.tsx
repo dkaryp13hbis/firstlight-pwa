@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import type { Briefing } from '../types';
 import { kilo, euro } from '../api';
 import { SectionLabel } from './Overview';
+import { InfoButton } from './Info';
 
 type WinKey = 'today' | '1d' | '3d' | '7d';
 const LABELS: Record<WinKey, string> = { today: 'today', '1d': 'yesterday', '3d': '3 days', '7d': '7 days' };
@@ -97,7 +98,7 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
   return (
     <>
       <style>{`@keyframes pwring{0%{background-position:0 0,0% 50%}50%{background-position:0 0,100% 50%}100%{background-position:0 0,0% 50%}}`}</style>
-      <SectionLabel info="pickup">Pickup Activity</SectionLabel>
+      <SectionLabel icon="trend" info="pickup" title="Pickup Activity">Pickup Activity</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
         {boxes.map(b => (
           <div key={b.key} className="card" onClick={() => setWin(b.key)}
@@ -122,13 +123,20 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
       </div>
 
       {fly && (
-        <div className="card" style={{ padding: '16px 18px', marginBottom: 6 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
-            Booked vs cancelled <span style={{ fontWeight: 600, color: 'var(--n600)' }}>· {fly.ranges[win]}</span>
+        <div className="card" style={{ padding: '18px 18px 14px', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+              Booked vs cancelled <span style={{ fontWeight: 600, color: 'var(--n600)' }}>· {fly.ranges[win]}</span>
+            </span>
+            <InfoButton k="fly" />
           </div>
           <div style={{ display: 'flex', gap: 12, fontSize: 10, fontWeight: 600, color: 'var(--n600)', margin: '6px 0 8px' }}>
             <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: '#0F2860', marginRight: 5 }} />booked · {LABELS[win]}</span>
             <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: '#B83A1B', marginRight: 5 }} />cancelled · {LABELS[win]}</span>
+          </div>
+          <div style={{ display: 'flex', fontSize: 10, fontWeight: 600, letterSpacing: '.1em', marginBottom: 4 }}>
+            <div style={{ flex: 1, color: '#B83A1B' }}>◀ CANCELLED</div>
+            <div style={{ flex: 1, textAlign: 'right', color: '#2E7CF7' }}>BOOKED ▶</div>
           </div>
           {fly.months.map(mo => {
             const v = mo.w[win];
@@ -157,7 +165,22 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
         </div>
       )}
 
-      <div className="card" style={{ padding: '10px 14px', fontSize: 11.5, color: 'var(--n600)', fontWeight: 600 }}>
+      {(() => {
+        if (!fly) return null;
+        const cands = fly.months.filter(mo => mo.m !== 'Earlier');
+        const worst = (cands.length ? cands : fly.months).reduce((a, b) =>
+          ((b.w[win].b ? b.w[win].c / b.w[win].b : 0) > (a.w[win].b ? a.w[win].c / a.w[win].b : 0) ? b : a));
+        const v = worst.w[win];
+        const share = v.b ? Math.round((v.c / v.b) * 100) : 0;
+        const period = { today: 'today', '1d': 'yesterday', '3d': 'the last 3 days', '7d': 'the last 7 days' }[win];
+        return share >= 15 ? (
+          <div style={{
+            background: '#FBEEDC', color: '#6D4C00', borderRadius: 12, fontSize: 12.5,
+            lineHeight: 1.5, padding: '11px 13px', marginBottom: 10, fontWeight: 600,
+          }}>⚠ {worst.m}: cancellations are {share}% of the rooms booked {period} — the highest churn of any month.</div>
+        ) : null;
+      })()}
+      <div className="card" style={{ padding: '12px 16px', fontSize: 11.5, color: 'var(--n600)', fontWeight: 600, marginBottom: 12 }}>
         Cancelled revenue · 7 days: <b style={{ fontWeight: 800, color: 'var(--coral)' }}>−{euro(pu.cancellationRevenue7d)}</b>
       </div>
     </>
