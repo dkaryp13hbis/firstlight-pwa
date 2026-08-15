@@ -3,6 +3,8 @@ import { fetchLatestBriefing } from './api';
 import type { Briefing } from './types';
 import { Shell, type Tab } from './components/Shell';
 import { KpiRow, SmartSummary } from './components/SmartSummary';
+import { MtdStrip, OtbCards } from './components/Overview';
+import { PickupSection } from './components/Pickup';
 
 export default function App() {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
@@ -23,12 +25,22 @@ export default function App() {
       onTab={setTab}
       aiCount={briefing.ai_insights?.insights?.length ?? 0}
     >
-      <SmartSummary briefing={briefing} />
-      <KpiRow briefing={briefing} />
-      <div className="card" style={{ padding: 18, textAlign: 'center', color: 'var(--n500)', fontSize: 13 }}>
-        Next components: MTD strip · OTB cards · pace charts · pickup + butterfly ·
-        demand calendar · ADR bridge · AI cards · history
-      </div>
+      {tab === 'Overview' && (
+        <>
+          <SmartSummary briefing={briefing} />
+          <KpiRow briefing={briefing} />
+          <MtdStrip briefing={briefing} />
+          <OtbCards briefing={briefing} />
+        </>
+      )}
+      {tab === 'Pickup' && <PickupSection briefing={briefing} />}
+      {(tab === 'OTB' || tab === 'AI Insights') && (
+        <div className="card" style={{ padding: 18, textAlign: 'center', color: 'var(--n500)', fontSize: 13 }}>
+          {tab === 'OTB'
+            ? 'Coming next: pace charts · curve meter · demand calendar · ADR bridge · top sources'
+            : 'Coming next: AI insight cards with feedback'}
+        </div>
+      )}
     </Shell>
   );
 }
