@@ -198,7 +198,7 @@ function MonthStands({ months }: { months: PaceMonth[] }) {
 
 interface DailyRow { ref_date: string; stay_year: number; stay_month: number; net_rn: number; }
 
-function BookingSpeed({ months, daily }: { months: PaceMonth[]; daily: DailyRow[] }) {
+export function BookingSpeed({ months, daily }: { months: PaceMonth[]; daily: DailyRow[] }) {
   const rows = useMemo(() => {
     if (!daily.length) return [];
     const end = daily.reduce((m, r) => (r.ref_date > m ? r.ref_date : m), daily[0].ref_date);
@@ -430,7 +430,6 @@ const PACE_LEGEND: [string, string, boolean?][] = [[NAVY, 'OTB TY'], [GREY, 'STL
 
 export function OtbTab({ briefing }: { briefing: Briefing }) {
   const paceAll = briefing.data.pace ?? [];
-  const daily = ((briefing.data as unknown as { pickup_daily?: DailyRow[] }).pickup_daily ?? []);
   const curM = new Date().getMonth() + 1;
   const fwd = paceAll.filter(m => m.month_num >= curM).slice(0, 4);
   return (
@@ -446,7 +445,6 @@ export function OtbTab({ briefing }: { briefing: Briefing }) {
         <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} />
       </ChartCard>
       <MonthStands months={fwd.slice(0, 3)} />
-      <BookingSpeed months={fwd} daily={daily} />
       <DemandHeat briefing={briefing} />
       <AdrBridge briefing={briefing} />
       <TopSources briefing={briefing} />

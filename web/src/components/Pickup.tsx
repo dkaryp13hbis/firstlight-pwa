@@ -6,6 +6,7 @@ import type { Briefing } from '../types';
 import { kilo, euro } from '../api';
 import { SectionLabel } from './Overview';
 import { InfoButton } from './Info';
+import { BookingSpeed } from './Charts';
 
 type WinKey = 'today' | '1d' | '3d' | '7d';
 const LABELS: Record<WinKey, string> = { today: 'today', '1d': 'yesterday', '3d': '3 days', '7d': '7 days' };
@@ -183,6 +184,10 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
       <div className="card" style={{ padding: '12px 16px', fontSize: 11.5, color: 'var(--n600)', fontWeight: 600, marginBottom: 12 }}>
         Cancelled revenue · 7 days: <b style={{ fontWeight: 800, color: 'var(--coral)' }}>−{euro(pu.cancellationRevenue7d)}</b>
       </div>
+      <BookingSpeed
+        months={(d.pace ?? []).filter(m => m.month_num >= new Date().getMonth() + 1).slice(0, 4)}
+        daily={(d as unknown as { pickup_daily?: DailyRow[] }).pickup_daily ?? []}
+      />
     </>
   );
 }
