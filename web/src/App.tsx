@@ -5,6 +5,8 @@ import { Shell, type Tab } from './components/Shell';
 import { KpiRow, SmartSummary } from './components/SmartSummary';
 import { MtdStrip, OtbCards } from './components/Overview';
 import { PickupSection } from './components/Pickup';
+import { OtbTab } from './components/Charts';
+import { AiTab } from './components/AiCards';
 
 export default function App() {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
@@ -34,13 +36,8 @@ export default function App() {
         </>
       )}
       {tab === 'Pickup' && <PickupSection briefing={briefing} />}
-      {(tab === 'OTB' || tab === 'AI Insights') && (
-        <div className="card" style={{ padding: 18, textAlign: 'center', color: 'var(--n500)', fontSize: 13 }}>
-          {tab === 'OTB'
-            ? 'Coming next: pace charts · curve meter · demand calendar · ADR bridge · top sources'
-            : 'Coming next: AI insight cards with feedback'}
-        </div>
-      )}
+      {tab === 'OTB' && <OtbTab briefing={briefing} />}
+      {tab === 'AI Insights' && <AiTab briefing={briefing} />}
     </Shell>
   );
 }
