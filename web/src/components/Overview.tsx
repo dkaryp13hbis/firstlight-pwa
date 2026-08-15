@@ -112,7 +112,7 @@ export function MtdStrip({ briefing }: { briefing: Briefing }) {
       <div style={{ fontSize: 12, fontWeight: 800, color: KC.ink, padding: '0 14px 10px' }}>
         Month to date <span style={{ fontSize: 10, color: KC.sub, fontWeight: 600 }}>· {mon} 1–{dt.getUTCDate()} vs LY</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.12fr 0.92fr 0.78fr 1.18fr' }}>
         {kpis.map((k, i) => (
           <div key={k.label} style={{ padding: '0 12px', borderRight: i < kpis.length - 1 ? `1px solid ${KC.hairline}` : 'none' }}>
             <div style={{ fontSize: 9, letterSpacing: '.08em', color: KC.sub, fontWeight: 800 }}>{k.label}</div>
@@ -166,7 +166,8 @@ export function OtbCards({ briefing }: { briefing: Briefing }) {
       {rows.map((row, i) => (
         <div key={row.label} style={{
           ...grid, padding: '10px 0', alignItems: 'center',
-          background: i % 2 === 0 ? MC.zebra : 'transparent', borderRadius: 12,
+          background: MC.zebra, borderRadius: i === 0 ? '12px 12px 0 0' : i === 2 ? '0 0 12px 12px' : 0,
+          borderTop: i > 0 ? '2px solid #fff' : 'none',
         }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px' }}>
             {row.icon}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchLatestBriefing } from './api';
 import { sb, demoMode } from './lib/sb';
 import type { Briefing } from './types';
@@ -27,6 +27,9 @@ export default function App() {
   const [refreshState, setRefreshState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const [bellOn, setBellOn] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [pull, setPull] = useState(0);
+  const pullRef = useRef(0);
+  const refreshRef = useRef<() => void>(() => undefined);
 
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2000); };
 
@@ -121,6 +124,33 @@ export default function App() {
     setBriefing(b => b ? { ...b } : b); // re-render highlights
   };
 
+  /* pull-to-refresh (logo + spinner revealed above the header) */
+  useEffect(() => {
+    let startY = 0, active = false;
+    const setP = (v: number) => { pullRef.current = v; setPull(v); };
+    const onStart = (e: TouchEvent) => {
+      if (window.scrollY <= 0) { startY = e.touches[0].clientY; active = true; }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!active) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy > 0 && window.scrollY <= 0) setP(Math.min(dy * 0.45, 96));
+      else if (dy <= 0) setP(0);
+    };
+    const onEnd = () => {
+      if (pullRef.current > 64) refreshRef.current();
+      setP(0); active = false;
+    };
+    window.addEventListener('touchstart', onStart, { passive: true });
+    window.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('touchend', onEnd, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', onStart);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+    };
+  }, []);
+
   const signOut = async () => {
     setSettingsOpen(false);
     if (sb) await sb.auth.signOut();
@@ -132,12 +162,37 @@ export default function App() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  refreshRef.current = requestRefresh;
+
   if (!session) return <Login />;
   if (error) return <p style={{ padding: 32, textAlign: 'center' }}>Could not load briefing: {error}</p>;
   if (!briefing) return <p style={{ padding: 32, textAlign: 'center', color: 'var(--n500)' }}>Loading briefing…</p>;
 
   return (
     <>
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, height: Math.max(pull, refreshState === 'busy' ? 54 : 0),
+        background: 'var(--app-top)', zIndex: 998, overflow: 'hidden',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
+        paddingBottom: 8, transition: pull === 0 ? 'height .2s' : 'none',
+      }}>
+        <svg width="26" height="26" viewBox="0 0 100 100" fill="none" style={{ marginBottom: 4 }}>
+          <path d="M18 38 38 28 54 33 74 16" stroke="#2E7CF7" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="74" cy="16" r="5" fill="#38E1F0" />
+          <rect x="18" y="50" width="8" height="36" rx="4" fill="#fff" />
+          <rect x="18" y="50" width="26" height="8" rx="4" fill="#fff" />
+          <rect x="18" y="64" width="19" height="8" rx="4" fill="#fff" />
+          <rect x="62" y="50" width="8" height="36" rx="4" fill="#fff" />
+          <rect x="62" y="78" width="24" height="8" rx="4" fill="#fff" />
+        </svg>
+        <span style={{
+          color: '#38E1F0', fontSize: 15, fontWeight: 700, display: 'inline-block',
+          transform: refreshState === 'busy' ? undefined : `rotate(${pull * 3.2}deg)`,
+          animation: refreshState === 'busy' ? 'flspin .8s linear infinite' : undefined,
+        }}>↻</span>
+        <style>{`@keyframes flspin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+      <div style={{ transform: `translateY(${Math.max(pull, refreshState === 'busy' ? 54 : 0)}px)`, transition: pull === 0 ? 'transform .2s' : 'none' }}>
       <Shell
         hotels={hotels} hotelId={hotelId} onHotel={changeHotel}
         tab={tab} onTab={nav}
@@ -175,6 +230,7 @@ export default function App() {
         </div>
       </Shell>
       <div style={{ height: 34, background: 'var(--app-top)' }} />
+      </div>
       <SettingsSheet
         open={settingsOpen} onClose={() => setSettingsOpen(false)}
         lang={lang} onLang={changeLang}
