@@ -68,7 +68,7 @@ export function Shell(props: {
   const busy = props.refreshState === 'busy';
   return (
     <div>
-      <div style={{ position: 'sticky', top: 0, zIndex: 999 }}>
+      <div id="fl-sticky" style={{ position: 'sticky', top: 0, zIndex: 999 }}>
       <header style={{ background: 'var(--app-top)', padding: 'calc(10px + env(safe-area-inset-top)) 16px 10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <LogoLockup />

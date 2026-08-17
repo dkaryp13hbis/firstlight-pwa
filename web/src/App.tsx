@@ -163,7 +163,11 @@ export default function App() {
   const nav = (t: Tab) => {
     setTab(t);
     const id = { Overview: 'sec-overview', Pickup: 'sec-pickup', Pace: 'sec-pace', 'AI Insights': 'sec-ai' }[t];
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const el = document.getElementById(id);
+    if (!el) return;
+    const stickyH = document.getElementById('fl-sticky')?.offsetHeight ?? 46;
+    const y = el.getBoundingClientRect().top + window.scrollY - stickyH - 6;
+    window.scrollTo({ top: Math.max(y, 0), behavior: 'smooth' });
   };
 
   if (!session) return <Login />;
