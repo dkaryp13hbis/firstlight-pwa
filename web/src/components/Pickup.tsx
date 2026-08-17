@@ -88,8 +88,32 @@ export function PickupSection({ briefing, year, comp }: { briefing: Briefing; ye
     year === 'next' ? nextYear : undefined,
   ), [d, year, nextYear]);
 
+  const pdAll = (d as unknown as { pickup_daily?: (DailyRow & { net_rev?: number })[] }).pickup_daily ?? [];
+  const cdAll = (d as unknown as { cancel_daily?: (CancelRow & { cancel_rev?: number })[] }).cancel_daily ?? [];
+  const yearBox = (days: number, single?: boolean) => {
+    if (!pdAll.length) return { bRn: 0, bRev: 0, cRn: 0, cRev: 0 };
+    const end = pdAll.reduce((m, r) => (r.ref_date > m ? r.ref_date : m), pdAll[0].ref_date);
+    const endD = new Date(end + 'T00:00:00Z');
+    const lo = new Date(endD.getTime() - (days - (single ? 0 : 1)) * 86400000).toISOString().slice(0, 10);
+    const hi = single && days > 0 ? lo : end;
+    const inWin = (r: { ref_date: string; stay_year: number }) =>
+      r.stay_year === nextYear && r.ref_date >= lo && r.ref_date <= hi;
+    const n = pdAll.filter(inWin).reduce((s, r) => s + r.net_rn, 0);
+    const nr = pdAll.filter(inWin).reduce((s, r) => s + (r.net_rev ?? 0), 0);
+    const cN = cdAll.filter(inWin).reduce((s, r) => s + r.cancel_rn, 0);
+    const cR = cdAll.filter(inWin).reduce((s, r) => s + (r.cancel_rev ?? 0), 0);
+    return { bRn: n + cN, bRev: nr + cR, cRn: cN, cRev: cR };
+  };
+  const yb = year === 'next'
+    ? { today: yearBox(0, true), d1: yearBox(1, true), d3: yearBox(3), d7: yearBox(7) }
+    : null;
   const boxes: { key: WinKey; title: string; tCol: string; sub?: string;
-    bRn: number; bRev: number; cRn: number; cRev: number }[] = [
+    bRn: number; bRev: number; cRn: number; cRev: number }[] = yb ? [
+    { key: 'today', title: 'Today', tCol: 'var(--green)', ...yb.today },
+    { key: '1d', title: 'Yesterday', tCol: 'var(--blue)', sub: pu.date1d, ...yb.d1 },
+    { key: '3d', title: '3-Day', tCol: 'var(--blue)', sub: pu.date3d, ...yb.d3 },
+    { key: '7d', title: '7-Day', tCol: 'var(--blue)', sub: pu.date7d, ...yb.d7 },
+  ] : [
     { key: 'today', title: 'Today', tCol: 'var(--green)', bRn: pu.today.roomNights, bRev: pu.today.revenue, cRn: pu.cancellationsToday, cRev: pu.cancellationRevenueToday },
     { key: '1d', title: 'Yesterday', tCol: 'var(--blue)', sub: pu.date1d, bRn: pu.last1d.roomNights, bRev: pu.last1d.revenue, cRn: pu.cancellations1d, cRev: pu.cancellationRevenue },
     { key: '3d', title: '3-Day', tCol: 'var(--blue)', sub: pu.date3d, bRn: pu.last3d.roomNights, bRev: pu.last3d.revenue, cRn: pu.cancellations3d, cRev: pu.cancellationRevenue3d },

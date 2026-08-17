@@ -441,10 +441,18 @@ export function buildNextPace(briefing: Briefing, comp: 'this' | 'prev' = 'this'
   const rooms = briefing.data.total_rooms || 1;
   const rows = ((briefing.data as unknown as { pace_next_year?: NextYearRow[] }).pace_next_year ?? []);
   const paceByMonth = new Map((briefing.data.pace ?? []).map(p => [p.month_num, p]));
+  const curM = new Date().getMonth() + 1;
   return rows.map(r => {
-    const cmpRn = comp === 'this' ? r.rn_stly : (r.rn_stly2 ?? 0);
-    const cmpRev = comp === 'this' ? r.rev_stly : (r.rev_stly2 ?? 0);
-    const fin = comp === 'prev' ? paceByMonth.get(r.month_num) : undefined;
+    const thisRow = paceByMonth.get(r.month_num);
+    // vs this (unfinished) year: closed months use their ACTUALS (their final),
+    // current + future months use the same-booking-stage value
+    const cmpRn = comp === 'this'
+      ? (r.month_num < curM && thisRow ? thisRow.rn : r.rn_stly)
+      : (r.rn_stly2 ?? 0);
+    const cmpRev = comp === 'this'
+      ? (r.month_num < curM && thisRow ? thisRow.rev : r.rev_stly)
+      : (r.rev_stly2 ?? 0);
+    const fin = comp === 'prev' ? thisRow : undefined;
     return {
       month: r.month, month_num: r.month_num,
       rn: r.rn, rn_stly: cmpRn, rn_final_ly: fin?.rn_final_ly ?? 0,
