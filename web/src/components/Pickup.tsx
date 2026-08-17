@@ -77,7 +77,7 @@ const ringStyle: React.CSSProperties = {
   animation: 'pwring 3.5s ease-in-out infinite',
 };
 
-export function PickupSection({ briefing, year }: { briefing: Briefing; year: 'this' | 'next' }) {
+export function PickupSection({ briefing, year, comp }: { briefing: Briefing; year: 'this' | 'next'; comp: 'this' | 'prev' }) {
   const [win, setWin] = useState<WinKey>('7d');
   const d = briefing.data;
   const pu = d.pickup;
@@ -190,7 +190,7 @@ export function PickupSection({ briefing, year }: { briefing: Briefing; year: 't
       <BookingSpeed
         months={year === 'this'
           ? (d.pace ?? []).filter(m => m.month_num >= new Date().getMonth() + 1).slice(0, 4)
-          : buildNextPace(briefing).slice(0, 4)}
+          : buildNextPace(briefing, comp).slice(0, 4)}
         daily={(d as unknown as { pickup_daily?: DailyRow[] }).pickup_daily ?? []}
       />
     </>

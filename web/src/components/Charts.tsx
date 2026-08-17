@@ -428,32 +428,49 @@ function TopSources({ briefing }: { briefing: Briefing }) {
 
 const PACE_LEGEND: [string, string, boolean?][] = [[NAVY, 'OTB TY'], [GREY, 'STLY'], [GREEN, 'Final LY', true]];
 
-interface NextYearRow { month: string; month_num: number; rn: number; rn_stly: number; rev: number; rev_stly: number; }
+interface NextYearRow {
+  month: string; month_num: number; rn: number; rn_stly: number; rev: number; rev_stly: number;
+  rn_stly2?: number; rev_stly2?: number;
+}
 
 const DIM = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-export function buildNextPace(briefing: Briefing): PaceMonth[] {
+/** comp: 'this' = vs this year at same stage; 'prev' = vs last completed year
+ *  (two-year stage + that year's FINAL, taken from the pace table). */
+export function buildNextPace(briefing: Briefing, comp: 'this' | 'prev' = 'this'): PaceMonth[] {
   const rooms = briefing.data.total_rooms || 1;
   const rows = ((briefing.data as unknown as { pace_next_year?: NextYearRow[] }).pace_next_year ?? []);
-  return rows.map(r => ({
-    month: r.month, month_num: r.month_num,
-    rn: r.rn, rn_stly: r.rn_stly, rn_final_ly: 0,
-    rev: r.rev, rev_stly: r.rev_stly, rev_final: 0,
-    adr: r.rn ? r.rev / r.rn : 0, adr_stly: r.rn_stly ? r.rev_stly / r.rn_stly : 0, adr_final_ly: 0,
-    occ: r.rn / (rooms * DIM[r.month_num - 1]), stly: r.rn_stly / (rooms * DIM[r.month_num - 1]), final: 0,
-    status: r.rn >= r.rn_stly ? 'ahead' : 'behind',
-  }));
+  const paceByMonth = new Map((briefing.data.pace ?? []).map(p => [p.month_num, p]));
+  return rows.map(r => {
+    const cmpRn = comp === 'this' ? r.rn_stly : (r.rn_stly2 ?? 0);
+    const cmpRev = comp === 'this' ? r.rev_stly : (r.rev_stly2 ?? 0);
+    const fin = comp === 'prev' ? paceByMonth.get(r.month_num) : undefined;
+    return {
+      month: r.month, month_num: r.month_num,
+      rn: r.rn, rn_stly: cmpRn, rn_final_ly: fin?.rn_final_ly ?? 0,
+      rev: r.rev, rev_stly: cmpRev, rev_final: fin?.rev_final ?? 0,
+      adr: r.rn ? r.rev / r.rn : 0,
+      adr_stly: cmpRn ? cmpRev / cmpRn : 0,
+      adr_final_ly: fin?.adr_final_ly ?? 0,
+      occ: r.rn / (rooms * DIM[r.month_num - 1]),
+      stly: cmpRn / (rooms * DIM[r.month_num - 1]),
+      final: fin?.final ?? 0,
+      status: r.rn >= cmpRn ? 'ahead' : 'behind',
+    };
+  });
 }
 
-export function OtbTab({ briefing, year }: { briefing: Briefing; year: 'this' | 'next' }) {
+export function OtbTab({ briefing, year, comp }: { briefing: Briefing; year: 'this' | 'next'; comp: 'this' | 'prev' }) {
   const thisYear = new Date().getFullYear();
-  const paceAll = year === 'this' ? (briefing.data.pace ?? []) : buildNextPace(briefing);
+  const paceAll = year === 'this' ? (briefing.data.pace ?? []) : buildNextPace(briefing, comp);
   const curM = new Date().getMonth() + 1;
   const fwd = (briefing.data.pace ?? []).filter(m => m.month_num >= curM).slice(0, 4);
   return (
     <>
       <SectionLabel icon="pace" info="pace" title="Pace">
-        {year === 'this' ? 'Pace — OTB vs STLY vs Final LY' : 'Pace — ' + String(thisYear + 1) + ' OTB vs ' + String(thisYear) + ' same stage'}
+        {year === 'this'
+          ? 'Pace — OTB vs STLY vs Final LY'
+          : 'Pace — ' + String(thisYear + 1) + ' OTB vs ' + String(comp === 'this' ? thisYear : thisYear - 1) + (comp === 'prev' ? ' (same stage & final)' : ' same stage')}
       </SectionLabel>
       {year === 'next' && paceAll.every(m => m.rn === 0) && (
         <div className="card" style={{ padding: '12px 16px', fontSize: 12, fontWeight: 600, color: 'var(--n600)', marginBottom: 12 }}>

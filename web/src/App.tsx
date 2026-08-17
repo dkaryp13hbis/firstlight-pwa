@@ -27,7 +27,9 @@ export default function App() {
   const [refreshState, setRefreshState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const [bellOn, setBellOn] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [year, setYear] = useState<'this' | 'next'>('this');
+  const [year, setYearState] = useState<'this' | 'next'>('this');
+  const [comp, setComp] = useState<'this' | 'prev'>('prev');
+  const setYear = (k: 'this' | 'next') => { setYearState(k); setComp(k === 'this' ? 'prev' : 'this'); };
   const [pull, setPull] = useState(0);
   const pullRef = useRef(0);
 
@@ -213,17 +215,24 @@ export default function App() {
               }}>{new Date().getFullYear() + (k === 'next' ? 1 : 0)}</button>
             ))}
           </span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#0a1f4d', marginLeft: 6 }}>vs</span>
+          <span style={{ display: 'inline-flex', background: '#E9EDF4', borderRadius: 10, padding: 3 }}>
+            {(year === 'this' ? (['prev'] as const) : (['this', 'prev'] as const)).map(k => (
+              <button key={k} onClick={() => setComp(k)} style={{
+                border: 'none', fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 8,
+                background: comp === k ? '#0F2860' : 'transparent', color: comp === k ? '#fff' : '#5A6780',
+              }}>{new Date().getFullYear() - (k === 'prev' ? 1 : 0)}</button>
+            ))}
+          </span>
           <span style={{ fontSize: 10.5, fontWeight: 600, color: '#6e7a96' }}>
-            {year === 'this'
-              ? 'vs ' + String(new Date().getFullYear() - 1) + ' (STLY & final)'
-              : 'vs ' + String(new Date().getFullYear()) + ' at the same booking stage'}
+            {comp === 'prev' ? 'same stage & final' : 'same booking stage'}
           </span>
         </div>
-        <OtbCards briefing={briefing} year={year} nextPace={buildNextPace(briefing)} />
+        <OtbCards briefing={briefing} year={year} nextPace={buildNextPace(briefing, comp)} />
         <div id="sec-pickup" style={{ scrollMarginTop: 46 }} />
-        <PickupSection briefing={briefing} year={year} />
+        <PickupSection briefing={briefing} year={year} comp={comp} />
         <div id="sec-pace" style={{ scrollMarginTop: 46 }} />
-        <OtbTab briefing={briefing} year={year} />
+        <OtbTab briefing={briefing} year={year} comp={comp} />
         <div id="sec-ai" style={{ scrollMarginTop: 46 }} />
         <AiTab briefing={briefing} hotelId={hotelId} onFeedback={setFb} />
         <div style={{
