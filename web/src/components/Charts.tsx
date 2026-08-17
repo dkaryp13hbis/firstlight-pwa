@@ -75,9 +75,9 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt }: {
               fill={(m[field] as number) >= ((m[fieldFinal] as number) || Infinity) ? GREEN : NAVY} />
             <rect x={x + 1} y={BOT - vLy} width={bw} height={vLy} rx={1.5} fill={GREY} />
             {(m[fieldFinal] as number) > 0 && m.month_num >= curM && (
-              <line x1={x - bw - 4} y1={BOT - (m[fieldFinal] as number) / mx * CH}
-                x2={x + bw + 4} y2={BOT - (m[fieldFinal] as number) / mx * CH}
-                stroke={GREEN} strokeWidth={1.5} strokeDasharray="3,2.5" />
+              <line x1={x - bw - 7} y1={BOT - (m[fieldFinal] as number) / mx * CH}
+                x2={x + bw + 7} y2={BOT - (m[fieldFinal] as number) / mx * CH}
+                stroke={GREEN} strokeWidth={2.5} strokeDasharray="4,3" />
             )}
             <text x={x} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
             <rect x={x - 27} y={BOT + 22} width={54} height={22} rx={5}
@@ -107,7 +107,7 @@ function OccPace({ months }: { months: PaceMonth[] }) {
       <Grid mx={1} fmt={v => `${Math.round(v * 100)}%`} />
       <path d={area} fill="rgba(15,40,96,.07)" />
       <path d={path(stlyPts)} fill="none" stroke={GREY} strokeWidth={2.5} />
-      {finPts.length > 1 && <path d={path(finPts)} fill="none" stroke={GREEN} strokeWidth={1.5} strokeDasharray="4,3" strokeLinecap="round" />}
+      {finPts.length > 1 && <path d={path(finPts)} fill="none" stroke={GREEN} strokeWidth={2.2} strokeDasharray="5,3.5" strokeLinecap="round" />}
       <path d={path(occPts)} fill="none" stroke={NAVY} strokeWidth={3} />
       {months.map((m, i) => {
         const beat = m.final > 0 && m.occ >= m.final;

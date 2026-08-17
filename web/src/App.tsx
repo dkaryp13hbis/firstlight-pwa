@@ -215,17 +215,21 @@ export default function App() {
               }}>{new Date().getFullYear() + (k === 'next' ? 1 : 0)}</button>
             ))}
           </span>
-          <span style={{ fontSize: 12, fontWeight: 800, color: '#0a1f4d', marginLeft: 6 }}>vs</span>
-          <span style={{ display: 'inline-flex', background: '#E9EDF4', borderRadius: 10, padding: 3 }}>
-            {(year === 'this' ? (['prev'] as const) : (['this', 'prev'] as const)).map(k => (
-              <button key={k} onClick={() => setComp(k)} style={{
-                border: 'none', fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 8,
-                background: comp === k ? '#0F2860' : 'transparent', color: comp === k ? '#fff' : '#5A6780',
-              }}>{new Date().getFullYear() - (k === 'prev' ? 1 : 0)}</button>
-            ))}
-          </span>
+          {year === 'next' && <span style={{ fontSize: 12, fontWeight: 800, color: '#0a1f4d', marginLeft: 6 }}>vs</span>}
+          {year === 'next' && (
+            <span style={{ display: 'inline-flex', background: '#E9EDF4', borderRadius: 10, padding: 3 }}>
+              {(['this', 'prev'] as const).map(k => (
+                <button key={k} onClick={() => setComp(k)} style={{
+                  border: 'none', fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 8,
+                  background: comp === k ? '#0F2860' : 'transparent', color: comp === k ? '#fff' : '#5A6780',
+                }}>{new Date().getFullYear() - (k === 'prev' ? 1 : 0)}</button>
+              ))}
+            </span>
+          )}
           <span style={{ fontSize: 10.5, fontWeight: 600, color: '#6e7a96' }}>
-            {comp === 'prev' ? 'same stage & final' : 'same booking stage'}
+            {year === 'this'
+              ? 'vs ' + String(new Date().getFullYear() - 1) + ' — STLY & Final LY'
+              : comp === 'prev' ? 'same stage & final' : 'closed months: final · open: same stage'}
           </span>
         </div>
         <OtbCards briefing={briefing} year={year} nextPace={buildNextPace(briefing, comp)} />
