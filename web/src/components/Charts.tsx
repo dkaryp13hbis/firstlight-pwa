@@ -356,6 +356,27 @@ function AdrBridge({ briefing }: { briefing: Briefing }) {
   }, [rows]);
   if (!model) return null;
   const sgn = (v: number) => `${v >= 0 ? '+' : '−'}€${Math.abs(v).toFixed(0)}`;
+  const scale = Math.max(model.adrT, model.adrL) * 1.06 || 1;
+  const W = (v: number) => (Math.abs(v) / scale) * 100;
+  const mixStart = Math.min(model.adrL, model.adrL + model.mix);
+  const rateStart = Math.min(model.adrL + model.mix, model.adrL + model.mix + model.rate);
+  const top = model.per.reduce<{ name: string; kind: string; v: number }>((best, p) => {
+    const cand = Math.abs(p.mix) >= Math.abs(p.rate)
+      ? { name: p.source, kind: 'mix', v: p.mix } : { name: p.source, kind: 'rate', v: p.rate };
+    return Math.abs(cand.v) > Math.abs(best.v) ? cand : best;
+  }, { name: '', kind: '', v: 0 });
+  const sentence = `ADR is ${model.delta >= 0 ? 'up' : 'down'} €${Math.abs(model.delta).toFixed(0)} vs last year — mix ${sgn(model.mix)}, rate ${sgn(model.rate)}. Biggest driver: ${top.name} ${top.kind} ${sgn(top.v)}.`;
+  const Row = ({ label, left, width, color, value, vColor }: {
+    label: string; left: number; width: number; color: string; value: string; vColor?: string;
+  }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+      <div style={{ width: 46, fontSize: 10, fontWeight: 700, color: 'var(--n600)' }}>{label}</div>
+      <div style={{ flex: 1, height: 13, background: 'var(--grey-100)', borderRadius: 7, position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${left}%`, width: `${Math.max(width, 0.8)}%`, background: color, borderRadius: 7 }} />
+      </div>
+      <div style={{ width: 52, textAlign: 'right', fontSize: 11, fontWeight: 800, color: vColor ?? 'var(--text)' }}>{value}</div>
+    </div>
+  );
   return (
     <div className="card" style={{ padding: '18px 18px 14px', marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -363,16 +384,14 @@ function AdrBridge({ briefing }: { briefing: Briefing }) {
         <InfoButton k="bridge" />
       </div>
       <div style={{ fontSize: 11, color: 'var(--n600)', lineHeight: 1.5, margin: '4px 0 12px' }}>
-        Mix = selling a different book of business · Rate = selling at different prices. They sum exactly to the ADR change.
+        Month to date vs last year. <b style={{ color: '#2E7CF7' }}>Mix</b> = selling a different book of business
+        · <b style={{ color: AMBER }}>Rate</b> = selling at different prices. They sum exactly to the ADR change.
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
-        <span className="t-value" style={{ fontSize: 22, color: 'var(--text)' }}>€{model.adrT.toFixed(0)}</span>
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--n600)' }}>vs €{model.adrL.toFixed(0)} LY</span>
-        <span style={{ fontWeight: 800, fontSize: 14, color: model.delta >= 0 ? GREEN : RED }}>{sgn(model.delta)}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: 'var(--n600)' }}>
-          mix <b style={{ color: '#2E7CF7' }}>{sgn(model.mix)}</b> · rate <b style={{ color: AMBER }}>{sgn(model.rate)}</b>
-        </span>
-      </div>
+      <Row label="LY ADR" left={0} width={W(model.adrL)} color="#CDD4E0" value={`€${model.adrL.toFixed(0)}`} />
+      <Row label="Mix" left={W(mixStart)} width={W(model.mix)} color="#2E7CF7" value={sgn(model.mix)} vColor="#2E7CF7" />
+      <Row label="Rate" left={W(rateStart)} width={W(model.rate)} color={AMBER} value={sgn(model.rate)} vColor={AMBER} />
+      <Row label="TY ADR" left={0} width={W(model.adrT)} color="#0F2860" value={`€${model.adrT.toFixed(0)}`} />
+      <div style={{ fontSize: 11.5, color: '#1C2333', lineHeight: 1.5, marginTop: 10 }}>{sentence}</div>
       <div style={{ display: 'flex', fontSize: 10, color: '#79747E', fontWeight: 600, padding: '2px 0', borderBottom: '1px solid #EDF0F6' }}>
         <div style={{ flex: 1.2 }}>CHANNEL</div><div style={{ flex: 1 }}>SHARE</div><div style={{ flex: 1 }}>ADR</div>
         <div style={{ width: 42, textAlign: 'right', color: '#2E7CF7' }}>MIX</div>
