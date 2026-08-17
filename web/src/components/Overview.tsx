@@ -127,8 +127,8 @@ export function MtdStrip({ briefing }: { briefing: Briefing }) {
   );
 }
 
-export function OtbCards({ briefing }: { briefing: Briefing }) {
-  const months = briefing.data.pace_current ?? [];
+export function OtbCards({ briefing, year, nextPace }: { briefing: Briefing; year: 'this' | 'next'; nextPace: import('../types').PaceMonth[] }) {
+  const months = year === 'this' ? (briefing.data.pace_current ?? []) : nextPace.filter(m => m.rn > 0 || m.rn_stly > 0).slice(0, 3);
   if (!months.length) return null;
   const MC = { up: '#1a7a50', upBg: 'rgba(26,122,80,.12)', down: '#c7411b', downBg: 'rgba(199,65,27,.12)', zebra: '#f6f8fc' };
   const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: `1.1fr repeat(${months.length}, 1fr)`, gap: 0 };
@@ -151,7 +151,7 @@ export function OtbCards({ briefing }: { briefing: Briefing }) {
     <div style={{ background: '#fff', border: `1px solid ${KC.border}`, borderRadius: 20, padding: 16, marginBottom: 22 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
         {ICONS.cal}
-        <span style={{ fontSize: 13, fontWeight: 800, color: KC.ink }}>On The Books — Next 3 Months</span>
+        <span style={{ fontSize: 13, fontWeight: 800, color: KC.ink }}>On The Books — {year === 'this' ? 'Next 3 Months' : String(new Date().getFullYear() + 1)}</span>
         <span style={{ fontSize: 10, color: KC.sub, fontWeight: 600 }}>· vs STLY</span>
         <InfoButton k="otb3" />
       </div>

@@ -6,7 +6,7 @@ import { Shell, type Tab } from './components/Shell';
 import { SmartSummary } from './components/SmartSummary';
 import { KpiRow, MtdStrip, OtbCards } from './components/Overview';
 import { PickupSection } from './components/Pickup';
-import { OtbTab } from './components/Charts';
+import { OtbTab, buildNextPace } from './components/Charts';
 import { AiTab, type FeedbackRequest } from './components/AiCards';
 import { FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
 import { Login } from './components/Login';
@@ -27,6 +27,7 @@ export default function App() {
   const [refreshState, setRefreshState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const [bellOn, setBellOn] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [year, setYear] = useState<'this' | 'next'>('this');
   const [pull, setPull] = useState(0);
   const pullRef = useRef(0);
 
@@ -202,11 +203,27 @@ export default function App() {
         <SmartSummary briefing={briefing} />
         <KpiRow briefing={briefing} />
         <MtdStrip briefing={briefing} />
-        <OtbCards briefing={briefing} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#0a1f4d' }}>Reporting year</span>
+          <span style={{ display: 'inline-flex', background: '#E9EDF4', borderRadius: 10, padding: 3 }}>
+            {(['this', 'next'] as const).map(k => (
+              <button key={k} onClick={() => setYear(k)} style={{
+                border: 'none', fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 8,
+                background: year === k ? '#0F2860' : 'transparent', color: year === k ? '#fff' : '#5A6780',
+              }}>{new Date().getFullYear() + (k === 'next' ? 1 : 0)}</button>
+            ))}
+          </span>
+          <span style={{ fontSize: 10.5, fontWeight: 600, color: '#6e7a96' }}>
+            {year === 'this'
+              ? 'vs ' + String(new Date().getFullYear() - 1) + ' (STLY & final)'
+              : 'vs ' + String(new Date().getFullYear()) + ' at the same booking stage'}
+          </span>
+        </div>
+        <OtbCards briefing={briefing} year={year} nextPace={buildNextPace(briefing)} />
         <div id="sec-pickup" style={{ scrollMarginTop: 46 }} />
-        <PickupSection briefing={briefing} />
+        <PickupSection briefing={briefing} year={year} />
         <div id="sec-pace" style={{ scrollMarginTop: 46 }} />
-        <OtbTab briefing={briefing} />
+        <OtbTab briefing={briefing} year={year} />
         <div id="sec-ai" style={{ scrollMarginTop: 46 }} />
         <AiTab briefing={briefing} hotelId={hotelId} onFeedback={setFb} />
         <div style={{

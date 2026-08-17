@@ -6,7 +6,7 @@ import type { Briefing } from '../types';
 import { kilo, euro } from '../api';
 import { SectionLabel } from './Overview';
 import { InfoButton } from './Info';
-import { BookingSpeed } from './Charts';
+import { BookingSpeed, buildNextPace } from './Charts';
 
 type WinKey = 'today' | '1d' | '3d' | '7d';
 const LABELS: Record<WinKey, string> = { today: 'today', '1d': 'yesterday', '3d': '3 days', '7d': '7 days' };
@@ -18,7 +18,7 @@ const MONTH_ABBR = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 
 
 function iso(d: Date) { return d.toISOString().slice(0, 10); }
 
-function computeButterfly(pd: DailyRow[], cd: CancelRow[]) {
+function computeButterfly(pd: DailyRow[], cd: CancelRow[], onlyYear?: number) {
   if (!pd.length) return null;
   const end = pd.reduce((m, r) => (r.ref_date > m ? r.ref_date : m), pd[0].ref_date);
   const endD = new Date(end + 'T00:00:00Z');
@@ -33,7 +33,8 @@ function computeButterfly(pd: DailyRow[], cd: CancelRow[]) {
   const ranges = Object.fromEntries(Object.entries(WINDOWS).map(([k, [lo, hi]]) =>
     [k, lo === hi ? fmtD(lo) : `${fmtD(lo)} – ${fmtD(hi)}`])) as Record<WinKey, string>;
 
-  const keys = [...new Set(pd.map(r => r.stay_year * 100 + r.stay_month))].sort();
+  let keys = [...new Set(pd.map(r => r.stay_year * 100 + r.stay_month))].sort();
+  if (onlyYear) keys = keys.filter(k => Math.floor(k / 100) === onlyYear);
   const now = new Date();
   const curKey = now.getUTCFullYear() * 100 + (now.getUTCMonth() + 1);
 
@@ -76,14 +77,16 @@ const ringStyle: React.CSSProperties = {
   animation: 'pwring 3.5s ease-in-out infinite',
 };
 
-export function PickupSection({ briefing }: { briefing: Briefing }) {
+export function PickupSection({ briefing, year }: { briefing: Briefing; year: 'this' | 'next' }) {
   const [win, setWin] = useState<WinKey>('7d');
   const d = briefing.data;
   const pu = d.pickup;
+  const nextYear = new Date().getFullYear() + 1;
   const fly = useMemo(() => computeButterfly(
     (d as unknown as { pickup_daily?: DailyRow[] }).pickup_daily ?? [],
     (d as unknown as { cancel_daily?: CancelRow[] }).cancel_daily ?? [],
-  ), [d]);
+    year === 'next' ? nextYear : undefined,
+  ), [d, year, nextYear]);
 
   const boxes: { key: WinKey; title: string; tCol: string; sub?: string;
     bRn: number; bRev: number; cRn: number; cRev: number }[] = [
@@ -185,7 +188,9 @@ export function PickupSection({ briefing }: { briefing: Briefing }) {
         Cancelled revenue · 7 days: <b style={{ fontWeight: 800, color: 'var(--coral)' }}>−{euro(pu.cancellationRevenue7d)}</b>
       </div>
       <BookingSpeed
-        months={(d.pace ?? []).filter(m => m.month_num >= new Date().getMonth() + 1).slice(0, 4)}
+        months={year === 'this'
+          ? (d.pace ?? []).filter(m => m.month_num >= new Date().getMonth() + 1).slice(0, 4)
+          : buildNextPace(briefing).slice(0, 4)}
         daily={(d as unknown as { pickup_daily?: DailyRow[] }).pickup_daily ?? []}
       />
     </>

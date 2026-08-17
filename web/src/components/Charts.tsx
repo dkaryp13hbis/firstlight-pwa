@@ -3,7 +3,7 @@
  *  (OTB TY / STLY / Final LY), no per-bar labels, navy series, occupancy
  *  area fill, taller plots. Plus: Where each month stands, booking speed
  *  with trend words, demand heat with behind-LY note, ADR bridge table. */
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { Briefing, PaceMonth } from '../types';
 import { kilo, signedPct } from '../api';
 import { SectionLabel } from './Overview';
@@ -216,9 +216,9 @@ export function BookingSpeed({ months, daily }: { months: PaceMonth[]; daily: Da
       const s7 = rn(c7) / 7, s14 = rn(c14) / 14;
       const trend = s7 < s14 * 0.85 ? 'slowing down' : s7 > s14 * 1.15 ? 'speeding up' : 'steady';
       return {
-        month: m.month, s7, s14, trend,
+        month: m.month, s7, s14, trend, hasRef: m.rn_final_ly > 0,
         needed: remaining > 0 ? remaining / daysLeft : 0,
-        passed: remaining <= 0, over: -remaining,
+        passed: m.rn_final_ly > 0 && remaining <= 0, over: -remaining,
       };
     });
   }, [months, daily]);
@@ -235,18 +235,18 @@ export function BookingSpeed({ months, daily }: { months: PaceMonth[]; daily: Da
               fontSize: 10.5, fontWeight: 700,
               color: r.trend === 'slowing down' ? RED : r.trend === 'speeding up' ? GREEN : 'var(--n500)',
             }}>{r.trend}</span>
-            <span style={{ marginLeft: 'auto', fontSize: 10.5, fontWeight: 600, color: 'var(--n600)' }}>
+            {r.hasRef && <span style={{ marginLeft: 'auto', fontSize: 10.5, fontWeight: 600, color: 'var(--n600)' }}>
               {r.passed
                 ? <b style={{ color: GREEN, fontWeight: 700 }}>✓ passed LY final (+{Math.round(r.over)} rn)</b>
                 : <>need <b style={{ fontWeight: 800, color: 'var(--text)' }}>{r.needed.toFixed(1)}</b>/day to reach LY final</>}
-            </span>
+            </span>}
           </div>
           {([['7d', r.s7, NAVY], ['14d', r.s14, '#7FB0FA']] as [string, number, string][]).map(([l, v, c]) => (
             <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--cap)', width: 26 }}>{l}</span>
               <div style={{ flex: 1, height: 10, background: '#EDF0F6', borderRadius: 5, position: 'relative' }}>
                 <div style={{ width: `${Math.min(v / mx, 1) * 100}%`, height: '100%', background: c, borderRadius: 5 }} />
-                {!r.passed && <div style={{ position: 'absolute', left: `${Math.min(r.needed / mx, 1) * 100}%`, top: -2, bottom: -2, width: 2, background: AMBER }} />}
+                {r.hasRef && !r.passed && <div style={{ position: 'absolute', left: `${Math.min(r.needed / mx, 1) * 100}%`, top: -2, bottom: -2, width: 2, background: AMBER }} />}
               </div>
               <b style={{ fontSize: 11, fontWeight: 800, width: 66, textAlign: 'right', color: 'var(--text)' }}>
                 {v.toFixed(1)} <span style={{ fontWeight: 600, color: 'var(--cap)', fontSize: 9.5 }}>/day·{l}</span>
@@ -432,12 +432,10 @@ interface NextYearRow { month: string; month_num: number; rn: number; rn_stly: n
 
 const DIM = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-export function OtbTab({ briefing }: { briefing: Briefing }) {
-  const [year, setYear] = useState<'this' | 'next'>('this');
-  const thisYear = new Date().getFullYear();
+export function buildNextPace(briefing: Briefing): PaceMonth[] {
   const rooms = briefing.data.total_rooms || 1;
-  const nextRows = ((briefing.data as unknown as { pace_next_year?: NextYearRow[] }).pace_next_year ?? []);
-  const nextPace: PaceMonth[] = nextRows.map(r => ({
+  const rows = ((briefing.data as unknown as { pace_next_year?: NextYearRow[] }).pace_next_year ?? []);
+  return rows.map(r => ({
     month: r.month, month_num: r.month_num,
     rn: r.rn, rn_stly: r.rn_stly, rn_final_ly: 0,
     rev: r.rev, rev_stly: r.rev_stly, rev_final: 0,
@@ -445,28 +443,18 @@ export function OtbTab({ briefing }: { briefing: Briefing }) {
     occ: r.rn / (rooms * DIM[r.month_num - 1]), stly: r.rn_stly / (rooms * DIM[r.month_num - 1]), final: 0,
     status: r.rn >= r.rn_stly ? 'ahead' : 'behind',
   }));
-  const paceAll = year === 'this' ? (briefing.data.pace ?? []) : nextPace;
+}
+
+export function OtbTab({ briefing, year }: { briefing: Briefing; year: 'this' | 'next' }) {
+  const thisYear = new Date().getFullYear();
+  const paceAll = year === 'this' ? (briefing.data.pace ?? []) : buildNextPace(briefing);
   const curM = new Date().getMonth() + 1;
   const fwd = (briefing.data.pace ?? []).filter(m => m.month_num >= curM).slice(0, 4);
-  const yearBtn = (k: 'this' | 'next', label: string) => (
-    <button key={k} onClick={() => setYear(k)} style={{
-      border: 'none', fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 8,
-      background: year === k ? '#0F2860' : 'transparent', color: year === k ? '#fff' : '#5A6780',
-    }}>{label}</button>
-  );
   return (
     <>
-      <SectionLabel icon="pace" info="pace" title="Pace">Pace — OTB vs STLY{year === 'this' ? ' vs Final LY' : ''}</SectionLabel>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-        <span style={{ display: 'inline-flex', background: '#E9EDF4', borderRadius: 10, padding: 3 }}>
-          {yearBtn('this', String(thisYear))}{yearBtn('next', String(thisYear + 1))}
-        </span>
-        {year === 'next' && (
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--n600)' }}>
-            {thisYear + 1} on the books vs {thisYear} at the same booking stage
-          </span>
-        )}
-      </div>
+      <SectionLabel icon="pace" info="pace" title="Pace">
+        {year === 'this' ? 'Pace — OTB vs STLY vs Final LY' : 'Pace — ' + String(thisYear + 1) + ' OTB vs ' + String(thisYear) + ' same stage'}
+      </SectionLabel>
       {year === 'next' && paceAll.every(m => m.rn === 0) && (
         <div className="card" style={{ padding: '12px 16px', fontSize: 12, fontWeight: 600, color: 'var(--n600)', marginBottom: 12 }}>
           No {thisYear + 1} bookings on the books yet — the grey STLY bars show where {thisYear} stood at this date last year.
@@ -482,7 +470,7 @@ export function OtbTab({ briefing }: { briefing: Briefing }) {
         <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} />
       </ChartCard>
       {year === 'this' && <MonthStands months={fwd.slice(0, 3)} />}
-      {year === 'this' && <DemandHeat briefing={briefing} />}
+      <DemandHeat briefing={briefing} />
       {year === 'this' && <AdrBridge briefing={briefing} />}
       {year === 'this' && <TopSources briefing={briefing} />}
     </>
