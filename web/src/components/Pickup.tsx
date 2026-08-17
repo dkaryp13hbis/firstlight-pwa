@@ -69,7 +69,7 @@ function computeButterfly(pd: DailyRow[], cd: CancelRow[], onlyYear?: number) {
 }
 
 const ringStyle: React.CSSProperties = {
-  border: '1.5px solid transparent',
+  border: '1.8px solid transparent',
   background:
     'linear-gradient(var(--card-bg), var(--card-bg)) padding-box,' +
     'linear-gradient(120deg, #0F2860, #2E7CF7, #38E1F0, #2E7CF7, #0F2860) border-box',
@@ -130,7 +130,7 @@ export function PickupSection({ briefing, year, comp }: { briefing: Briefing; ye
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
         {boxes.map(b => (
           <div key={b.key} className="card" onClick={() => setWin(b.key)}
-            style={{ padding: 12, cursor: 'pointer', ...(win === b.key ? ringStyle : { border: '1.5px solid transparent' }) }}>
+            style={{ padding: 12, cursor: 'pointer', ...(win === b.key ? ringStyle : { border: '1.8px solid transparent' }) }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: b.tCol, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
               {b.title}{b.sub ? <span style={{ color: 'var(--cap)', marginLeft: 4 }}>{b.sub}</span> : null}
             </div>
