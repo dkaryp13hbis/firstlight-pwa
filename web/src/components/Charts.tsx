@@ -421,27 +421,44 @@ function TopSources({ briefing }: { briefing: Briefing }) {
   const totalRev = chans[0].pct ? chans[0].rev / chans[0].pct : 1;
   return (
     <ChartCard title="Top Sources — OTB Full Year" info="sources">
-      {chans.map(ch => {
-        const w = Math.round(ch.pct * 100);
-        const stly = Math.min(100, Math.max(0, (ch.rev_stly / totalRev) * 100));
-        const v = ch.var != null ? ch.var * 100 : 0;
+      {(() => {
+        const COLS = '92px minmax(0,1fr) 54px 50px 66px';
         return (
-          <div key={ch.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0' }}>
-            <span style={{ flex: '0 0 92px', fontSize: 12.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>{ch.name}</span>
-            <div style={{ flex: 1, height: 14, background: 'var(--grey-100)', borderRadius: 7, position: 'relative' }}>
-              <div style={{ width: `${w}%`, height: '100%', background: 'var(--grad-cyan)', borderRadius: 7 }} />
-              <div style={{ position: 'absolute', left: `${stly}%`, top: -3, width: 3, height: 20, background: 'var(--navy)', opacity: .55, borderRadius: 1.5 }} />
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 8, alignItems: 'center', padding: '0 0 6px', borderBottom: '1px solid var(--grey-100)' }}>
+              <span />
+              <span />
+              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.06em', color: 'var(--cap)', textAlign: 'right' }}>OTB</span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.06em', color: 'var(--cap)', textAlign: 'right' }}>STLY</span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.06em', color: 'var(--cap)', textAlign: 'right' }}>VS STLY</span>
             </div>
-            <b style={{ fontSize: 11.5, fontWeight: 800, width: 52, textAlign: 'right', color: 'var(--text)' }}>{kilo(ch.rev)}</b>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--cap)', width: 48, textAlign: 'right' }}>{kilo(ch.rev_stly)}</span>
-            <span style={{
-              fontSize: 10.5, fontWeight: 700, padding: '2px 6px', borderRadius: 7, whiteSpace: 'nowrap',
-              background: ch.trend === 'up' ? 'var(--green-bg)' : 'var(--red-bg)',
-              color: ch.trend === 'up' ? 'var(--green)' : 'var(--red)',
-            }}>{ch.trend === 'up' ? '▲' : '▼'} {signedPct(v)}</span>
-          </div>
+            {chans.map(ch => {
+              const w = Math.round(ch.pct * 100);
+              const stly = Math.min(100, Math.max(0, (ch.rev_stly / totalRev) * 100));
+              const v = ch.var != null ? ch.var * 100 : 0;
+              return (
+                <div key={ch.name} style={{ display: 'grid', gridTemplateColumns: COLS, gap: 8, alignItems: 'center', padding: '9px 0' }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25, overflow: 'hidden' }}>{ch.name}</span>
+                  <div style={{ height: 14, background: 'var(--grey-100)', borderRadius: 7, position: 'relative', minWidth: 0 }}>
+                    <div style={{ width: `${w}%`, height: '100%', background: 'var(--grad-cyan)', borderRadius: 7 }} />
+                    <div style={{ position: 'absolute', left: `calc(${stly}% - 1.5px)`, top: -3, width: 3, height: 20, background: 'var(--navy)', opacity: .55, borderRadius: 1.5 }} />
+                  </div>
+                  <b style={{ fontSize: 11.5, fontWeight: 800, textAlign: 'right', color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{kilo(ch.rev)}</b>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--cap)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{kilo(ch.rev_stly)}</span>
+                  <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <span style={{
+                      fontSize: 10.5, fontWeight: 700, padding: '2px 0', borderRadius: 7, whiteSpace: 'nowrap',
+                      width: 62, textAlign: 'center', fontVariantNumeric: 'tabular-nums',
+                      background: ch.trend === 'up' ? 'var(--green-bg)' : 'var(--red-bg)',
+                      color: ch.trend === 'up' ? 'var(--green)' : 'var(--red)',
+                    }}>{ch.trend === 'up' ? '▲' : '▼'} {signedPct(v)}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </>
         );
-      })}
+      })()}
     </ChartCard>
   );
 }
