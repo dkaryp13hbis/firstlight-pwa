@@ -34,6 +34,8 @@ export function SettingsSheet(props: {
   open: boolean; onClose: () => void;
   lang: 'en' | 'el'; onLang: (l: 'en' | 'el') => void;
   revMode: 'gross' | 'net'; onRevMode: (m: 'gross' | 'net') => void;
+  year: 'this' | 'next'; onYear: (y: 'this' | 'next') => void;
+  comp: 'this' | 'prev'; onComp: (c: 'this' | 'prev') => void;
   textSize: number; onTextSize: (d: number) => void;
   onSignOut: () => void;
 }) {
@@ -42,6 +44,7 @@ export function SettingsSheet(props: {
     fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 8,
     color: on ? '#fff' : '#5A6780',
   });
+  const Y = new Date().getFullYear();
   const tsBtn: React.CSSProperties = {
     width: 44, height: 38, border: 'none', borderRadius: 10,
     background: '#F1F3F8', fontSize: 15, fontWeight: 800, color: '#0F2860',
@@ -65,6 +68,34 @@ export function SettingsSheet(props: {
           <button style={segBtn(props.revMode === 'gross')} onClick={() => props.onRevMode('gross')}>Gross</button>
           <button style={segBtn(props.revMode === 'net')} onClick={() => props.onRevMode('net')}>Net</button>
         </div>
+      </div>
+      <div style={rowStyle}>
+        <span style={labelStyle}>Reporting year</span>
+        <div style={{ display: 'flex', background: '#F1F3F8', borderRadius: 10, padding: 3 }}>
+          <button style={segBtn(props.year === 'this')} onClick={() => props.onYear('this')}>{Y}</button>
+          <button style={segBtn(props.year === 'next')} onClick={() => props.onYear('next')}>{Y + 1}</button>
+        </div>
+      </div>
+      <div style={rowStyle}>
+        <span style={labelStyle}>Comparison year</span>
+        {props.year === 'this' ? (
+          <div style={{ display: 'flex', background: '#F1F3F8', borderRadius: 10, padding: 3 }}>
+            <button style={segBtn(true)}>{Y - 1}</button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', background: '#F1F3F8', borderRadius: 10, padding: 3 }}>
+            <button style={segBtn(props.comp === 'this')} onClick={() => props.onComp('this')}>{Y}</button>
+            <button style={segBtn(props.comp === 'prev')} onClick={() => props.onComp('prev')}>{Y - 1}</button>
+          </div>
+        )}
+      </div>
+      <div style={{ ...rowStyle, borderBottom: 'none', paddingTop: 0, marginTop: -6 }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: '#6e7a96', lineHeight: 1.4 }}>
+          {props.year === 'this'
+            ? 'Same time last year & final ' + (Y - 1) + ' on every chart'
+            : props.comp === 'prev' ? 'Same stage & final ' + (Y - 1)
+            : 'Closed months: final ' + Y + ' · open months: same stage ' + Y}
+        </span>
       </div>
       <div style={rowStyle}>
         <span style={labelStyle}>Text size</span>

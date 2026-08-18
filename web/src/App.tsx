@@ -295,33 +295,13 @@ export default function App() {
         )}
         <KpiRow briefing={viewBriefing ?? briefing} />
         <MtdStrip briefing={viewBriefing ?? briefing} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, fontWeight: 800, color: '#0a1f4d' }}>Reporting year</span>
-          <span style={{ display: 'inline-flex', background: '#E9EDF4', borderRadius: 10, padding: 3 }}>
-            {(['this', 'next'] as const).map(k => (
-              <button key={k} onClick={() => setYear(k)} style={{
-                border: 'none', fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 8,
-                background: year === k ? '#0F2860' : 'transparent', color: year === k ? '#fff' : '#5A6780',
-              }}>{new Date().getFullYear() + (k === 'next' ? 1 : 0)}</button>
-            ))}
-          </span>
-          {year === 'next' && <span style={{ fontSize: 12, fontWeight: 800, color: '#0a1f4d', marginLeft: 6 }}>vs</span>}
-          {year === 'next' && (
-            <span style={{ display: 'inline-flex', background: '#E9EDF4', borderRadius: 10, padding: 3 }}>
-              {(['this', 'prev'] as const).map(k => (
-                <button key={k} onClick={() => setComp(k)} style={{
-                  border: 'none', fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 8,
-                  background: comp === k ? '#0F2860' : 'transparent', color: comp === k ? '#fff' : '#5A6780',
-                }}>{new Date().getFullYear() - (k === 'prev' ? 1 : 0)}</button>
-              ))}
-            </span>
-          )}
-          <span style={{ fontSize: 10.5, fontWeight: 600, color: '#6e7a96' }}>
-            {year === 'this'
-              ? 'vs ' + String(new Date().getFullYear() - 1) + ' — STLY & Final LY'
-              : comp === 'prev' ? 'same stage & final' : 'closed months: final · open: same stage'}
-          </span>
-        </div>
+        {year === 'next' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-2px 0 14px', fontSize: 12, fontWeight: 600, color: '#5A6780' }}>
+            <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.08em', color: '#0F2860', background: '#E9EDF4', borderRadius: 999, padding: '3px 9px' }}>{new Date().getFullYear() + 1}</span>
+            Reporting year {new Date().getFullYear() + 1} vs {new Date().getFullYear() - (comp === 'prev' ? 1 : 0)}
+            {comp === 'prev' ? ' — same stage & final' : ' — closed months final · open months same stage'} · change in Settings
+          </div>
+        )}
         <OtbCards briefing={viewBriefing ?? briefing} year={year} nextPace={buildNextPace(viewBriefing ?? briefing, comp)} />
         <div id="sec-pickup" style={{ scrollMarginTop: 46 }} />
         <PickupSection briefing={viewBriefing ?? briefing} year={year} comp={comp} />
@@ -359,6 +339,7 @@ export default function App() {
         open={settingsOpen} onClose={() => setSettingsOpen(false)}
         lang={lang} onLang={changeLang}
         revMode={revMode} onRevMode={changeRevMode}
+        year={year} onYear={setYear} comp={comp} onComp={setComp}
         textSize={textSize} onTextSize={d => setTextSize(s => Math.min(5, Math.max(1, s + d)))}
         onSignOut={signOut}
       />
