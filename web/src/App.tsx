@@ -10,6 +10,7 @@ import { OtbTab, buildNextPace } from './components/Charts';
 import { AiTab, type FeedbackRequest } from './components/AiCards';
 import { FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
 import { Login } from './components/Login';
+import { registerSW, isSubscribed, subscribe, unsubscribe } from './lib/push';
 
 const TS_ZOOM: Record<number, number> = { 1: 0.85, 2: 1, 3: 1.12, 4: 1.25, 5: 1.4 };
 
@@ -263,6 +264,25 @@ export default function App() {
     return b;
   }, [briefing, revMode, netAvailable]);
 
+  /* Web Push: service worker + honest bell state (browser subscription AND server row). */
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
+  useEffect(() => {
+    registerSW(sectionId => {
+      const t = ({ 'sec-overview': 'Overview', 'sec-pickup': 'Pickup', 'sec-pace': 'Pace', 'sec-ai': 'AI Insights' } as Record<string, Tab>)[sectionId];
+      if (t) setTimeout(() => nav(t), 400);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => { if (session) isSubscribed().then(setBellOn); }, [session, hotels.length]);
+
+  const toggleBell = async () => {
+    if (bellOn) { const m = await unsubscribe(); setBellOn(false); say(m); return; }
+    const ids = hotels.map(h => h.id).filter(id => id !== 'demo');
+    const r = await subscribe(ids.length ? ids : [hotelId]);
+    setBellOn(r.ok);
+    if (r.ok) say(r.msg); else setPushMsg(r.msg);
+  };
+
   const nav = (t: Tab) => {
     setTab(t);
     const id = { Overview: 'sec-overview', Pickup: 'sec-pickup', Pace: 'sec-pace', 'AI Insights': 'sec-ai' }[t];
@@ -311,7 +331,7 @@ export default function App() {
         tab={tab} onTab={nav}
         aiCount={briefing.ai_insights?.insights?.length ?? 0}
         refreshState={refreshState} onRefresh={requestRefresh}
-        bellOn={bellOn} onBell={() => { setBellOn(!bellOn); say(bellOn ? 'Notifications off' : 'Notifications on'); }}
+        bellOn={bellOn} onBell={toggleBell}
         onSettings={() => setSettingsOpen(true)}
       >
         <div id="sec-overview" style={{ scrollMarginTop: 46 }} />
@@ -377,6 +397,17 @@ export default function App() {
         onClose={() => setFb(null)} onSubmit={submitFeedback}
       />
       <Toast msg={toast} />
+      {pushMsg && (
+        <div onClick={() => setPushMsg(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(6,21,53,.45)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, padding: '20px 20px 16px', maxWidth: 360, boxShadow: '0 12px 40px rgba(10,20,45,.25)' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#0F2860', marginBottom: 8 }}>Notifications</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: '#4D5A74', lineHeight: 1.45 }}>{pushMsg}</div>
+            <div style={{ textAlign: 'right', marginTop: 14 }}>
+              <button onClick={() => setPushMsg(null)} style={{ border: 'none', background: '#0F2860', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 10 }}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
