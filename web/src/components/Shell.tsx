@@ -73,8 +73,21 @@ export function Shell(props: {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <LogoLockup />
           <div style={{ display: 'flex', gap: 10 }}>
-            <button style={{ ...icoStyle, color: props.bellOn ? '#38E1F0' : icoStyle.color, borderColor: 'rgba(56,225,240,.4)' }}
-              onClick={props.onBell} title={props.bellOn ? 'Notifications on' : 'Notifications off'}>🔔</button>
+            <button style={{ ...icoStyle, position: 'relative', overflow: 'visible', color: props.bellOn ? '#38E1F0' : icoStyle.color, borderColor: 'rgba(56,225,240,.4)' }}
+              onClick={props.onBell} title={props.bellOn ? 'Notifications on' : 'Notifications off'}>
+              🔔
+              <span style={{
+                position: 'absolute', right: -3, bottom: -3, width: 15, height: 15, borderRadius: '50%',
+                background: props.bellOn ? '#1A7A50' : '#D64545', border: '2px solid var(--app-top)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                  {props.bellOn
+                    ? <polyline points="4 12.5 10 18 20 6" />
+                    : <><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></>}
+                </svg>
+              </span>
+            </button>
             <button style={icoStyle} title="Share"
               onClick={() => { if (navigator.share) navigator.share({ title: 'FirstLight — Morning Briefing', url: location.href }).catch(() => undefined); }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
