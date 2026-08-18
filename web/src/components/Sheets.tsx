@@ -33,6 +33,7 @@ const labelStyle: React.CSSProperties = { fontSize: 15, fontWeight: 600, color: 
 export function SettingsSheet(props: {
   open: boolean; onClose: () => void;
   lang: 'en' | 'el'; onLang: (l: 'en' | 'el') => void;
+  revMode: 'gross' | 'net'; onRevMode: (m: 'gross' | 'net') => void;
   textSize: number; onTextSize: (d: number) => void;
   onSignOut: () => void;
 }) {
@@ -56,6 +57,13 @@ export function SettingsSheet(props: {
         <div style={{ display: 'flex', background: '#F1F3F8', borderRadius: 10, padding: 3 }}>
           <button style={segBtn(props.lang === 'en')} onClick={() => props.onLang('en')}>EN</button>
           <button style={segBtn(props.lang === 'el')} onClick={() => props.onLang('el')}>ΕΛ</button>
+        </div>
+      </div>
+      <div style={rowStyle}>
+        <span style={labelStyle}>Revenue</span>
+        <div style={{ display: 'flex', background: '#F1F3F8', borderRadius: 10, padding: 3 }}>
+          <button style={segBtn(props.revMode === 'gross')} onClick={() => props.onRevMode('gross')}>Gross</button>
+          <button style={segBtn(props.revMode === 'net')} onClick={() => props.onRevMode('net')}>Net</button>
         </div>
       </div>
       <div style={rowStyle}>

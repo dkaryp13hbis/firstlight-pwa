@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchLatestBriefing } from './api';
 import { sb, demoMode } from './lib/sb';
 import type { Briefing } from './types';
@@ -27,6 +27,8 @@ export default function App() {
   const [refreshState, setRefreshState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const [bellOn, setBellOn] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [revMode, setRevMode] = useState<'gross' | 'net'>(
+    () => (localStorage.getItem('fl_revmode') as 'gross' | 'net') || 'gross');
   const [year, setYearState] = useState<'this' | 'next'>('this');
   const [comp, setComp] = useState<'this' | 'prev'>('prev');
   const setYear = (k: 'this' | 'next') => { setYearState(k); setComp(k === 'this' ? 'prev' : 'this'); };
@@ -160,6 +162,84 @@ export default function App() {
     if (sb) await sb.auth.signOut();
   };
 
+  const netAvailable = (briefing?.data.mtd as unknown as { revenueNet?: number } | undefined)?.revenueNet != null;
+  const changeRevMode = (m: 'gross' | 'net') => {
+    if (m === 'net' && !netAvailable) {
+      say('Net figures arrive with the next data refresh'); return;
+    }
+    setRevMode(m);
+    localStorage.setItem('fl_revmode', m);
+    say(m === 'net' ? 'Showing net revenue' : 'Showing gross revenue');
+  };
+
+  /* Net view: exact logisnet fields where the payload carries them (yesterday,
+     MTD, OTB pace); sections without a net query yet (pickup, channels, next
+     year, ADR bridge) are scaled by the hotel's net/gross factor so the whole
+     app reads in one basis. */
+  const viewBriefing = useMemo(() => {
+    if (!briefing || revMode === 'gross' || !netAvailable) return briefing;
+    type NumRec = Record<string, number | undefined>;
+    const src = briefing.data as unknown as Record<string, unknown>;
+    const ratio = (o: NumRec | undefined, n: string, g: string) =>
+      o && typeof o[n] === 'number' && (o[g] ?? 0) > 0 ? (o[n] as number) / (o[g] as number) : null;
+    const paceTot = ((src.pace as NumRec[] | undefined) ?? []).reduce<{ n: number; g: number }>(
+      (a, p) => ({ n: a.n + (p.rev_net ?? 0), g: a.g + (p.rev ?? 0) }), { n: 0, g: 0 });
+    const f = ratio(src.mtd as NumRec, 'revenueNet', 'revenue')
+      ?? ratio(src.yesterday as NumRec, 'revenueNet', 'revenue')
+      ?? (paceTot.g > 0 ? paceTot.n / paceTot.g : 1);
+    const b: Briefing = JSON.parse(JSON.stringify(briefing));
+    const bd = b.data as unknown as Record<string, unknown>;
+    const day = (o: NumRec) => {
+      o.revenue = o.revenueNet ?? (o.revenue ?? 0) * f;
+      o.revenueLY = o.revenueNetLY ?? (o.revenueLY ?? 0) * f;
+      if (o.roomNights) o.adr = o.revenue / o.roomNights;
+      else o.adr = (o.adr ?? 0) * f;
+      if (o.roomNightsLY) o.adrLY = (o.revenueLY ?? 0) / o.roomNightsLY;
+      else o.adrLY = (o.adrLY ?? 0) * f;
+    };
+    day(bd.yesterday as NumRec);
+    day(bd.mtd as NumRec);
+    for (const p of (bd.pace as NumRec[] | undefined) ?? []) {
+      p.rev = p.rev_net ?? (p.rev ?? 0) * f;
+      p.rev_stly = p.rev_stly_net ?? (p.rev_stly ?? 0) * f;
+      p.rev_final = p.rev_final_net ?? (p.rev_final ?? 0) * f;
+      p.adr = p.rn ? (p.rev ?? 0) / p.rn : (p.adr ?? 0) * f;
+      p.adr_stly = p.rn_stly ? (p.rev_stly ?? 0) / p.rn_stly : (p.adr_stly ?? 0) * f;
+      p.adr_final_ly = p.rn_final_ly ? (p.rev_final ?? 0) / p.rn_final_ly : (p.adr_final_ly ?? 0) * f;
+    }
+    for (const p of (bd.pace_current as NumRec[] | undefined) ?? []) {
+      p.rev = p.rev_net ?? (p.rev ?? 0) * f;
+      p.rev_stly = p.rev_stly_net ?? (p.rev_stly ?? 0) * f;
+      p.adr = p.rn ? (p.rev ?? 0) / p.rn : (p.adr ?? 0) * f;
+      p.adr_stly = p.rn_stly ? (p.rev_stly ?? 0) / p.rn_stly : (p.adr_stly ?? 0) * f;
+    }
+    const pu = bd.pickup as Record<string, unknown> | undefined;
+    if (pu) {
+      for (const k of ['today', 'last1d', 'last3d', 'last7d']) {
+        const w = pu[k] as NumRec | undefined;
+        if (w) w.revenue = (w.revenue ?? 0) * f;
+      }
+      for (const k of ['cancellationRevenue', 'cancellationRevenueToday', 'cancellationRevenue3d', 'cancellationRevenue7d']) {
+        if (typeof pu[k] === 'number') pu[k] = (pu[k] as number) * f;
+      }
+    }
+    for (const r of (bd.consumed_by_source as NumRec[] | undefined) ?? []) r.rev = (r.rev ?? 0) * f;
+    for (const c of (bd.topChannels as NumRec[] | undefined) ?? []) {
+      c.rev = (c.rev ?? 0) * f; c.rev_stly = (c.rev_stly ?? 0) * f;
+    }
+    for (const r of (bd.pace_next_year as NumRec[] | undefined) ?? []) {
+      r.rev = (r.rev ?? 0) * f; r.rev_stly = (r.rev_stly ?? 0) * f;
+      if (typeof r.rev_stly2 === 'number') r.rev_stly2 = r.rev_stly2 * f;
+    }
+    for (const r of (bd.pickup_daily as NumRec[] | undefined) ?? []) {
+      if (typeof r.net_rev === 'number') r.net_rev = r.net_rev * f;
+    }
+    for (const r of (bd.cancel_daily as NumRec[] | undefined) ?? []) {
+      if (typeof r.cancel_rev === 'number') r.cancel_rev = r.cancel_rev * f;
+    }
+    return b;
+  }, [briefing, revMode, netAvailable]);
+
   const nav = (t: Tab) => {
     setTab(t);
     const id = { Overview: 'sec-overview', Pickup: 'sec-pickup', Pace: 'sec-pace', 'AI Insights': 'sec-ai' }[t];
@@ -206,9 +286,15 @@ export default function App() {
         onSettings={() => setSettingsOpen(true)}
       >
         <div id="sec-overview" style={{ scrollMarginTop: 46 }} />
-        <SmartSummary briefing={briefing} />
-        <KpiRow briefing={briefing} />
-        <MtdStrip briefing={briefing} />
+        <SmartSummary briefing={viewBriefing ?? briefing} />
+        {revMode === 'net' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-6px 0 14px', fontSize: 12, fontWeight: 600, color: '#5A6780' }}>
+            <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.08em', color: '#0F2860', background: '#E9EDF4', borderRadius: 999, padding: '3px 9px' }}>NET</span>
+            Revenue and ADR shown net of VAT &amp; taxes · change in Settings
+          </div>
+        )}
+        <KpiRow briefing={viewBriefing ?? briefing} />
+        <MtdStrip briefing={viewBriefing ?? briefing} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 12, fontWeight: 800, color: '#0a1f4d' }}>Reporting year</span>
           <span style={{ display: 'inline-flex', background: '#E9EDF4', borderRadius: 10, padding: 3 }}>
@@ -236,11 +322,11 @@ export default function App() {
               : comp === 'prev' ? 'same stage & final' : 'closed months: final · open: same stage'}
           </span>
         </div>
-        <OtbCards briefing={briefing} year={year} nextPace={buildNextPace(briefing, comp)} />
+        <OtbCards briefing={viewBriefing ?? briefing} year={year} nextPace={buildNextPace(viewBriefing ?? briefing, comp)} />
         <div id="sec-pickup" style={{ scrollMarginTop: 46 }} />
-        <PickupSection briefing={briefing} year={year} comp={comp} />
+        <PickupSection briefing={viewBriefing ?? briefing} year={year} comp={comp} />
         <div id="sec-pace" style={{ scrollMarginTop: 46 }} />
-        <OtbTab briefing={briefing} year={year} comp={comp} />
+        <OtbTab briefing={viewBriefing ?? briefing} year={year} comp={comp} />
         <div id="sec-ai" style={{ scrollMarginTop: 46 }} />
         <AiTab briefing={briefing} hotelId={hotelId} onFeedback={setFb} />
         <div style={{
@@ -272,6 +358,7 @@ export default function App() {
       <SettingsSheet
         open={settingsOpen} onClose={() => setSettingsOpen(false)}
         lang={lang} onLang={changeLang}
+        revMode={revMode} onRevMode={changeRevMode}
         textSize={textSize} onTextSize={d => setTextSize(s => Math.min(5, Math.max(1, s + d)))}
         onSignOut={signOut}
       />
