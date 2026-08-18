@@ -332,7 +332,10 @@ interface ConsumedRow { period: 'TY' | 'LY'; source: string; rn: number; rev: nu
 function AdrBridge({ briefing }: { briefing: Briefing }) {
   const rows = (briefing.data as unknown as { consumed_by_source?: ConsumedRow[] }).consumed_by_source ?? [];
   const model = useMemo(() => {
-    const ty = rows.filter(r => r.period === 'TY'), ly = rows.filter(r => r.period === 'LY');
+    // zero-night rows (pure revenue adjustments) can't be decomposed —
+    // exclude from BOTH sides so mix+rate stays exactly equal to the delta
+    const ty = rows.filter(r => r.period === 'TY' && r.rn > 0);
+    const ly = rows.filter(r => r.period === 'LY' && r.rn > 0);
     const tot = (xs: ConsumedRow[]) => xs.reduce((a, r) => ({ rn: a.rn + r.rn, rev: a.rev + r.rev }), { rn: 0, rev: 0 });
     const T = tot(ty), L = tot(ly);
     if (!T.rn || !L.rn) return null;
