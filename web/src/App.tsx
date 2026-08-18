@@ -13,8 +13,17 @@ import { Login } from './components/Login';
 
 const TS_ZOOM: Record<number, number> = { 1: 0.85, 2: 1, 3: 1.12, 4: 1.25, 5: 1.4 };
 
+/* Local cache → instant paint on open (stale-while-revalidate). */
+function readCache<T>(key: string): T | null {
+  try { const v = localStorage.getItem(key); return v ? (JSON.parse(v) as T) : null; } catch { return null; }
+}
+function writeCache(key: string, v: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* quota — ignore */ }
+}
+
 export default function App() {
-  const [session, setSession] = useState<boolean>(demoMode);
+  const [session, setSession] = useState<boolean>(() => demoMode
+    || Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token')));
   const [hotels, setHotels] = useState<{ id: string; name: string }[]>([]);
   const [hotelId, setHotelId] = useState<string>('');
   const [briefing, setBriefing] = useState<Briefing | null>(null);
@@ -48,20 +57,32 @@ export default function App() {
   useEffect(() => {
     if (!session) return;
     if (!sb) { setHotels([{ id: 'demo', name: 'Pomegranate Wellness Spa Hotel' }]); setHotelId('demo'); return; }
+    const cachedHotels = readCache<{ id: string; name: string }[]>('fl_hotels');
+    if (cachedHotels?.length) {
+      setHotels(cachedHotels);
+      setHotelId(prev => prev || localStorage.getItem('fl_hotel') || cachedHotels[0].id);
+    }
     (async () => {
       const { data: hu } = await sb.from('hotel_users').select('hotel_id');
       const ids = (hu ?? []).map(r => r.hotel_id);
       const { data: hs } = await sb.from('hotels').select('id, name').in('id', ids);
       const list = hs ?? [];
+      if (!list.length) return;
       setHotels(list);
-      setHotelId(prev => prev || localStorage.getItem('fl_hotel') || list[0]?.id || '');
+      writeCache('fl_hotels', list);
+      setHotelId(prev => (prev && list.some(h => h.id === prev)) ? prev
+        : (list.find(h => h.id === localStorage.getItem('fl_hotel'))?.id ?? list[0].id));
     })();
   }, [session]);
 
   /* briefing */
   const load = useCallback(() => {
     if (!hotelId) return;
-    fetchLatestBriefing(hotelId).then(setBriefing).catch(e => setError(String(e)));
+    const cached = readCache<Briefing>(`fl_briefing_${hotelId}`);
+    if (cached) setBriefing(cached);
+    fetchLatestBriefing(hotelId)
+      .then(b => { setBriefing(b); setError(null); writeCache(`fl_briefing_${hotelId}`, b); })
+      .catch(e => { if (!cached) setError(String(e)); });
   }, [hotelId]);
   useEffect(load, [load]);
 
@@ -159,6 +180,8 @@ export default function App() {
 
   const signOut = async () => {
     setSettingsOpen(false);
+    Object.keys(localStorage).filter(k => k.startsWith('fl_briefing_') || k === 'fl_hotels').forEach(k => localStorage.removeItem(k));
+    setBriefing(null); setHotels([]); setHotelId('');
     if (sb) await sb.auth.signOut();
   };
 
@@ -252,7 +275,13 @@ export default function App() {
 
   if (!session) return <Login />;
   if (error) return <p style={{ padding: 32, textAlign: 'center' }}>Could not load briefing: {error}</p>;
-  if (!briefing) return <p style={{ padding: 32, textAlign: 'center', color: 'var(--n500)' }}>Loading briefing…</p>;
+  if (!briefing) return (
+    <Shell hotels={hotels} hotelId={hotelId} onHotel={changeHotel} tab={tab} onTab={setTab} aiCount={0}
+      refreshState="idle" onRefresh={() => undefined} bellOn={bellOn} onBell={() => undefined}
+      onSettings={() => setSettingsOpen(true)}>
+      <p style={{ padding: '40px 0', textAlign: 'center', color: 'var(--n500)', fontSize: 13, fontWeight: 600 }}>Loading briefing…</p>
+    </Shell>
+  );
 
   return (
     <>

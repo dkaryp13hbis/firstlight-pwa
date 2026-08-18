@@ -426,11 +426,11 @@ function TopSources({ briefing }: { briefing: Briefing }) {
         const stly = Math.min(100, Math.max(0, (ch.rev_stly / totalRev) * 100));
         const v = ch.var != null ? ch.var * 100 : 0;
         return (
-          <div key={ch.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' }}>
+          <div key={ch.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0' }}>
             <span style={{ flex: '0 0 92px', fontSize: 12.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>{ch.name}</span>
-            <div style={{ flex: 1, height: 6, background: 'var(--grey-100)', borderRadius: 4, position: 'relative' }}>
-              <div style={{ width: `${w}%`, height: '100%', background: 'var(--grad-cyan)', borderRadius: 4 }} />
-              <div style={{ position: 'absolute', left: `${stly}%`, top: -3, width: 2, height: 12, background: 'var(--blue)', opacity: .5, borderRadius: 1 }} />
+            <div style={{ flex: 1, height: 14, background: 'var(--grey-100)', borderRadius: 7, position: 'relative' }}>
+              <div style={{ width: `${w}%`, height: '100%', background: 'var(--grad-cyan)', borderRadius: 7 }} />
+              <div style={{ position: 'absolute', left: `${stly}%`, top: -3, width: 3, height: 20, background: 'var(--navy)', opacity: .55, borderRadius: 1.5 }} />
             </div>
             <b style={{ fontSize: 11.5, fontWeight: 800, width: 52, textAlign: 'right', color: 'var(--text)' }}>{kilo(ch.rev)}</b>
             <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--cap)', width: 48, textAlign: 'right' }}>{kilo(ch.rev_stly)}</span>
