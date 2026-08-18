@@ -273,12 +273,12 @@ export default function App() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  useEffect(() => { if (session) isSubscribed().then(setBellOn); }, [session, hotels.length]);
+  useEffect(() => { if (session && hotelId) isSubscribed(hotelId).then(setBellOn); }, [session, hotelId]);
 
   const toggleBell = async () => {
-    if (bellOn) { const m = await unsubscribe(); setBellOn(false); say(m); return; }
-    const ids = hotels.map(h => h.id).filter(id => id !== 'demo');
-    const r = await subscribe(ids.length ? ids : [hotelId]);
+    const name = hotels.find(h => h.id === hotelId)?.name ?? 'this hotel';
+    if (bellOn) { const m = await unsubscribe(hotelId, name); setBellOn(false); say(m); return; }
+    const r = await subscribe(hotelId, name);
     setBellOn(r.ok);
     if (r.ok) say(r.msg); else setPushMsg(r.msg);
   };
