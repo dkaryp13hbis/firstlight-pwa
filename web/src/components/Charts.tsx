@@ -132,67 +132,6 @@ function OccPace({ months }: { months: PaceMonth[] }) {
   );
 }
 
-/* ── Where each month stands (canon fl meter) ─────────────────────────── */
-
-function MonthStands({ months }: { months: PaceMonth[] }) {
-  return (
-    <div className="card" style={{ padding: '18px 18px 14px', marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Where each month stands</span>
-        <InfoButton k="meter" />
-      </div>
-      <div style={{ fontSize: 11, color: 'var(--n600)', lineHeight: 1.5, marginBottom: 14 }}>
-        Track = last year's final month · bar = booked now · tick = LY same date.
-        Green spill past the end = above LY final · red bar = behind LY pace. All numbers are room nights.
-      </div>
-      {months.map(m => {
-        const scaleMax = Math.max(m.rn_final_ly, m.rn, 1) * 1.02;
-        const w = (v: number) => `${Math.min(v / scaleMax, 1) * 100}%`;
-        const behind = m.rn < m.rn_stly;
-        const beat = m.rn_final_ly > 0 && m.rn > m.rn_final_ly;
-        const vsPace = m.rn - m.rn_stly;
-        const vsFinal = m.rn - m.rn_final_ly;
-        return (
-          <div key={m.month} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 5 }}>{m.month}</div>
-              <div style={{ position: 'relative', height: 14 }}>
-                <div style={{ position: 'absolute', inset: 0, width: w(m.rn_final_ly), background: '#EDF0F6', borderRadius: 7 }} />
-                <div style={{
-                  position: 'absolute', left: 0, top: 0, bottom: 0, width: w(Math.min(m.rn, m.rn_final_ly || m.rn)),
-                  background: behind ? RED : NAVY, borderRadius: 7,
-                }} />
-                {beat && (
-                  <div style={{
-                    position: 'absolute', top: 0, bottom: 0, left: w(m.rn_final_ly),
-                    width: `calc(${w(m.rn)} - ${w(m.rn_final_ly)})`, background: GREEN, borderRadius: '0 7px 7px 0',
-                  }} />
-                )}
-                <div style={{ position: 'absolute', left: w(m.rn_stly), top: -3, bottom: -3, width: 2, background: '#9AA4B8' }} />
-              </div>
-              <div style={{ display: 'flex', gap: 12, fontSize: 10.5, color: 'var(--n600)', fontWeight: 600, marginTop: 6, flexWrap: 'wrap' }}>
-                <span>booked: <b style={{ fontWeight: 800, color: 'var(--text)' }}>{m.rn.toLocaleString()} rn</b></span>
-                <span>▲ LY same date: {m.rn_stly.toLocaleString()}</span>
-                <span>LY final: {m.rn_final_ly.toLocaleString()}</span>
-              </div>
-            </div>
-            <div style={{ width: 108, textAlign: 'right', paddingTop: 18 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: vsPace >= 0 ? GREEN : RED }}>
-                {vsPace >= 0 ? '+' : ''}{vsPace.toLocaleString()} rn
-              </div>
-              <div style={{ fontSize: 10, color: 'var(--n600)', fontWeight: 600 }}>vs LY pace</div>
-              <div style={{ fontSize: 10, marginTop: 4, fontWeight: beat ? 700 : 600, color: beat ? GREEN : 'var(--n600)', lineHeight: 1.3 }}>
-                {m.rn_final_ly > 0
-                  ? (beat ? `+${vsFinal.toLocaleString()} rn above LY final` : `${(-vsFinal).toLocaleString()} rn to LY final`)
-                  : 'no LY final'}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 /* ── Booking speed (legend, trend word, needed marker, passed detail) ── */
 
@@ -510,8 +449,6 @@ export function buildNextPace(briefing: Briefing, comp: 'this' | 'prev' = 'this'
 export function OtbTab({ briefing, year, comp }: { briefing: Briefing; year: 'this' | 'next'; comp: 'this' | 'prev' }) {
   const thisYear = new Date().getFullYear();
   const paceAll = year === 'this' ? (briefing.data.pace ?? []) : buildNextPace(briefing, comp);
-  const curM = new Date().getMonth() + 1;
-  const fwd = (briefing.data.pace ?? []).filter(m => m.month_num >= curM).slice(0, 4);
   return (
     <>
       <SectionLabel icon="pace" info="pace" title="Pace">
