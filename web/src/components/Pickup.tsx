@@ -139,7 +139,7 @@ export function PickupSection({ briefing, year, comp }: { briefing: Briefing; ye
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)' }}>+{b.bRn} rn · {kilo(b.bRev)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-              <span style={puLbl}>Cancel</span>
+              <span style={puLbl}>Cancelled</span>
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)' }}>-{b.cRn} rn · -{kilo(b.cRev)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 6, borderTop: '1px solid var(--grey-100)' }}>
