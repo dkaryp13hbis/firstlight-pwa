@@ -91,7 +91,8 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: {
   const [tip, setTip] = useState<number | null>(null);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}
-      onMouseLeave={() => setTip(null)}>
+      onMouseLeave={() => setTip(null)}
+      onPointerDown={e => { if (e.pointerType !== 'mouse' && e.target === e.currentTarget) setTip(null); }}>
       <Grid mx={mx} fmt={fmt} />
       {months.map((m, i) => {
         const x = 62 + i * step + step / 2;
@@ -100,10 +101,14 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: {
         const vs = (m[fieldStly] as number) ? (((m[field] as number) - (m[fieldStly] as number)) / (m[fieldStly] as number)) * 100 : 0;
         return (
           <g key={m.month}
-            onMouseEnter={() => setTip(i)}
-            onClick={() => setTip(t => (t === i ? null : i))}
-            style={{ cursor: 'pointer' }}>
-            <rect x={62 + i * step} y={BOT - CH} width={step} height={CH + 44} fill="transparent" />
+            /* mouse: hover shows; touch: tap toggles (iOS fires synthetic
+               mouseenter+click on tap, which double-toggled — so pointer
+               events with a type check, and touch never runs the hover path) */
+            onPointerEnter={e => { if (e.pointerType === 'mouse') setTip(i); }}
+            onPointerDown={e => { if (e.pointerType !== 'mouse') setTip(t => (t === i ? null : i)); }}
+            onClick={e => e.stopPropagation()}
+            style={{ cursor: 'pointer', touchAction: 'pan-y' }}>
+            <rect x={62 + i * step} y={0} width={step} height={BOT + 44} fill="transparent" />
             <rect x={x - bw - 1} y={BOT - vTy} width={bw} height={vTy} rx={1.5}
               fill={(m[field] as number) >= ((m[fieldFinal] as number) || Infinity) ? GREEN : NAVY} />
             <rect x={x + 1} y={BOT - vLy} width={bw} height={vLy} rx={1.5} fill={GREY} />
