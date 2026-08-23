@@ -35,7 +35,9 @@ function Card({ ins, cardId, voted, onFeedback }: {
     }}>{glyph}</button>
   );
   const tag = TAG_STYLE[ins.tag ?? ins.type ?? 'MONITOR'] ?? TAG_STYLE.MONITOR;
-  const kpis = ins.evidence ?? ins.kpis ?? [];
+  const kpisRaw = ins.evidence ?? ins.kpis ?? [];
+  /* legacy cards carry "€X at stake" subs — estimates are no longer shown */
+  const kpis = kpisRaw.map(k => (/at stake/i.test(k.sub ?? '') ? { ...k, sub: undefined } : k));
   return (
     <div style={{
       background: '#fff', border: '1px solid rgba(10,31,77,.08)', borderRadius: 16,
@@ -84,11 +86,8 @@ function Card({ ins, cardId, voted, onFeedback }: {
           )}
           {ins.recommended_action && (
             <div style={{ background: '#F1F6FF', borderRadius: 10, padding: '10px 12px', fontSize: 13, lineHeight: 1.5 }}>
-              <b style={{ fontWeight: 800 }}>Suggested review: </b>{ins.recommended_action}
+              <b style={{ fontWeight: 800 }}>Suggested review: </b>{ins.recommended_action.replace(/\s*At stake: €[\d.,]+\.?/gi, '')}
               {ins.by_when && <span style={{ color: 'var(--n600)' }}> By when: {ins.by_when}</span>}
-              {ins.at_stake?.value && (
-                <span className="t-delta" style={{ color: 'var(--coral)' }}> At stake: {ins.at_stake.value}</span>
-              )}
             </div>
           )}
           <div style={{

@@ -16,7 +16,7 @@ export const INFO: Record<string, string> = {
   meter: 'Each month’s progress towards last year’s final total. The tick marks where last year stood on today’s date — ahead of the tick means ahead of your own pace. Green spill = the month already beat last year.',
   heat: 'Occupancy on the books for every one of the next 60 nights — darker is fuller. A red outline flags a date far behind last year: expected demand that hasn’t arrived.',
   sources: 'Where this year’s revenue comes from, by booking source, compared with the same time last year. Watch for a cheap channel quietly growing its share.',
-  ai: 'The analyst’s ranked findings for today: what happened, why it matters, a suggested action and what’s at stake. Only changes that passed significance checks appear here.',
+  ai: 'The analyst’s ranked findings for today: what happened, why it matters, and a suggested action. Only changes that passed significance checks appear here.',
 };
 
 export function InfoButton({ k, dark }: { k: string; dark?: boolean }) {
