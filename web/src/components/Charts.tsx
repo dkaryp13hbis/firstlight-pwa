@@ -3,9 +3,9 @@
  *  (OTB TY / STLY / Final LY), no per-bar labels, navy series, occupancy
  *  area fill, taller plots. Plus: Where each month stands, booking speed
  *  with trend words, demand heat with behind-LY note, ADR bridge table. */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Briefing, PaceMonth } from '../types';
-import { kilo, signedPct } from '../api';
+import { euro, kilo, signedPct } from '../api';
 import { SectionLabel, LabelSub, ICONS } from './Overview';
 import { InfoButton } from './Info';
 
@@ -80,15 +80,18 @@ function Grid({ mx, fmt }: { mx: number; fmt: (v: number) => string }) {
   );
 }
 
-function BarPace({ months, field, fieldStly, fieldFinal, fmt }: {
+function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: {
   months: PaceMonth[]; field: 'rev' | 'adr'; fieldStly: 'rev_stly' | 'adr_stly';
   fieldFinal: 'rev_final' | 'adr_final_ly'; fmt: (v: number) => string;
+  fmtFull: (v: number) => string;
 }) {
   const n = months.length, step = (W - 82) / n, bw = n > 6 ? 13 : 15;
   const curM = new Date().getMonth() + 1;
   const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.08;
+  const [tip, setTip] = useState<number | null>(null);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}
+      onMouseLeave={() => setTip(null)}>
       <Grid mx={mx} fmt={fmt} />
       {months.map((m, i) => {
         const x = 62 + i * step + step / 2;
@@ -96,7 +99,11 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt }: {
         const vLy = (m[fieldStly] as number) / mx * CH;
         const vs = (m[fieldStly] as number) ? (((m[field] as number) - (m[fieldStly] as number)) / (m[fieldStly] as number)) * 100 : 0;
         return (
-          <g key={m.month}>
+          <g key={m.month}
+            onMouseEnter={() => setTip(i)}
+            onClick={() => setTip(t => (t === i ? null : i))}
+            style={{ cursor: 'pointer' }}>
+            <rect x={62 + i * step} y={BOT - CH} width={step} height={CH + 44} fill="transparent" />
             <rect x={x - bw - 1} y={BOT - vTy} width={bw} height={vTy} rx={1.5}
               fill={(m[field] as number) >= ((m[fieldFinal] as number) || Infinity) ? GREEN : NAVY} />
             <rect x={x + 1} y={BOT - vLy} width={bw} height={vLy} rx={1.5} fill={GREY} />
@@ -114,6 +121,49 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt }: {
           </g>
         );
       })}
+      {tip != null && months[tip] && (() => {
+        const m = months[tip];
+        const closed = m.month_num < curM;
+        const fin = (m[fieldFinal] as number) || 0;
+        const rows: { sw: string; dash?: boolean; label: string; v: number }[] = closed
+          ? [{ sw: (m[field] as number) >= (fin || Infinity) ? GREEN : NAVY, label: 'TY', v: m[field] as number },
+             ...(fin > 0 ? [{ sw: GREEN, dash: true, label: 'Final LY', v: fin }] : []),
+             ...(fin <= 0 ? [{ sw: GREY, label: 'STLY', v: m[fieldStly] as number }] : [])]
+          : [{ sw: (m[field] as number) >= (fin || Infinity) ? GREEN : NAVY, label: 'OTB TY', v: m[field] as number },
+             { sw: GREY, label: 'STLY', v: m[fieldStly] as number },
+             ...(fin > 0 ? [{ sw: GREEN, dash: true, label: 'Final LY', v: fin }] : [])];
+        const ref = closed ? (fin || (m[fieldStly] as number)) : (m[fieldStly] as number);
+        const dv = ref ? (((m[field] as number) - ref) / ref) * 100 : 0;
+        const tw = 168, th = 34 + rows.length * 21 + 20;
+        const cx = 62 + tip * step + step / 2;
+        const tx = Math.max(64, Math.min(W - 12 - tw, cx - tw / 2));
+        const ty = 6;
+        return (
+          <g style={{ pointerEvents: 'none' }}>
+            <rect x={tx} y={ty} width={tw} height={th} rx={12}
+              fill="#fff" stroke="rgba(10,31,77,.12)" strokeWidth={1}
+              filter="drop-shadow(0 4px 10px rgba(10,20,45,.18))" />
+            <text x={tx + 14} y={ty + 21} style={{ fontSize: 12.5, fontWeight: 800, fill: '#0A1F4D' }}>
+              {m.month}{closed ? ' · final' : ''}
+            </text>
+            {rows.map((r, ri) => (
+              <g key={r.label}>
+                {r.dash
+                  ? <line x1={tx + 14} y1={ty + 34 + ri * 21} x2={tx + 24} y2={ty + 34 + ri * 21}
+                      stroke={r.sw} strokeWidth={2.5} strokeDasharray="3,2.5" />
+                  : <rect x={tx + 14} y={ty + 30 + ri * 21} width={10} height={10} rx={2.5} fill={r.sw} />}
+                <text x={tx + 31} y={ty + 39 + ri * 21} style={{ fontSize: 11.5, fontWeight: 600, fill: '#6E7A96' }}>{r.label}</text>
+                <text x={tx + tw - 14} y={ty + 39 + ri * 21} textAnchor="end"
+                  style={{ fontSize: 12, fontWeight: 800, fill: '#1A2540' }}>{fmtFull(r.v)}</text>
+              </g>
+            ))}
+            <text x={tx + 14} y={ty + th - 9}
+              style={{ fontSize: 11, fontWeight: 800, fill: dv >= 0 ? GREEN : RED }}>
+              {dv >= 0 ? '▲ +' : '▼ '}{Math.round(dv)}% vs {closed ? (fin > 0 ? 'final LY' : 'STLY') : 'STLY'}
+            </text>
+          </g>
+        );
+      })()}
     </svg>
   );
 }
@@ -500,13 +550,13 @@ export function OtbTab({ briefing, year, comp }: { briefing: Briefing; year: 'th
         </div>
       )}
       <ChartCard inner title="Revenue OTB" icon="euro" legend={PACE_LEGEND} info="crev">
-        <BarPace months={paceAll} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} />
+        <BarPace months={paceAll} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} fmtFull={v => euro(v)} />
       </ChartCard>
       <ChartCard inner title="Occupancy" icon="occ" legend={PACE_LEGEND} info="cocc">
         <OccPace months={paceAll} />
       </ChartCard>
       <ChartCard inner title="ADR" icon="adr" legend={PACE_LEGEND} info="cadr">
-        <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} />
+        <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} />
       </ChartCard>
 
       <DemandHeat briefing={briefing} />
