@@ -533,7 +533,7 @@ export function OtbTab({ briefing, year, comp }: { briefing: Briefing; year: 'th
       <ChartCard title="ADR" legend={PACE_LEGEND} info="cadr">
         <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} />
       </ChartCard>
-      {year === 'this' && <MonthStands months={fwd.slice(0, 3)} />}
+
       <DemandHeat briefing={briefing} />
       {year === 'this' && <AdrBridge briefing={briefing} />}
       {year === 'this' && <TopSources briefing={briefing} />}
