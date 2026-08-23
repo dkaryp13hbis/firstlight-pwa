@@ -4,7 +4,8 @@
 import { useMemo, useState } from 'react';
 import type { Briefing } from '../types';
 import { kilo } from '../api';
-import { SectionLabel, LabelSub } from './Overview';
+import { SectionLabel, LabelSub, ICONS } from './Overview';
+import { InfoButton } from './Info';
 import { BookingSpeed, buildNextPace } from './Charts';
 
 type WinKey = 'today' | '1d' | '3d' | '7d';
@@ -150,11 +151,14 @@ export function PickupSection({ briefing, year, comp }: { briefing: Briefing; ye
       </div>
 
       {fly && (
-        <div style={{ marginBottom: 12 }}>
-          <SectionLabel icon="fly" info="fly" title="Booked vs Cancelled">
-            Booked vs Cancelled <LabelSub>· {fly.ranges[win]}</LabelSub>
-          </SectionLabel>
-          <div className="card" style={{ padding: '18px 18px 14px' }}>
+        <div className="card" style={{ padding: '18px 18px 14px', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+            {ICONS.fly}
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+              Booked vs Cancelled <LabelSub>· {fly.ranges[win]}</LabelSub>
+            </span>
+            <InfoButton k="fly" />
+          </div>
           <div style={{ display: 'flex', gap: 12, fontSize: 10, fontWeight: 600, color: 'var(--n600)', margin: '6px 0 8px' }}>
             <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: '#0F2860', marginRight: 5 }} />booked · {LABELS[win]}</span>
             <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: '#B83A1B', marginRight: 5 }} />cancelled · {LABELS[win]}</span>
@@ -187,7 +191,6 @@ export function PickupSection({ briefing, year, comp }: { briefing: Briefing; ye
               </div>
             );
           })}
-          </div>
         </div>
       )}
 

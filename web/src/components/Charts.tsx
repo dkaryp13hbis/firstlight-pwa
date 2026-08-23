@@ -6,14 +6,39 @@
 import { useMemo } from 'react';
 import type { Briefing, PaceMonth } from '../types';
 import { kilo, signedPct } from '../api';
-import { SectionLabel, LabelSub } from './Overview';
+import { SectionLabel, LabelSub, ICONS } from './Overview';
+import { InfoButton } from './Info';
 
 const NAVY = '#0F2860', GREY = '#CDD4E0', GREEN = '#1A7A50', RED = '#B83A1B', AMBER = '#B47D09';
 
-function ChartCard({ title, sub, icon, info, legend, children }: {
+function ChartCard({ title, sub, icon, info, legend, inner, children }: {
   title: string; sub?: string; icon?: string; info?: string;
-  legend?: [string, string, boolean?][]; children: React.ReactNode;
+  legend?: [string, string, boolean?][]; inner?: boolean; children: React.ReactNode;
 }) {
+  if (inner) {
+    return (
+      <div className="card" style={{ padding: '18px 18px 14px', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+          {icon && ICONS[icon]}
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{title}</span>
+          {info && <InfoButton k={info} />}
+          {legend && (
+            <span style={{ marginLeft: 'auto', display: 'flex', gap: 10, fontSize: 10, fontWeight: 600, color: 'var(--n600)' }}>
+              {legend.map(([c, l, dash]) => (
+                <span key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{
+                    width: 9, height: dash ? 2 : 9, background: dash ? 'transparent' : c,
+                    borderTop: dash ? `2px dashed ${c}` : 'none', borderRadius: 2, display: 'inline-block',
+                  }} />{l}
+                </span>
+              ))}
+            </span>
+          )}
+        </div>
+        {children}
+      </div>
+    );
+  }
   return (
     <div style={{ marginBottom: 12 }}>
       <SectionLabel icon={icon} info={info} title={title}>
@@ -98,7 +123,19 @@ function OccPace({ months }: { months: PaceMonth[] }) {
   const curM = new Date().getMonth() + 1;
   const x = (i: number) => 62 + i * step + step / 2;
   const y = (v: number) => BOT - Math.min(v, 1.05) * CH;
-  const path = (pts: [number, number][]) => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0]},${p[1]}`).join(' ');
+  /* monotone-style smoothing: Catmull-Rom -> cubic Bezier, tension .5 —
+     curves through every point without overshooting between months */
+  const path = (pts: [number, number][]) => {
+    if (pts.length < 2) return pts.length ? `M${pts[0][0]},${pts[0][1]}` : '';
+    let d = `M${pts[0][0]},${pts[0][1]}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] ?? pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] ?? p2;
+      const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0]},${p2[1]}`;
+    }
+    return d;
+  };
   const occPts: [number, number][] = months.map((m, i) => [x(i), y(m.occ)]);
   const stlyPts: [number, number][] = months.map((m, i) => [x(i), y(m.stly)]);
   const finPts: [number, number][] = months.filter(m => m.month_num >= curM).map(m => [x(months.indexOf(m)), y(m.final)]);
@@ -462,13 +499,13 @@ export function OtbTab({ briefing, year, comp }: { briefing: Briefing; year: 'th
           No {thisYear + 1} bookings on the books yet — the grey STLY bars show where {thisYear} stood at this date last year.
         </div>
       )}
-      <ChartCard title="Revenue OTB" icon="euro" legend={PACE_LEGEND} info="crev">
+      <ChartCard inner title="Revenue OTB" icon="euro" legend={PACE_LEGEND} info="crev">
         <BarPace months={paceAll} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} />
       </ChartCard>
-      <ChartCard title="Occupancy" icon="occ" legend={PACE_LEGEND} info="cocc">
+      <ChartCard inner title="Occupancy" icon="occ" legend={PACE_LEGEND} info="cocc">
         <OccPace months={paceAll} />
       </ChartCard>
-      <ChartCard title="ADR" icon="adr" legend={PACE_LEGEND} info="cadr">
+      <ChartCard inner title="ADR" icon="adr" legend={PACE_LEGEND} info="cadr">
         <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} />
       </ChartCard>
 
