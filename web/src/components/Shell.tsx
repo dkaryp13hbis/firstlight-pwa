@@ -14,7 +14,7 @@ export function LogoLockup() {
             <stop offset="1" stopColor="#38E1F0" />
           </linearGradient>
         </defs>
-        <g stroke="#38E1F0" strokeWidth="3" strokeLinecap="round" opacity=".22">
+        <g stroke="#38E1F0" strokeWidth="3" strokeLinecap="round" opacity=".5">
           <path d="M50 -2 50 6" /><path d="M96 14 89 18" /><path d="M102 50 94 50" />
           <path d="M96 86 89 82" /><path d="M50 102 50 94" /><path d="M4 86 11 82" />
           <path d="M-2 50 6 50" /><path d="M4 14 11 18" />
