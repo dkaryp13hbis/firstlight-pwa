@@ -3,9 +3,8 @@
  *  is a faithful TS port of charts._butterfly, run client-side. */
 import { useMemo, useState } from 'react';
 import type { Briefing } from '../types';
-import { kilo, euro } from '../api';
-import { SectionLabel } from './Overview';
-import { InfoButton } from './Info';
+import { kilo } from '../api';
+import { SectionLabel, LabelSub } from './Overview';
 import { BookingSpeed, buildNextPace } from './Charts';
 
 type WinKey = 'today' | '1d' | '3d' | '7d';
@@ -151,13 +150,11 @@ export function PickupSection({ briefing, year, comp }: { briefing: Briefing; ye
       </div>
 
       {fly && (
-        <div className="card" style={{ padding: '18px 18px 14px', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-              Booked vs cancelled <span style={{ fontWeight: 600, color: 'var(--n600)' }}>· {fly.ranges[win]}</span>
-            </span>
-            <InfoButton k="fly" />
-          </div>
+        <div style={{ marginBottom: 12 }}>
+          <SectionLabel icon="fly" info="fly" title="Booked vs Cancelled">
+            Booked vs Cancelled <LabelSub>· {fly.ranges[win]}</LabelSub>
+          </SectionLabel>
+          <div className="card" style={{ padding: '18px 18px 14px' }}>
           <div style={{ display: 'flex', gap: 12, fontSize: 10, fontWeight: 600, color: 'var(--n600)', margin: '6px 0 8px' }}>
             <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: '#0F2860', marginRight: 5 }} />booked · {LABELS[win]}</span>
             <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: '#B83A1B', marginRight: 5 }} />cancelled · {LABELS[win]}</span>
@@ -190,6 +187,7 @@ export function PickupSection({ briefing, year, comp }: { briefing: Briefing; ye
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
@@ -208,9 +206,6 @@ export function PickupSection({ briefing, year, comp }: { briefing: Briefing; ye
           }}>⚠ {worst.m}: cancellations are {share}% of the rooms booked {period} — the highest churn of any month.</div>
         ) : null;
       })()}
-      <div className="card" style={{ padding: '12px 16px', fontSize: 11.5, color: 'var(--n600)', fontWeight: 600, marginBottom: 12 }}>
-        Cancelled revenue · 7 days: <b style={{ fontWeight: 800, color: 'var(--coral)' }}>−{euro(pu.cancellationRevenue7d)}</b>
-      </div>
       <BookingSpeed
         months={year === 'this'
           ? (d.pace ?? []).filter(m => m.month_num >= new Date().getMonth() + 1).slice(0, 4)

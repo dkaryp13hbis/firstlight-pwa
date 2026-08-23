@@ -11,7 +11,20 @@ export const ICONS: Record<string, React.ReactNode> = {
   trend: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>,
   pace: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>,
   star: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg>,
+  month: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /><path d="M7 15h6" strokeWidth="2.4" /></svg>,
+  euro: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><path d="M17.5 7a6.5 6.5 0 1 0 0 10" /><path d="M4 10.5h9M4 13.5h9" /></svg>,
+  occ: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5" /><circle cx="17" cy="9" r="2.4" /><path d="M16 14.7c2 .3 3.6 1.6 4.3 4.3" /></svg>,
+  adr: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" /><circle cx="7.5" cy="7.5" r="1" fill="#2E7CF7" /></svg>,
+  fly: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><path d="M8 7H2l3-3M2 7l3 3" /><path d="M16 17h6l-3-3M22 17l-3 3" /><path d="M11 5h9M4 19h9" /></svg>,
+  speed: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><path d="M21 13A9 9 0 1 0 3 13" /><path d="M12 13l4.5-4.5" /><path d="M3 13h2M19 13h2M5.6 6.6 7 8M18.4 6.6 17 8" /></svg>,
+  heat: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" fill="#2E7CF7" fillOpacity=".35" /></svg>,
+  bridge: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><path d="M4 20V10M12 20V4M20 20v-8" /><path d="M2 20h20" /></svg>,
+  sources: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="M8.3 10.7l7.4-4.4M8.3 13.3l7.4 4.4" /></svg>,
 };
+
+/* grey secondary text inside a SectionLabel title */
+export const LabelSub = ({ children }: { children: React.ReactNode }) =>
+  <span style={{ fontSize: 11, color: '#6E7A96', fontWeight: 600 }}>{children}</span>;
 
 async function shareSection(title: string) {
   try {
@@ -68,11 +81,9 @@ export function KpiRow({ briefing }: { briefing: Briefing }) {
   ];
   return (
     <div style={{ marginBottom: 22 }}>
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: KC.ink }}>Yesterday</span>
-        <span style={{ fontSize: 11, color: KC.sub, fontWeight: 600 }}>· {subtitle}</span>
-        <InfoButton k="yday" />
-      </div>
+      <SectionLabel icon="sun" info="yday" title="Yesterday">
+        Yesterday <LabelSub>· {subtitle}</LabelSub>
+      </SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {kpis.map(k => (
           <div key={k.label} style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 2px 8px rgba(15,40,96,.06)' }}>
@@ -108,10 +119,11 @@ export function MtdStrip({ briefing }: { briefing: Briefing }) {
     { label: 'ROOM NIGHTS', value: String(m.roomNights), v: varPct(m.roomNights, m.roomNightsLY) },
   ];
   return (
-    <div style={{ background: '#fff', border: `1px solid ${KC.border}`, borderRadius: 18, padding: '14px 0 16px', marginBottom: 22 }}>
-      <div style={{ fontSize: 12, fontWeight: 800, color: KC.ink, padding: '0 14px 10px' }}>
-        Month to date <span style={{ fontSize: 10, color: KC.sub, fontWeight: 600 }}>· {mon} 1–{dt.getUTCDate()} vs LY</span>
-      </div>
+    <div style={{ marginBottom: 22 }}>
+      <SectionLabel icon="month" title="Month to Date">
+        Month to Date <LabelSub>· {mon} 1–{dt.getUTCDate()} vs LY</LabelSub>
+      </SectionLabel>
+      <div style={{ background: '#fff', border: `1px solid ${KC.border}`, borderRadius: 18, padding: '14px 0 16px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1.12fr 0.92fr 0.78fr 1.18fr' }}>
         {kpis.map((k, i) => (
           <div key={k.label} style={{ padding: '0 12px', borderRight: i < kpis.length - 1 ? `1px solid ${KC.hairline}` : 'none' }}>
@@ -122,6 +134,7 @@ export function MtdStrip({ briefing }: { briefing: Briefing }) {
             </div>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );
@@ -151,13 +164,11 @@ export function OtbCards({ briefing, year, nextPace }: { briefing: Briefing; yea
     { icon: KIcons.adr, label: 'ADR', cells: months.map(p => ({ value: `€${Math.round(p.adr)}`, v: varPct(p.adr, p.adr_stly) })) },
   ];
   return (
-    <div style={{ background: '#fff', border: `1px solid ${KC.border}`, borderRadius: 20, padding: 16, marginBottom: 22 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-        {ICONS.cal}
-        <span style={{ fontSize: 13, fontWeight: 800, color: KC.ink }}>On The Books — {year === 'this' ? 'Next 3 Months' : String(new Date().getFullYear() + 1)}</span>
-        <span style={{ fontSize: 10, color: KC.sub, fontWeight: 600 }}>· vs STLY</span>
-        <InfoButton k="otb3" />
-      </div>
+    <div style={{ marginBottom: 22 }}>
+      <SectionLabel icon="cal" info="otb3" title="On The Books">
+        On The Books — {year === 'this' ? 'Next 3 Months' : String(new Date().getFullYear() + 1)} <LabelSub>· vs STLY</LabelSub>
+      </SectionLabel>
+      <div style={{ background: '#fff', border: `1px solid ${KC.border}`, borderRadius: 20, padding: 16 }}>
       <div style={{ ...grid, padding: '0 0 6px' }}>
         <span />
         {months.map(p => (
@@ -179,6 +190,7 @@ export function OtbCards({ briefing, year, nextPace }: { briefing: Briefing; yea
           {row.cells.map((c, j) => <Cell key={j} {...c} />)}
         </div>
       ))}
+    </div>
     </div>
   );
 }

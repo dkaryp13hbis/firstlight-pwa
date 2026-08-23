@@ -6,21 +6,22 @@
 import { useMemo } from 'react';
 import type { Briefing, PaceMonth } from '../types';
 import { kilo, signedPct } from '../api';
-import { SectionLabel } from './Overview';
-import { InfoButton } from './Info';
+import { SectionLabel, LabelSub } from './Overview';
 
 const NAVY = '#0F2860', GREY = '#CDD4E0', GREEN = '#1A7A50', RED = '#B83A1B', AMBER = '#B47D09';
 
-function ChartCard({ title, info, legend, children }: {
-  title: string; info?: string; legend?: [string, string, boolean?][]; children: React.ReactNode;
+function ChartCard({ title, sub, icon, info, legend, children }: {
+  title: string; sub?: string; icon?: string; info?: string;
+  legend?: [string, string, boolean?][]; children: React.ReactNode;
 }) {
   return (
-    <div className="card" style={{ padding: '18px 18px 14px', marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{title}</span>
-        {info && <InfoButton k={info} />}
+    <div style={{ marginBottom: 12 }}>
+      <SectionLabel icon={icon} info={info} title={title}>
+        {title}{sub && <LabelSub> · {sub}</LabelSub>}
+      </SectionLabel>
+      <div className="card" style={{ padding: '18px 18px 14px' }}>
         {legend && (
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: 10, fontSize: 10, fontWeight: 600, color: 'var(--n600)' }}>
+          <span style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, fontSize: 10, fontWeight: 600, color: 'var(--n600)', marginBottom: 8 }}>
             {legend.map(([c, l, dash]) => (
               <span key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <span style={{
@@ -31,8 +32,8 @@ function ChartCard({ title, info, legend, children }: {
             ))}
           </span>
         )}
+        {children}
       </div>
-      {children}
     </div>
   );
 }
@@ -164,7 +165,7 @@ export function BookingSpeed({ months, daily }: { months: PaceMonth[]; daily: Da
   if (!rows.length) return null;
   const mx = Math.max(1, ...rows.flatMap(r => [r.s7, r.s14, r.needed])) * 1.1;
   return (
-    <ChartCard title="Booking speed — rooms per day" info="vel"
+    <ChartCard title="Booking Speed" sub="rooms per day" icon="speed" info="vel"
       legend={[[NAVY, 'last 7 days'], ['#7FB0FA', 'last 14 days'], [AMBER, 'needed for LY final', true]]}>
       {rows.map(r => (
         <div key={r.month} style={{ marginBottom: 16 }}>
@@ -222,11 +223,9 @@ function DemandHeat({ briefing }: { briefing: Briefing }) {
     prevMonth = d.getUTCMonth();
   }
   return (
-    <div className="card" style={{ padding: '18px 18px 14px', marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Demand heat — next 60 days</span>
-        <InfoButton k="heat" />
-      </div>
+    <div style={{ marginBottom: 12 }}>
+      <SectionLabel icon="heat" info="heat" title="Next 60 Days Demand">Next 60 Days Demand</SectionLabel>
+      <div className="card" style={{ padding: '18px 18px 14px' }}>
       <div style={{ fontSize: 11, color: 'var(--n600)', lineHeight: 1.5, margin: '4px 0 12px' }}>
         Occupancy on the books per stay date — darker = fuller. A red outline marks a date far behind last year.
       </div>
@@ -260,6 +259,7 @@ function DemandHeat({ briefing }: { briefing: Briefing }) {
           fontSize: 12, lineHeight: 1.5, padding: '10px 13px', marginTop: 10, fontWeight: 600,
         }}>⚠ Dates far behind last year: {anoms.slice(0, 6).join(', ')}</div>
       )}
+    </div>
     </div>
   );
 }
@@ -320,11 +320,11 @@ function AdrBridge({ briefing }: { briefing: Briefing }) {
     </div>
   );
   return (
-    <div className="card" style={{ padding: '18px 18px 14px', marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>ADR bridge — why the rate moved</span>
-        <InfoButton k="bridge" />
-      </div>
+    <div style={{ marginBottom: 12 }}>
+      <SectionLabel icon="bridge" info="bridge" title="ADR Bridge">
+        ADR Bridge <LabelSub>· why the rate moved</LabelSub>
+      </SectionLabel>
+      <div className="card" style={{ padding: '18px 18px 14px' }}>
       <div style={{ fontSize: 11, color: 'var(--n600)', lineHeight: 1.5, margin: '4px 0 12px' }}>
         Month to date vs last year. <b style={{ color: '#2E7CF7' }}>Mix</b> = selling a different book of business
         · <b style={{ color: AMBER }}>Rate</b> = selling at different prices. They sum exactly to the ADR change.
@@ -349,6 +349,7 @@ function AdrBridge({ briefing }: { briefing: Briefing }) {
         </div>
       ))}
     </div>
+    </div>
   );
 }
 
@@ -359,7 +360,7 @@ function TopSources({ briefing }: { briefing: Briefing }) {
   if (!chans.length) return null;
   const totalRev = chans[0].pct ? chans[0].rev / chans[0].pct : 1;
   return (
-    <ChartCard title="Top Sources — OTB Full Year" info="sources">
+    <ChartCard title="Top Sources" sub="OTB Full Year" icon="sources" info="sources">
       {(() => {
         const COLS = '92px minmax(0,1fr) 54px 50px 66px';
         return (
@@ -461,13 +462,13 @@ export function OtbTab({ briefing, year, comp }: { briefing: Briefing; year: 'th
           No {thisYear + 1} bookings on the books yet — the grey STLY bars show where {thisYear} stood at this date last year.
         </div>
       )}
-      <ChartCard title="Revenue OTB" legend={PACE_LEGEND} info="crev">
+      <ChartCard title="Revenue OTB" icon="euro" legend={PACE_LEGEND} info="crev">
         <BarPace months={paceAll} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} />
       </ChartCard>
-      <ChartCard title="Occupancy" legend={PACE_LEGEND} info="cocc">
+      <ChartCard title="Occupancy" icon="occ" legend={PACE_LEGEND} info="cocc">
         <OccPace months={paceAll} />
       </ChartCard>
-      <ChartCard title="ADR" legend={PACE_LEGEND} info="cadr">
+      <ChartCard title="ADR" icon="adr" legend={PACE_LEGEND} info="cadr">
         <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} />
       </ChartCard>
 
