@@ -34,6 +34,9 @@ export function SettingsSheet(props: {
   open: boolean; onClose: () => void;
   lang: 'en' | 'el'; onLang: (l: 'en' | 'el') => void;
   revMode: 'gross' | 'net'; onRevMode: (m: 'gross' | 'net') => void;
+  pushPrefs: { morning: boolean; alerts: boolean; momentum: boolean } | null;
+  onPushPref: (k: 'morning' | 'alerts' | 'momentum', v: boolean) => void;
+  bellOn: boolean;
   year: 'this' | 'next'; onYear: (y: 'this' | 'next') => void;
   comp: 'this' | 'prev'; onComp: (c: 'this' | 'prev') => void;
   textSize: number; onTextSize: (d: number) => void;
@@ -96,6 +99,27 @@ export function SettingsSheet(props: {
             : props.comp === 'prev' ? 'Same stage & final ' + (Y - 1)
             : 'Closed months: final ' + Y + ' · open months: same stage ' + Y}
         </span>
+      </div>
+      <div style={{ ...rowStyle, display: 'block' }}>
+        <div style={{ ...labelStyle, marginBottom: 8 }}>Notifications</div>
+        {props.bellOn && props.pushPrefs ? (
+          (['morning', 'alerts', 'momentum'] as const).map(k => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#4D5A74' }}>
+                {k === 'morning' ? 'Morning briefing' : k === 'alerts' ? 'Intraday alerts' : 'Momentum'}
+              </span>
+              <div style={{ display: 'flex', background: '#F1F3F8', borderRadius: 10, padding: 3 }}>
+                <button style={segBtn(props.pushPrefs![k])} onClick={() => props.onPushPref(k, true)}>On</button>
+                <button style={segBtn(!props.pushPrefs![k])} onClick={() => props.onPushPref(k, false)}>Off</button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#6E7A96', lineHeight: 1.5 }}>
+            Turn on the bell 🔔 first — then choose which moments reach your phone:
+            the morning briefing, intraday alerts, and momentum highlights.
+          </div>
+        )}
       </div>
       <div style={rowStyle}>
         <span style={labelStyle}>Text size</span>

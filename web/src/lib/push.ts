@@ -91,3 +91,29 @@ export async function unsubscribe(hotelId: string, hotelName: string): Promise<s
   } catch (e) { console.warn('[push] unsubscribe', e); }
   return `Notifications off for ${hotelName}`;
 }
+
+export type PushPrefs = { morning: boolean; alerts: boolean; momentum: boolean };
+export const DEFAULT_PREFS: PushPrefs = { morning: true, alerts: true, momentum: true };
+
+/** Per-type preferences for THIS hotel's subscription row (null = not subscribed). */
+export async function getPrefs(hotelId: string): Promise<PushPrefs | null> {
+  if (!sb) return DEFAULT_PREFS;
+  try {
+    const { data, error } = await sb.from('push_subscriptions')
+      .select('notification_prefs').eq('hotel_id', hotelId).limit(1);
+    if (error || !data?.length) return null;
+    return { ...DEFAULT_PREFS, ...(data[0].notification_prefs ?? {}) };
+  } catch { return null; }
+}
+
+export async function setPrefs(hotelId: string, prefs: PushPrefs): Promise<boolean> {
+  if (!sb) return true;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return false;
+    const { error } = await sb.from('push_subscriptions')
+      .update({ notification_prefs: prefs })
+      .eq('user_id', session.user.id).eq('hotel_id', hotelId);
+    return !error;
+  } catch { return false; }
+}

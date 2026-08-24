@@ -10,7 +10,7 @@ import { OtbTab, buildNextPace } from './components/Charts';
 import { AiTab, type FeedbackRequest } from './components/AiCards';
 import { FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
 import { Login } from './components/Login';
-import { registerSW, isSubscribed, subscribe, unsubscribe } from './lib/push';
+import { registerSW, isSubscribed, subscribe, unsubscribe, getPrefs, setPrefs, DEFAULT_PREFS, type PushPrefs } from './lib/push';
 import { initTracking, setTrackedHotel, track } from './lib/track';
 
 const TS_ZOOM: Record<number, number> = { 1: 0.85, 2: 1, 3: 1.12, 4: 1.25, 5: 1.4 };
@@ -48,6 +48,7 @@ export default function App() {
   };
   const [pull, setPull] = useState(0);
   const pullRef = useRef(0);
+  const [pushPrefs, setPushPrefs] = useState<PushPrefs | null>(null);
   const [dates, setDates] = useState<string[]>([]);
   const [viewDate, setViewDate] = useState<string | null>(null);  // null = latest
 
@@ -289,11 +290,20 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => { if (session && hotelId) isSubscribed(hotelId).then(setBellOn); }, [session, hotelId]);
+  useEffect(() => { if (session && hotelId && bellOn) getPrefs(hotelId).then(setPushPrefs); else setPushPrefs(null); }, [session, hotelId, bellOn]);
 
   const trackedInit = useRef(false);
   useEffect(() => {
     if (session && hotelId && !trackedInit.current) { trackedInit.current = true; void initTracking(hotelId); }
   }, [session, hotelId]);
+
+  const changePushPref = async (k: 'morning' | 'alerts' | 'momentum', v: boolean) => {
+    const next = { ...(pushPrefs ?? DEFAULT_PREFS), [k]: v };
+    setPushPrefs(next);
+    track('setting_change', { setting: `push_${k}`, value: v });
+    const ok = await setPrefs(hotelId, next);
+    if (!ok) say('Could not save — is the notifications SQL applied?');
+  };
 
   const toggleBell = async () => {
     track('bell_toggle', { to: bellOn ? 'off' : 'on' });
@@ -453,6 +463,7 @@ export default function App() {
         open={settingsOpen} onClose={() => setSettingsOpen(false)}
         lang={lang} onLang={changeLang}
         revMode={revMode} onRevMode={changeRevMode}
+        pushPrefs={pushPrefs} onPushPref={changePushPref} bellOn={bellOn}
         year={year} onYear={setYear} comp={comp} onComp={setComp}
         textSize={textSize} onTextSize={d => setTextSize(s => Math.min(5, Math.max(1, s + d)))}
         onSignOut={signOut}
