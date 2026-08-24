@@ -3,7 +3,7 @@ import { fetchLatestBriefing, fetchBriefingByDate, fetchDates, fetchPrevBriefing
 import { sb, demoMode } from './lib/sb';
 import type { Briefing } from './types';
 import { WatchlistSection, WatchSheet, titleCase } from './components/Watchlist';
-import { WATCHLIST_EMAILS, WATCH_CAP, itemTitle, monthKey, type WatchItem, type WatchKind } from './lib/watch';
+import { WATCHLIST_EMAILS, WATCH_CAP, itemTitle, monthKey, rangeKey, type WatchItem, type WatchKind } from './lib/watch';
 import { Shell, type Tab } from './components/Shell';
 import { SmartSummary } from './components/SmartSummary';
 import { KpiRow, MtdStrip, OtbCards } from './components/Overview';
@@ -140,6 +140,7 @@ export default function App() {
   /* ── My Watchlist actions ── */
   const watchedKeys = useMemo(() => new Set((watch ?? []).map(w => `${w.kind}:${w.key}`)), [watch]);
   const watchedMonths = useMemo(() => new Set((watch ?? []).filter(w => w.kind === 'month').map(w => w.key)), [watch]);
+  const watchedRanges = useMemo(() => new Set((watch ?? []).filter(w => w.kind === 'range').map(w => w.key)), [watch]);
   const saveWatch = async (kind: WatchKind, key: string, label: string | null, from: string) => {
     if (!briefing) return;
     if ((watch?.length ?? 0) >= WATCH_CAP) { say(`Watchlist is full (${WATCH_CAP})`); return; }
@@ -485,7 +486,9 @@ export default function App() {
         <div id="sec-pickup" style={{ scrollMarginTop: 46 }} />
         <PickupSection briefing={viewBriefing ?? briefing} year={year} comp={comp} />
         <div id="sec-pace" style={{ scrollMarginTop: 46 }} />
-        <OtbTab briefing={viewBriefing ?? briefing} year={year} comp={comp} />
+        <OtbTab briefing={viewBriefing ?? briefing} year={year} comp={comp}
+          watchedRanges={watchActive && !viewDate ? watchedRanges : undefined}
+          onWatchRange={watchActive && !viewDate ? (f, t) => void saveWatch('range', rangeKey(f, t), null, 'heatmap') : undefined} />
         <div id="sec-ai" style={{ scrollMarginTop: 46 }} />
         <AiTab briefing={briefing} hotelId={hotelId} onFeedback={setFb}
           watched={watchActive && !viewDate ? watchedMonths : undefined}

@@ -9,6 +9,7 @@ import { euro, kilo, signedPct } from '../api';
 import { SectionLabel, LabelSub, ICONS } from './Overview';
 import { InfoButton } from './Info';
 import { monthSpeed } from '../lib/speed';
+import { softRuns, rangeKey, rangeTitle, isoAdd } from '../lib/watch';
 
 const NAVY = '#0F2860', GREY = '#CDD4E0', GREEN = '#1A7A50', RED = '#B83A1B', AMBER = '#B47D09';
 
@@ -278,11 +279,23 @@ export function BookingSpeed({ months, daily }: { months: PaceMonth[]; daily: Da
 const RAMP = ['#F2F2F7', '#E1EBFB', '#C4DAF9', '#9FC4F6', '#6FA7F2', '#3D87EE', '#0A6CDF'];
 const bucket = (occ: number) => { for (let i = 0; i < 6; i++) if (occ < [0.20, 0.35, 0.50, 0.65, 0.78, 0.88][i]) return i; return 6; };
 
-function DemandHeat({ briefing }: { briefing: Briefing }) {
+const WDL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const dayLbl = (iso: string) => { const d = new Date(iso + 'T00:00:00Z'); return `${WDL[d.getUTCDay()]} ${d.getUTCDate()}`; };
+
+/** Heatmap cells are tap targets when `onWatch` is given: one tap = a date,
+ *  a second tap = a range; the panel under the grid offers Watch this date /
+ *  this week / the flagged soft run the date sits in. */
+function DemandHeat({ briefing, onWatch, watched }: {
+  briefing: Briefing;
+  onWatch?: (from: string, to: string) => void;
+  watched?: Set<string>;                       // range keys "from..to" already watched
+}) {
+  const [sel, setSel] = useState<string[]>([]);
   const rooms = briefing.data.total_rooms;
-  const otb = ((briefing.data as unknown as { otb_by_date?: { stay_date: string; rn_ty: number; rn_stly: number }[] }).otb_by_date ?? []).slice(0, 60);
+  const otb = (briefing.data.otb_by_date ?? []).slice(0, 60);
+  const runs = useMemo(() => softRuns(briefing, 20), [briefing]);
   if (!otb.length || !rooms) return null;
-  const cells: ({ empty: true } | { empty: false; d: Date; occ: number; ring: boolean; newMonth: boolean })[] = [];
+  const cells: ({ empty: true } | { empty: false; iso: string; d: Date; occ: number; ring: boolean; newMonth: boolean })[] = [];
   const anoms: string[] = [];
   const first = new Date(otb[0].stay_date + 'T00:00:00Z');
   for (let i = 0; i < (first.getUTCDay() + 6) % 7; i++) cells.push({ empty: true });
@@ -293,26 +306,64 @@ function DemandHeat({ briefing }: { briefing: Briefing }) {
     const occLy = (r.rn_stly || 0) / rooms;
     const ring = occLy >= 0.30 && occ < 0.5 * occLy;
     if (ring) anoms.push(`${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
-    cells.push({ empty: false, d, occ, ring, newMonth: d.getUTCMonth() !== prevMonth });
+    cells.push({ empty: false, iso: r.stay_date, d, occ, ring, newMonth: d.getUTCMonth() !== prevMonth });
     prevMonth = d.getUTCMonth();
   }
+
+  /* selection → candidate ranges */
+  const tap = (iso: string) => {
+    if (!onWatch) return;
+    setSel(s => s.length === 1 && s[0] !== iso ? [s[0], iso].sort() : s.length === 1 ? [] : [iso]);
+  };
+  const from = sel[0], to = sel[sel.length - 1];
+  const inSel = (iso: string) => !!from && iso >= from && iso <= to;
+  const stats = (a: string, b: string) => {
+    const rows = otb.filter(r => r.stay_date >= a && r.stay_date <= b);
+    const n = rows.length || 1;
+    return {
+      occ: Math.round(rows.reduce((s, r) => s + r.rn_ty, 0) / (rooms * n) * 100),
+      ly: Math.round(rows.reduce((s, r) => s + r.rn_stly, 0) / (rooms * n) * 100),
+      days: rows.length,
+    };
+  };
+  const options: { from: string; to: string; label: string; soft?: boolean }[] = [];
+  if (from) {
+    if (sel.length === 1) {
+      options.push({ from, to: from, label: `Watch ${dayLbl(from)}` });
+      const dow = (new Date(from + 'T00:00:00Z').getUTCDay() + 6) % 7;          // Mon = 0
+      const mon = isoAdd(from, -dow), sun = isoAdd(mon, 6);
+      const wFrom = mon < otb[0].stay_date ? otb[0].stay_date : mon;
+      if (wFrom !== sun) options.push({ from: wFrom, to: sun, label: `Watch this week · ${rangeTitle(wFrom, sun)}` });
+      const run = runs.find(r => from >= r.from && from <= r.to);
+      if (run && run.from !== run.to) options.push({ from: run.from, to: run.to, label: `Watch ${rangeTitle(run.from, run.to)} · behind LY`, soft: true });
+    } else {
+      options.push({ from, to, label: `Watch ${rangeTitle(from, to)}` });
+    }
+  }
+  const selStats = from ? stats(from, to) : null;
+
   return (
     <div style={{ marginBottom: 12 }}>
       <SectionLabel icon="heat" info="heat" title="Next 60 Days Demand">Next 60 Days Demand</SectionLabel>
       <div className="card" style={{ padding: '18px 18px 14px' }}>
       <div style={{ fontSize: 11, color: 'var(--n600)', lineHeight: 1.5, margin: '4px 0 12px' }}>
         Occupancy on the books per stay date — darker = fuller. A red outline marks a date far behind last year.
+        {onWatch && ' Tap a date to watch it — tap a second date for a range.'}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((w, i) => (
           <div key={i} style={{ textAlign: 'center', fontSize: 10, fontWeight: 600, color: 'var(--cap)' }}>{w}</div>
         ))}
         {cells.map((c, i) => c.empty ? <div key={i} /> : (
-          <div key={i} style={{
-            borderRadius: 7, padding: '7px 0 6px', textAlign: 'center',
+          <div key={i} onClick={() => tap(c.iso)} style={{
+            borderRadius: 7, padding: '7px 0 6px', textAlign: 'center', cursor: onWatch ? 'pointer' : undefined,
             background: RAMP[bucket(c.occ)],
             color: bucket(c.occ) >= 4 ? '#fff' : '#1D1B20',
-            boxShadow: c.ring ? 'inset 0 0 0 2px #BA1A1A' : c.newMonth ? 'inset 2px 0 0 #1D1B20' : undefined,
+            boxShadow: [
+              inSel(c.iso) ? '0 0 0 2px #2E7CF7' : '',
+              c.ring ? 'inset 0 0 0 2px #BA1A1A' : c.newMonth ? 'inset 2px 0 0 #1D1B20' : '',
+            ].filter(Boolean).join(', ') || undefined,
+            transform: inSel(c.iso) ? 'scale(1.04)' : undefined,
           }}>
             <div style={{ fontSize: 13.5, fontWeight: 800 }}>{Math.round(c.occ * 100)}%</div>
             <div style={{ fontSize: 9.5, fontWeight: 600, opacity: .75 }}>
@@ -321,6 +372,32 @@ function DemandHeat({ briefing }: { briefing: Briefing }) {
           </div>
         ))}
       </div>
+      {onWatch && from && selStats && (
+        <div style={{ background: '#F1F6FF', borderRadius: 12, padding: '10px 12px', marginTop: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0F2860' }}>
+              {sel.length === 1 ? dayLbl(from) : rangeTitle(from, to)}
+              <span style={{ fontWeight: 600, color: 'var(--n600)', marginLeft: 6 }}>
+                {selStats.occ}% booked · last year {selStats.ly}%{sel.length > 1 ? ` · ${selStats.days} dates` : ''}
+              </span>
+            </span>
+            {sel.length === 1 && <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--n500)' }}>tap another date for a range</span>}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+            {options.map(o => {
+              const on = !!watched?.has(rangeKey(o.from, o.to));
+              return (
+                <button key={o.label} disabled={on} onClick={() => { onWatch(o.from, o.to); setSel([]); }} style={{
+                  border: 'none', borderRadius: 999, padding: '7px 12px', fontSize: 11.5, fontWeight: 700,
+                  background: on ? '#E2E7F0' : o.soft ? '#FFF1D6' : '#0F2860',
+                  color: on ? '#6E7A96' : o.soft ? '#8A5A00' : '#fff',
+                }}>{on ? `Watching ✓ ${o.label.replace(/^Watch (this week · )?/, '')}` : o.label}</button>
+              );
+            })}
+            <button onClick={() => setSel([])} style={{ border: 'none', background: 'none', fontSize: 11.5, fontWeight: 700, color: '#6E7A96', padding: '7px 8px' }}>Clear</button>
+          </div>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 10, fontSize: 10, fontWeight: 600, color: 'var(--n600)' }}>
         empty {RAMP.map(c => <span key={c} style={{ width: 12, height: 12, borderRadius: 3, background: c, display: 'inline-block' }} />)} full
         <span style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -521,7 +598,11 @@ export function buildNextPace(briefing: Briefing, comp: 'this' | 'prev' = 'this'
   });
 }
 
-export function OtbTab({ briefing, year, comp }: { briefing: Briefing; year: 'this' | 'next'; comp: 'this' | 'prev' }) {
+export function OtbTab({ briefing, year, comp, onWatchRange, watchedRanges }: {
+  briefing: Briefing; year: 'this' | 'next'; comp: 'this' | 'prev';
+  onWatchRange?: (from: string, to: string) => void;   // heatmap → watchlist
+  watchedRanges?: Set<string>;
+}) {
   const thisYear = new Date().getFullYear();
   const paceAll = year === 'this' ? (briefing.data.pace ?? []) : buildNextPace(briefing, comp);
   return (
@@ -546,7 +627,7 @@ export function OtbTab({ briefing, year, comp }: { briefing: Briefing; year: 'th
         <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} />
       </ChartCard>
 
-      <DemandHeat briefing={briefing} />
+      <DemandHeat briefing={briefing} onWatch={onWatchRange} watched={watchedRanges} />
       {year === 'this' && <AdrBridge briefing={briefing} />}
       {year === 'this' && <TopSources briefing={briefing} />}
     </>
