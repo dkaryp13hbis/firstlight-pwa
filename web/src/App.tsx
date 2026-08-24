@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchLatestBriefing } from './api';
+import { fetchLatestBriefing, fetchBriefingByDate, fetchDates } from './api';
 import { sb, demoMode } from './lib/sb';
 import type { Briefing } from './types';
 import { Shell, type Tab } from './components/Shell';
@@ -48,6 +48,8 @@ export default function App() {
   };
   const [pull, setPull] = useState(0);
   const pullRef = useRef(0);
+  const [dates, setDates] = useState<string[]>([]);
+  const [viewDate, setViewDate] = useState<string | null>(null);  // null = latest
 
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2000); };
 
@@ -88,6 +90,7 @@ export default function App() {
     fetchLatestBriefing(hotelId)
       .then(b => { setBriefing(b); setError(null); writeCache(`fl_briefing_${hotelId}`, b); })
       .catch(e => { if (!cached) setError(String(e)); });
+    fetchDates(hotelId, 7).then(setDates).catch(() => setDates([]));
   }, [hotelId]);
   useEffect(load, [load]);
 
@@ -103,6 +106,7 @@ export default function App() {
   }, [textSize]);
 
   const changeHotel = (id: string) => {
+    setViewDate(null);
     setTrackedHotel(id);
     track('hotel_switch', {});
     setHotelId(id);
@@ -111,6 +115,7 @@ export default function App() {
   };
 
   const requestRefresh = async () => {
+    if (viewDate) { say('Viewing a past briefing — go back to Today first'); return; }
     track('refresh_tap', {});
     setRefreshState('busy');
     if (!sb) { setTimeout(() => { setRefreshState('idle'); say('Demo mode — no live refresh'); }, 1200); return; }
@@ -299,6 +304,19 @@ export default function App() {
     if (r.ok) say(r.msg); else setPushMsg(r.msg);
   };
 
+  const selectDate = async (d: string | null) => {
+    if (d === null || d === dates[0]) {
+      setViewDate(null); load(); return;
+    }
+    track('history_view', { date: d });
+    try {
+      const b = await fetchBriefingByDate(hotelId, d);
+      if (!b) { say('No briefing stored for that day'); return; }
+      setViewDate(d); setBriefing(b);
+      window.scrollTo({ top: 0 });
+    } catch { say('Could not load that day'); }
+  };
+
   const nav = (t: Tab) => {
     track('tab_nav', { tab: t });
     setTab(t);
@@ -352,6 +370,36 @@ export default function App() {
         onSettings={() => setSettingsOpen(true)}
       >
         <div id="sec-overview" style={{ scrollMarginTop: 46 }} />
+        {dates.length > 1 && (
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', margin: '0 0 12px', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
+            {dates.map((d, i) => {
+              const on = viewDate === d || (viewDate === null && i === 0);
+              const dt = new Date(d + 'T00:00:00Z');
+              const label = i === 0 ? 'Today'
+                : `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getUTCDay()]} ${dt.getUTCDate()}`;
+              return (
+                <button key={d} onClick={() => selectDate(i === 0 ? null : d)} style={{
+                  border: on ? 'none' : '1px solid #CDD4E0', background: on ? '#0F2860' : '#fff',
+                  color: on ? '#fff' : '#4D5A74', borderRadius: 999, padding: '6px 13px',
+                  fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', flex: '0 0 auto',
+                }}>{label}</button>
+              );
+            })}
+          </div>
+        )}
+        {viewDate && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+            background: '#FBEEDC', color: '#6D4C00', borderRadius: 12, padding: '9px 13px',
+            fontSize: 12, fontWeight: 700, marginBottom: 12,
+          }}>
+            <span>Viewing the briefing of {(() => { const dt = new Date(viewDate + 'T00:00:00Z'); return `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getUTCDay()]} ${dt.getUTCDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()]}`; })()}</span>
+            <button onClick={() => selectDate(null)} style={{
+              border: 'none', background: '#6D4C00', color: '#fff', borderRadius: 999,
+              padding: '4px 11px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+            }}>Back to Today</button>
+          </div>
+        )}
         <SmartSummary briefing={viewBriefing ?? briefing} />
         {revMode === 'net' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-6px 0 14px', fontSize: 12, fontWeight: 600, color: '#5A6780' }}>

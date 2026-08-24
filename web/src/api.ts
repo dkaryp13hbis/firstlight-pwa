@@ -30,6 +30,33 @@ export async function fetchLatestBriefing(hotelId?: string): Promise<Briefing> {
   return fixture as unknown as Briefing;
 }
 
+/** One specific day's briefing (history view). Supabase path only — the
+ *  Phase A API has no by-date endpoint yet. */
+export async function fetchBriefingByDate(hotelId: string, date: string): Promise<Briefing | null> {
+  if (sb && hotelId && hotelId !== 'demo') {
+    const { data, error } = await sb.from('briefings')
+      .select('report_date, generated_at, data, ai_insights')
+      .eq('hotel_id', hotelId).eq('report_date', date)
+      .order('generated_at', { ascending: false })
+      .limit(1);
+    if (error) throw new Error(error.message);
+    return (data?.[0] as unknown as Briefing) ?? null;
+  }
+  return null;
+}
+
+/** Last N report dates for the hotel, newest first. */
+export async function fetchDates(hotelId: string, days = 7): Promise<string[]> {
+  if (sb && hotelId && hotelId !== 'demo') {
+    const { data } = await sb.from('briefings')
+      .select('report_date')
+      .eq('hotel_id', hotelId)
+      .order('report_date', { ascending: false }).limit(days);
+    return [...new Set((data ?? []).map(r => r.report_date as string))];
+  }
+  return [];
+}
+
 export async function fetchHistory(hotelId?: string, days = 7): Promise<unknown> {
   if (API && TOKEN && hotelId) {
     const r = await fetch(`${API}/briefing/history?hotel_id=${hotelId}&days=${days}`, {
