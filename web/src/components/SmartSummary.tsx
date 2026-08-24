@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import type { Briefing } from '../types';
 import { euro, kilo, signedPct, varPct } from '../api';
 import { InfoButton } from './Info';
+import { track } from '../lib/track';
 
 function speak(text: string, btn: HTMLButtonElement) {
   const s = window.speechSynthesis;
@@ -180,7 +181,7 @@ export function SmartSummary({ briefing }: { briefing: Briefing }) {
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,.55)', fontWeight: 600, letterSpacing: '.04em' }}>
             Last refresh {(() => { const dt = new Date(briefing.data.report_date + 'T00:00:00Z'); return `${String(dt.getUTCDate()).padStart(2, '0')} ${['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][dt.getUTCMonth()]}`; })()} · {d.generated_at}
           </span>
-          {hero && <button title="Listen to the briefing" onClick={e => speak(hero, e.currentTarget)} style={{
+          {hero && <button title="Listen to the briefing" onClick={e => { track('voice_play', {}); speak(hero, e.currentTarget); }} style={{
             background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.2)',
             borderRadius: 999, width: 32, height: 32, fontSize: 14,
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0,
@@ -223,7 +224,7 @@ export function SmartSummary({ briefing }: { briefing: Briefing }) {
           }}>Show less ↑</button>
         </>
       ) : (
-        <button onClick={() => setOpen(true)} style={{
+        <button onClick={() => { track('hero_expand', {}); setOpen(true); }} style={{
           border: 'none', background: 'none', color: 'var(--cyan)',
           fontSize: 13.5, fontWeight: 700, marginTop: 3, padding: 0,
         }}>Read the full briefing →</button>

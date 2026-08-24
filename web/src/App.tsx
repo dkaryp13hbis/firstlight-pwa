@@ -11,6 +11,7 @@ import { AiTab, type FeedbackRequest } from './components/AiCards';
 import { FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
 import { Login } from './components/Login';
 import { registerSW, isSubscribed, subscribe, unsubscribe } from './lib/push';
+import { initTracking, setTrackedHotel, track } from './lib/track';
 
 const TS_ZOOM: Record<number, number> = { 1: 0.85, 2: 1, 3: 1.12, 4: 1.25, 5: 1.4 };
 
@@ -41,7 +42,10 @@ export default function App() {
     () => (localStorage.getItem('fl_revmode') as 'gross' | 'net') || 'gross');
   const [year, setYearState] = useState<'this' | 'next'>('this');
   const [comp, setComp] = useState<'this' | 'prev'>('prev');
-  const setYear = (k: 'this' | 'next') => { setYearState(k); setComp(k === 'this' ? 'prev' : 'this'); };
+  const setYear = (k: 'this' | 'next') => {
+    track('setting_change', { setting: 'reporting_year', value: k });
+    setYearState(k); setComp(k === 'this' ? 'prev' : 'this');
+  };
   const [pull, setPull] = useState(0);
   const pullRef = useRef(0);
 
@@ -99,12 +103,15 @@ export default function App() {
   }, [textSize]);
 
   const changeHotel = (id: string) => {
+    setTrackedHotel(id);
+    track('hotel_switch', {});
     setHotelId(id);
     localStorage.setItem('fl_hotel', id);
     window.scrollTo(0, 0);
   };
 
   const requestRefresh = async () => {
+    track('refresh_tap', {});
     setRefreshState('busy');
     if (!sb) { setTimeout(() => { setRefreshState('idle'); say('Demo mode — no live refresh'); }, 1200); return; }
     const client = sb;
@@ -122,6 +129,7 @@ export default function App() {
   };
 
   const changeLang = async (l: 'en' | 'el') => {
+    track('setting_change', { setting: 'language', value: l });
     setLang(l);
     localStorage.setItem(`fl_lang_${hotelId}`, l);
     if (sb) {
@@ -132,6 +140,7 @@ export default function App() {
 
   const submitFeedback = async (note: string) => {
     if (!fb) return;
+    track('feedback_submit', { card: fb.cardId, verdict: fb.verdict, has_note: !!note });
     const key = `fl_fb_${hotelId}_${briefing?.report_date}_${fb.cardId}`;
     if (sb) {
       const row = {
@@ -191,6 +200,7 @@ export default function App() {
     if (m === 'net' && !netAvailable) {
       say('Net figures arrive with the next data refresh'); return;
     }
+    track('setting_change', { setting: 'revenue', value: m });
     setRevMode(m);
     localStorage.setItem('fl_revmode', m);
     say(m === 'net' ? 'Showing net revenue' : 'Showing gross revenue');
@@ -275,7 +285,13 @@ export default function App() {
   }, []);
   useEffect(() => { if (session && hotelId) isSubscribed(hotelId).then(setBellOn); }, [session, hotelId]);
 
+  const trackedInit = useRef(false);
+  useEffect(() => {
+    if (session && hotelId && !trackedInit.current) { trackedInit.current = true; void initTracking(hotelId); }
+  }, [session, hotelId]);
+
   const toggleBell = async () => {
+    track('bell_toggle', { to: bellOn ? 'off' : 'on' });
     const name = hotels.find(h => h.id === hotelId)?.name ?? 'this hotel';
     if (bellOn) { const m = await unsubscribe(hotelId, name); setBellOn(false); say(m); return; }
     const r = await subscribe(hotelId, name);
@@ -284,6 +300,7 @@ export default function App() {
   };
 
   const nav = (t: Tab) => {
+    track('tab_nav', { tab: t });
     setTab(t);
     const id = { Overview: 'sec-overview', Pickup: 'sec-pickup', Pace: 'sec-pace', 'AI Insights': 'sec-ai' }[t];
     const el = document.getElementById(id);

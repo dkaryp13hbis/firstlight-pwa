@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import type { Briefing, Insight } from '../types';
 import { SectionLabel } from './Overview';
+import { track } from '../lib/track';
 export interface FeedbackRequest { cardId: string; verdict: 1 | -1; card: Insight | null }
 
 const STRIPE: Record<string, string> = {
@@ -48,7 +49,7 @@ function Card({ ins, cardId, voted, onFeedback }: {
         position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, borderRadius: '3px 0 0 3px',
         background: STRIPE[ins.tag ?? ins.type ?? 'MONITOR'] ?? STRIPE.MONITOR,
       }} />
-      <div onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+      <div onClick={() => { if (!open) track('card_expand', { card: ins.id ?? ins.title }); setOpen(!open); }} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
         <h2 style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#0A1F4D', lineHeight: 1.38 }}>
           {ins.headline ?? ins.title}
         </h2>
