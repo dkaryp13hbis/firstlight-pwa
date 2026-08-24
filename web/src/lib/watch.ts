@@ -6,8 +6,9 @@
 import type { Briefing, PaceMonth } from '../types';
 import { monthSpeed, lastRefDate } from './speed';
 
-/* Gate (same pattern as usage tracking): demo account first, null = everyone. */
-export const WATCHLIST_EMAILS: string[] | null = ['demo@hbis.io'];
+/* Gate (same pattern as usage tracking): null = everyone (opened 2026-08-24 for
+   Pome + Potidea); set to ['demo@hbis.io'] to restrict again. */
+export const WATCHLIST_EMAILS: string[] | null = null;
 export const WATCH_CAP = 5;
 export const RANGE_HORIZON_DAYS = 90;
 
