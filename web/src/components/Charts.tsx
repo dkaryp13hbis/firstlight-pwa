@@ -8,6 +8,7 @@ import type { Briefing, PaceMonth } from '../types';
 import { euro, kilo, signedPct } from '../api';
 import { SectionLabel, LabelSub, ICONS } from './Overview';
 import { InfoButton } from './Info';
+import { monthSpeed } from '../lib/speed';
 
 const NAVY = '#0F2860', GREY = '#CDD4E0', GREEN = '#1A7A50', RED = '#B83A1B', AMBER = '#B47D09';
 
@@ -231,29 +232,10 @@ function OccPace({ months }: { months: PaceMonth[] }) {
 interface DailyRow { ref_date: string; stay_year: number; stay_month: number; net_rn: number; }
 
 export function BookingSpeed({ months, daily }: { months: PaceMonth[]; daily: DailyRow[] }) {
-  const rows = useMemo(() => {
-    if (!daily.length) return [];
-    const end = daily.reduce((m, r) => (r.ref_date > m ? r.ref_date : m), daily[0].ref_date);
-    const endD = new Date(end + 'T00:00:00Z');
-    const cut = (days: number) => new Date(endD.getTime() - (days - 1) * 86400000).toISOString().slice(0, 10);
-    const c7 = cut(7), c14 = cut(14);
-    const year = endD.getUTCFullYear();
-    return months.map(m => {
-      const rn = (lo: string) => daily
-        .filter(r => r.stay_month === m.month_num && r.stay_year >= year && r.ref_date >= lo && r.ref_date <= end)
-        .reduce((s, r) => s + r.net_rn, 0);
-      const monthEnd = new Date(Date.UTC(year, m.month_num, 0));
-      const daysLeft = Math.max(1, Math.round((monthEnd.getTime() - endD.getTime()) / 86400000));
-      const remaining = m.rn_final_ly - m.rn;
-      const s7 = rn(c7) / 7, s14 = rn(c14) / 14;
-      const trend = s7 < s14 * 0.85 ? 'slowing down' : s7 > s14 * 1.15 ? 'speeding up' : 'steady';
-      return {
-        month: m.month, s7, s14, trend, hasRef: m.rn_final_ly > 0,
-        needed: remaining > 0 ? remaining / daysLeft : 0,
-        passed: m.rn_final_ly > 0 && remaining <= 0, over: -remaining,
-      };
-    });
-  }, [months, daily]);
+  /* speed math lives in lib/speed.ts — shared with the Watchlist so both agree */
+  const rows = useMemo(() => months
+    .map(m => { const s = monthSpeed(m, daily); return s && { month: m.month, ...s }; })
+    .filter((r): r is NonNullable<typeof r> => !!r), [months, daily]);
   if (!rows.length) return null;
   const mx = Math.max(1, ...rows.flatMap(r => [r.s7, r.s14, r.needed])) * 1.1;
   return (

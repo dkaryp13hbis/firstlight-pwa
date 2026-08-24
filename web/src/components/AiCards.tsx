@@ -3,8 +3,9 @@
  *  API in the go-live pass. */
 import { useState } from 'react';
 import type { Briefing, Insight } from '../types';
-import { SectionLabel } from './Overview';
+import { SectionLabel, EyeIcon } from './Overview';
 import { track } from '../lib/track';
+import { monthKeyFromCardId } from '../lib/watch';
 export interface FeedbackRequest { cardId: string; verdict: 1 | -1; card: Insight | null }
 
 const STRIPE: Record<string, string> = {
@@ -23,9 +24,10 @@ const TAG_STYLE: Record<string, { bg: string; fg: string; bd: string; label: str
   MONITOR:     { bg: 'rgba(124,91,255,.10)', fg: '#6344D9', bd: 'rgba(124,91,255,.22)', label: 'Monitor' },
 };
 
-function Card({ ins, cardId, voted, onFeedback }: {
+function Card({ ins, cardId, voted, onFeedback, watchKey, watched, onWatch }: {
   ins: Insight; cardId: string; voted: string | null;
   onFeedback: (r: FeedbackRequest) => void;
+  watchKey: string | null; watched: boolean; onWatch?: (monthKey: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const thumb = (v: 1 | -1, glyph: string) => (
@@ -100,6 +102,14 @@ function Card({ ins, cardId, voted, onFeedback }: {
             <span style={{ display: 'inline-flex', gap: 6, marginLeft: 10 }}>
               {thumb(1, '👍')}{thumb(-1, '👎')}
             </span>
+            {watchKey && onWatch && (
+              <button onClick={() => onWatch(watchKey)} title={watched ? 'Stop watching this month' : 'Watch this month'} style={{
+                marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5,
+                border: watched ? '1.5px solid #2E7CF7' : '1.5px solid #E2E7F0',
+                background: watched ? '#E8F0FE' : '#fff', color: watched ? '#1E6DD8' : '#4D5A74',
+                borderRadius: 999, padding: '5px 11px', fontSize: 11, fontWeight: 700,
+              }}><EyeIcon on={!!watched} size={13} />{watched ? 'Watching' : 'Watch'}</button>
+            )}
           </div>
         </div>
       )}
@@ -107,8 +117,10 @@ function Card({ ins, cardId, voted, onFeedback }: {
   );
 }
 
-export function AiTab({ briefing, hotelId, onFeedback }: {
+export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
   briefing: Briefing; hotelId: string; onFeedback: (r: FeedbackRequest) => void;
+  watched?: Set<string>;                     // month keys on the watchlist
+  onWatch?: (monthKey: string) => void;      // "Watch" on month-scoped cards
 }) {
   const insights = briefing.ai_insights?.insights ?? [];
   if (!insights.length) {
@@ -120,7 +132,9 @@ export function AiTab({ briefing, hotelId, onFeedback }: {
       {insights.map((ins, i) => {
         const cardId = ins.id || `card_${i + 1}`;
         const voted = localStorage.getItem(`fl_fb_${hotelId}_${briefing.report_date}_${cardId}`);
-        return <Card key={cardId} ins={ins} cardId={cardId} voted={voted} onFeedback={onFeedback} />;
+        const watchKey = onWatch ? monthKeyFromCardId(ins.id) : null;
+        return <Card key={cardId} ins={ins} cardId={cardId} voted={voted} onFeedback={onFeedback}
+          watchKey={watchKey} watched={!!(watchKey && watched?.has(watchKey))} onWatch={onWatch} />;
       })}
     </>
   );

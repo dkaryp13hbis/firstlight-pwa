@@ -21,7 +21,19 @@ export const ICONS: Record<string, React.ReactNode> = {
   heat: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" fill="#2E7CF7" fillOpacity=".35" /></svg>,
   bridge: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><path d="M4 20V10M12 20V4M20 20v-8" /><path d="M2 20h20" /></svg>,
   sources: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="M8.3 10.7l7.4-4.4M8.3 13.3l7.4 4.4" /></svg>,
+  eye: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>,
 };
+
+/** Watch toggle (eye): outline = not watched, filled blue = watched. */
+export function EyeIcon({ on, size = 14 }: { on: boolean; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={on ? '#2E7CF7' : 'none'}
+      stroke={on ? '#2E7CF7' : '#9AA4B8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" fill={on ? '#fff' : 'none'} />
+    </svg>
+  );
+}
 
 /* grey secondary text inside a SectionLabel title */
 export const LabelSub = ({ children }: { children: React.ReactNode }) =>
@@ -142,7 +154,12 @@ export function MtdStrip({ briefing }: { briefing: Briefing }) {
   );
 }
 
-export function OtbCards({ briefing, year, nextPace }: { briefing: Briefing; year: 'this' | 'next'; nextPace: import('../types').PaceMonth[] }) {
+export function OtbCards({ briefing, year, nextPace, watched, onWatch }: {
+  briefing: Briefing; year: 'this' | 'next'; nextPace: import('../types').PaceMonth[];
+  watched?: Set<string>;                      // month keys "YYYY-MM" on the watchlist
+  onWatch?: (monthNum: number) => void;       // eye tap → watch / unwatch (this year only)
+}) {
+  const reportYear = Number(briefing.report_date.slice(0, 4));
   const nextWithData = nextPace.filter(m => m.rn > 0 || m.rn_stly > 0);
   const months = year === 'this'
     ? (briefing.data.pace_current ?? [])
@@ -174,8 +191,16 @@ export function OtbCards({ briefing, year, nextPace }: { briefing: Briefing; yea
       <div style={{ ...grid, padding: '0 0 6px' }}>
         <span />
         {months.map(p => (
-          <span key={p.month} style={{ textAlign: 'center', fontSize: 10, fontWeight: 800, color: '#2e7cf7', letterSpacing: '.06em', padding: '0 4px' }}>
+          <span key={p.month} style={{ textAlign: 'center', fontSize: 10, fontWeight: 800, color: '#2e7cf7', letterSpacing: '.06em', padding: '0 4px', display: 'inline-flex', justifyContent: 'center', alignItems: 'center', gap: 5 }}>
             {p.month.toUpperCase()}
+            {onWatch && year === 'this' && (() => {
+              const on = !!watched?.has(`${reportYear}-${String(p.month_num).padStart(2, '0')}`);
+              return (
+                <button onClick={() => onWatch(p.month_num)} title={on ? 'Stop watching' : 'Watch this month'} style={{
+                  border: 'none', background: 'none', padding: 2, display: 'inline-flex', lineHeight: 0,
+                }}><EyeIcon on={on} size={13} /></button>
+              );
+            })()}
           </span>
         ))}
       </div>

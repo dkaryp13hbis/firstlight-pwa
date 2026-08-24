@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchLatestBriefing, fetchBriefingByDate, fetchDates } from './api';
+import { fetchLatestBriefing, fetchBriefingByDate, fetchDates, fetchPrevBriefing, fetchWatchlist, addWatch, removeWatch } from './api';
 import { sb, demoMode } from './lib/sb';
 import type { Briefing } from './types';
+import { WatchlistSection, WatchSheet, titleCase } from './components/Watchlist';
+import { WATCHLIST_EMAILS, WATCH_CAP, itemTitle, monthKey, type WatchItem, type WatchKind } from './lib/watch';
 import { Shell, type Tab } from './components/Shell';
 import { SmartSummary } from './components/SmartSummary';
 import { KpiRow, MtdStrip, OtbCards } from './components/Overview';
@@ -51,6 +53,11 @@ export default function App() {
   const [pushPrefs, setPushPrefs] = useState<PushPrefs | null>(null);
   const [dates, setDates] = useState<string[]>([]);
   const [viewDate, setViewDate] = useState<string | null>(null);  // null = latest
+  /* My Watchlist: items, yesterday's row (for "since yesterday"), sheet, gate */
+  const [watch, setWatch] = useState<WatchItem[] | null>(null);   // null = table missing / not loaded
+  const [prevB, setPrevB] = useState<Briefing | null>(null);
+  const [watchOpen, setWatchOpen] = useState(false);
+  const [watchOn, setWatchOn] = useState(demoMode);
 
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2000); };
 
@@ -89,11 +96,25 @@ export default function App() {
     const cached = readCache<Briefing>(`fl_briefing_${hotelId}`);
     if (cached) setBriefing(cached);
     fetchLatestBriefing(hotelId)
-      .then(b => { setBriefing(b); setError(null); writeCache(`fl_briefing_${hotelId}`, b); })
+      .then(b => {
+        setBriefing(b); setError(null); writeCache(`fl_briefing_${hotelId}`, b);
+        fetchPrevBriefing(hotelId, b.report_date).then(setPrevB).catch(() => setPrevB(null));
+      })
       .catch(e => { if (!cached) setError(String(e)); });
     fetchDates(hotelId, 7).then(setDates).catch(() => setDates([]));
+    fetchWatchlist(hotelId).then(setWatch).catch(() => setWatch(null));
   }, [hotelId]);
   useEffect(load, [load]);
+
+  /* watchlist gate — same pattern as usage tracking (demo account first) */
+  useEffect(() => {
+    if (!sb) { setWatchOn(true); return; }
+    if (!session) { setWatchOn(false); return; }
+    sb.auth.getSession().then(({ data }) => {
+      const email = (data.session?.user.email ?? '').toLowerCase();
+      setWatchOn(WATCHLIST_EMAILS === null || WATCHLIST_EMAILS.includes(email));
+    }).catch(() => setWatchOn(false));
+  }, [session]);
 
   /* per-hotel language preference */
   useEffect(() => {
@@ -108,12 +129,39 @@ export default function App() {
 
   const changeHotel = (id: string) => {
     setViewDate(null);
+    setWatch(null); setPrevB(null);
     setTrackedHotel(id);
     track('hotel_switch', {});
     setHotelId(id);
     localStorage.setItem('fl_hotel', id);
     window.scrollTo(0, 0);
   };
+
+  /* ── My Watchlist actions ── */
+  const watchedKeys = useMemo(() => new Set((watch ?? []).map(w => `${w.kind}:${w.key}`)), [watch]);
+  const watchedMonths = useMemo(() => new Set((watch ?? []).filter(w => w.kind === 'month').map(w => w.key)), [watch]);
+  const saveWatch = async (kind: WatchKind, key: string, label: string | null, from: string) => {
+    if (!briefing) return;
+    if ((watch?.length ?? 0) >= WATCH_CAP) { say(`Watchlist is full (${WATCH_CAP})`); return; }
+    const r = await addWatch(hotelId, kind, key, label);
+    if (!r.ok) { say(r.msg); return; }
+    track('watch_add', { kind, key, from });
+    setWatch(w => [...(w ?? []), r.item]);
+    setWatchOpen(false);
+    say(`Watching ${titleCase(itemTitle(r.item, briefing.report_date))}`);
+  };
+  const dropWatch = async (item: WatchItem) => {
+    const ok = await removeWatch(hotelId, item.id);
+    if (!ok) { say('Could not remove the watch'); return; }
+    track('watch_remove', { kind: item.kind, key: item.key });
+    setWatch(w => (w ?? []).filter(x => x.id !== item.id));
+    say('Removed from your watchlist');
+  };
+  const toggleMonthWatch = (key: string, from: string) => {
+    const ex = (watch ?? []).find(w => w.kind === 'month' && w.key === key);
+    if (ex) void dropWatch(ex); else void saveWatch('month', key, null, from);
+  };
+  const watchActive = watchOn && watch !== null;
 
   const requestRefresh = async () => {
     if (viewDate) { say('Viewing a past briefing — go back to Today first'); return; }
@@ -419,6 +467,11 @@ export default function App() {
         )}
         <KpiRow briefing={viewBriefing ?? briefing} />
         <MtdStrip briefing={viewBriefing ?? briefing} />
+        {!viewDate && watchActive && watch && (
+          <WatchlistSection briefing={briefing} prev={prevB} items={watch}
+            onAdd={() => setWatchOpen(true)} onRemove={dropWatch}
+            onTap={l => { track('watch_tap', { kind: l.item.kind }); nav('Pace'); }} />
+        )}
         {year === 'next' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-2px 0 14px', fontSize: 12, fontWeight: 600, color: '#5A6780' }}>
             <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.08em', color: '#0F2860', background: '#E9EDF4', borderRadius: 999, padding: '3px 9px' }}>{new Date().getFullYear() + 1}</span>
@@ -426,13 +479,17 @@ export default function App() {
             {comp === 'prev' ? ' — same stage & final' : ' — closed months final · open months same stage'} · change in Settings
           </div>
         )}
-        <OtbCards briefing={viewBriefing ?? briefing} year={year} nextPace={buildNextPace(viewBriefing ?? briefing, comp)} />
+        <OtbCards briefing={viewBriefing ?? briefing} year={year} nextPace={buildNextPace(viewBriefing ?? briefing, comp)}
+          watched={watchActive && !viewDate ? watchedMonths : undefined}
+          onWatch={watchActive && !viewDate ? m => toggleMonthWatch(monthKey(Number(briefing.report_date.slice(0, 4)), m), 'otb_card') : undefined} />
         <div id="sec-pickup" style={{ scrollMarginTop: 46 }} />
         <PickupSection briefing={viewBriefing ?? briefing} year={year} comp={comp} />
         <div id="sec-pace" style={{ scrollMarginTop: 46 }} />
         <OtbTab briefing={viewBriefing ?? briefing} year={year} comp={comp} />
         <div id="sec-ai" style={{ scrollMarginTop: 46 }} />
-        <AiTab briefing={briefing} hotelId={hotelId} onFeedback={setFb} />
+        <AiTab briefing={briefing} hotelId={hotelId} onFeedback={setFb}
+          watched={watchActive && !viewDate ? watchedMonths : undefined}
+          onWatch={watchActive && !viewDate ? k => toggleMonthWatch(k, 'ai_card') : undefined} />
         <div style={{
           marginTop: 28, padding: '14px 4px 6px', borderTop: '1px solid #E2E7F0',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
@@ -472,6 +529,10 @@ export default function App() {
         open={!!fb} verdict={fb?.verdict ?? 1}
         onClose={() => setFb(null)} onSubmit={submitFeedback}
       />
+      {watchActive && watch && (
+        <WatchSheet open={watchOpen} onClose={() => setWatchOpen(false)} briefing={briefing}
+          existing={watchedKeys} used={watch.length} onSave={saveWatch} />
+      )}
       <Toast msg={toast} />
       {pushMsg && (
         <div onClick={() => setPushMsg(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(6,21,53,.45)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>

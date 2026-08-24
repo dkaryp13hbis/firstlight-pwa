@@ -17,6 +17,7 @@ export const INFO: Record<string, string> = {
   heat: 'Occupancy on the books for every one of the next 60 nights — darker is fuller. A red outline flags a date far behind last year: expected demand that hasn’t arrived.',
   sources: 'Where this year’s revenue comes from, by booking source, compared with the same time last year. Watch for a cheap channel quietly growing its share.',
   ai: 'The analyst’s ranked findings for today: what happened, why it matters, and a suggested action. Only changes that passed significance checks appear here.',
+  watch: 'Months or dates you asked FirstLight to follow. Each gets a one-line update on every refresh — rooms booked vs the same time last year, what came in since yesterday, and whether the booking speed is enough to reach last year’s final — whether or not it made today’s Signals. Improving / Getting worse compares with yesterday’s briefing.',
 };
 
 export function InfoButton({ k, dark }: { k: string; dark?: boolean }) {
