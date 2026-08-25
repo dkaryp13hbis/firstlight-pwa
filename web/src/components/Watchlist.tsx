@@ -7,7 +7,7 @@ import { SectionLabel, LabelSub, EyeIcon } from './Overview';
 import { Sheet } from './Sheets';
 import {
   computeWatchLine, watchableMonths, weekendPreset, softRuns, rangeKey, rangeTitle, isoAdd,
-  watchSeries, watchStatusHistory, dayLabel,
+  watchSeries, watchStatusHistory, netRoomsFromSeries, dayLabel,
   STATUS_LABEL, WATCH_CAP, RANGE_HORIZON_DAYS,
   type WatchItem, type WatchLine, type WatchKind, type WatchStatus, type WatchPoint, type Seg,
 } from '../lib/watch';
@@ -80,17 +80,24 @@ function TrendStrip({ item, briefing, history }: { item: WatchItem; briefing: Br
   const unit = item.kind === 'month' ? 'rooms' : '%';
   const first = pts[0], last = pts[pts.length - 1];
   const fmt = (v: number) => (unit === '%' ? `${Math.round(v)}%` : Math.round(v).toLocaleString('en-US'));
-  /* net rooms per booking day for the month (already in today's payload) */
+  /* net rooms booked per day: months from today's pickup_daily (per booking
+     day, 14 d); ranges — and months without daily rows — from the change in
+     rooms on the books between consecutive morning briefings */
   const bars = (() => {
-    if (item.kind !== 'month') return null;
-    const [y, m] = item.key.split('-').map(Number);
-    const daily = (briefing.data.pickup_daily ?? []).filter(r => r.stay_year === y && r.stay_month === m);
-    if (!daily.length) return null;
-    const byDay = new Map<string, number>();
-    for (const r of daily) byDay.set(r.ref_date, (byDay.get(r.ref_date) ?? 0) + r.net_rn);
-    return [...byDay.entries()].sort().slice(-14);
+    if (item.kind === 'month') {
+      const [y, m] = item.key.split('-').map(Number);
+      const daily = (briefing.data.pickup_daily ?? []).filter(r => r.stay_year === y && r.stay_month === m);
+      if (daily.length) {
+        const byDay = new Map<string, number>();
+        for (const r of daily) byDay.set(r.ref_date, (byDay.get(r.ref_date) ?? 0) + r.net_rn);
+        return { rows: [...byDay.entries()].sort().slice(-14), src: 'booking day' };
+      }
+    }
+    const d = netRoomsFromSeries(pts);
+    return d.length ? { rows: d, src: 'morning briefing' } : null;
   })();
-  const mx = bars ? Math.max(1, ...bars.map(([, v]) => Math.abs(v))) : 1;
+  const mx = bars ? Math.max(1, ...bars.rows.map(([, v]) => Math.abs(v))) : 1;
+  const netTotal = bars ? bars.rows.reduce((s, [, v]) => s + v, 0) : 0;
   return (
     <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #EDF0F6' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 10.5, fontWeight: 700, color: '#79747E', letterSpacing: '.06em', textTransform: 'uppercase' }}>
@@ -123,16 +130,20 @@ function TrendStrip({ item, briefing, history }: { item: WatchItem; briefing: Br
       )}
       {bars && (
         <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: '#79747E', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>
-            Net rooms per booking day · last {bars.length} days
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 10.5, fontWeight: 700, color: '#79747E', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>
+            <span>Net rooms booked · per {bars.src} · {bars.rows.length} days</span>
+            <b style={{ color: netTotal >= 0 ? NAVY : RED, fontWeight: 800, letterSpacing: 0 }}>{netTotal >= 0 ? '+' : '−'}{Math.abs(netTotal)} total</b>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 34 }}>
-            {bars.map(([d, v]) => (
+            {bars.rows.map(([d, v]) => (
               <span key={d} title={`${dayLabel(d)} · ${v >= 0 ? '+' : ''}${v}`} style={{
                 flex: 1, height: Math.max(2, (Math.abs(v) / mx) * 34), borderRadius: 2,
                 background: v >= 0 ? BLUE : RED, opacity: v === 0 ? .25 : 1,
               }} />
             ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 600, color: '#9AA4B8', marginTop: 2 }}>
+            <span>{dayLabel(bars.rows[0][0])}</span><span>{dayLabel(bars.rows[bars.rows.length - 1][0])}</span>
           </div>
         </div>
       )}

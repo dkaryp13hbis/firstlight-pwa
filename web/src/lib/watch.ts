@@ -187,7 +187,13 @@ export interface WatchPoint {
   date: string;        // report_date
   ty: number;          // rooms booked (month) · booked % (range)
   ly: number | null;   // same time last year
+  rn: number;          // rooms on the books that morning (both kinds) — day-to-day delta = net rooms booked
   label: string;       // formatted ty
+}
+
+/** Net rooms booked per day = change in rooms on the books between consecutive morning briefings. */
+export function netRoomsFromSeries(pts: WatchPoint[]): [string, number][] {
+  return pts.slice(1).map((p, i) => [p.date, p.rn - pts[i].rn]);
 }
 
 export const dayLabel = (iso: string) => { const d = utc(iso); return `${WD[d.getUTCDay()]} ${d.getUTCDate()}`; };
@@ -207,7 +213,7 @@ export function watchSeries(item: WatchItem, rows: Briefing[]): WatchPoint[] {
       if (Number(r.report_date.slice(0, 4)) !== y) continue;
       const p = r.data.pace?.find(x => x.month_num === m);
       if (!p) continue;
-      pts.push({ date: r.report_date, ty: p.rn, ly: p.rn_stly > 0 ? p.rn_stly : null, label: n(p.rn) });
+      pts.push({ date: r.report_date, ty: p.rn, ly: p.rn_stly > 0 ? p.rn_stly : null, rn: p.rn, label: n(p.rn) });
     }
   } else {
     const [from, to] = item.key.split('..');
@@ -215,9 +221,10 @@ export function watchSeries(item: WatchItem, rows: Briefing[]): WatchPoint[] {
       const rooms = r.data.total_rooms || 0;
       const days = (r.data.otb_by_date ?? []).filter(x => x.stay_date >= from && x.stay_date <= to);
       if (!rooms || !days.length) continue;
-      const occ = days.reduce((s, x) => s + x.rn_ty, 0) / (rooms * days.length) * 100;
+      const rn = days.reduce((s, x) => s + x.rn_ty, 0);
+      const occ = rn / (rooms * days.length) * 100;
       const ly = days.reduce((s, x) => s + x.rn_stly, 0) / (rooms * days.length) * 100;
-      pts.push({ date: r.report_date, ty: occ, ly, label: `${Math.round(occ)}%` });
+      pts.push({ date: r.report_date, ty: occ, ly, rn, label: `${Math.round(occ)}%` });
     }
   }
   return pts;
