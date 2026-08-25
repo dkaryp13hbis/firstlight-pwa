@@ -48,8 +48,6 @@ const utc = (iso: string) => new Date(iso + 'T00:00:00Z');
 const n = (v: number) => Math.round(v).toLocaleString('en-US');
 const signed = (v: number) => `${v >= 0 ? '+' : '−'}${n(Math.abs(v))}`;
 const pctGap = (rn: number, ref: number) => (ref > 0 ? ((rn - ref) / ref) * 100 : null);
-const dayLabel = (iso: string) => { const d = utc(iso); return `${WD[d.getUTCDay()]} ${d.getUTCDate()}`; };
-
 export function rangeTitle(from: string, to: string): string {
   const a = utc(from), b = utc(to);
   if (from === to) return `${MON[a.getUTCMonth()]} ${a.getUTCDate()}`.toUpperCase();
@@ -181,6 +179,54 @@ function rangeLine(item: WatchItem, b: Briefing, prev: Briefing | null): WatchLi
 
 export function computeWatchLine(item: WatchItem, b: Briefing, prev: Briefing | null): WatchLine {
   return item.kind === 'month' ? monthLine(item, b, prev) : rangeLine(item, b, prev);
+}
+
+/* ── trend over stored briefings (one point per report date) ──────────── */
+
+export interface WatchPoint {
+  date: string;        // report_date
+  ty: number;          // rooms booked (month) · booked % (range)
+  ly: number | null;   // same time last year
+  label: string;       // formatted ty
+}
+
+export const dayLabel = (iso: string) => { const d = utc(iso); return `${WD[d.getUTCDay()]} ${d.getUTCDate()}`; };
+
+/** Sort briefings by report_date (asc), one per date (latest generated wins). */
+export function sortHistory(rows: Briefing[]): Briefing[] {
+  const byDate = new Map<string, Briefing>();
+  for (const r of [...rows].sort((a, b) => (a.generated_at ?? '') < (b.generated_at ?? '') ? -1 : 1)) byDate.set(r.report_date, r);
+  return [...byDate.values()].sort((a, b) => (a.report_date < b.report_date ? -1 : 1));
+}
+
+export function watchSeries(item: WatchItem, rows: Briefing[]): WatchPoint[] {
+  const pts: WatchPoint[] = [];
+  if (item.kind === 'month') {
+    const [y, m] = item.key.split('-').map(Number);
+    for (const r of sortHistory(rows)) {
+      if (Number(r.report_date.slice(0, 4)) !== y) continue;
+      const p = r.data.pace?.find(x => x.month_num === m);
+      if (!p) continue;
+      pts.push({ date: r.report_date, ty: p.rn, ly: p.rn_stly > 0 ? p.rn_stly : null, label: n(p.rn) });
+    }
+  } else {
+    const [from, to] = item.key.split('..');
+    for (const r of sortHistory(rows)) {
+      const rooms = r.data.total_rooms || 0;
+      const days = (r.data.otb_by_date ?? []).filter(x => x.stay_date >= from && x.stay_date <= to);
+      if (!rooms || !days.length) continue;
+      const occ = days.reduce((s, x) => s + x.rn_ty, 0) / (rooms * days.length) * 100;
+      const ly = days.reduce((s, x) => s + x.rn_stly, 0) / (rooms * days.length) * 100;
+      pts.push({ date: r.report_date, ty: occ, ly, label: `${Math.round(occ)}%` });
+    }
+  }
+  return pts;
+}
+
+/** Status per day, computed exactly as the card did that morning (day i vs day i−1). */
+export function watchStatusHistory(item: WatchItem, rows: Briefing[]): { date: string; status: WatchStatus }[] {
+  const s = sortHistory(rows);
+  return s.map((r, i) => ({ date: r.report_date, status: computeWatchLine(item, r, i ? s[i - 1] : null).status }));
 }
 
 /* ── helpers for the add sheet ─────────────────────────────────────────── */

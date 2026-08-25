@@ -83,6 +83,13 @@ export async function fetchPrevBriefing(hotelId: string, before: string): Promis
   return d ? fetchBriefingByDate(hotelId, d) : null;
 }
 
+/** Stored briefings for the given report dates (watchlist trend). Missing
+ *  days are skipped; fixture mode has no history. */
+export async function fetchHistoryRows(hotelId: string, dates: string[]): Promise<Briefing[]> {
+  const rows = await Promise.all(dates.map(d => fetchBriefingByDate(hotelId, d).catch(() => null)));
+  return rows.filter((r): r is Briefing => !!r);
+}
+
 /* ── My Watchlist (Supabase `watchlist`, own rows; demo → localStorage) ── */
 const DEMO_WATCH = 'fl_watch_demo';
 /* fixture mode only (no Supabase): two sample watches until the user edits the list */

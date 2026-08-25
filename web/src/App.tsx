@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchLatestBriefing, fetchBriefingByDate, fetchDates, fetchPrevBriefing, fetchWatchlist, addWatch, removeWatch } from './api';
+import { fetchLatestBriefing, fetchBriefingByDate, fetchDates, fetchPrevBriefing, fetchHistoryRows, fetchWatchlist, addWatch, removeWatch } from './api';
 import { sb, demoMode } from './lib/sb';
 import type { Briefing } from './types';
 import { WatchlistSection, WatchSheet, titleCase } from './components/Watchlist';
@@ -58,6 +58,8 @@ export default function App() {
   const [prevB, setPrevB] = useState<Briefing | null>(null);
   const [watchOpen, setWatchOpen] = useState(false);
   const [watchOn, setWatchOn] = useState(demoMode);
+  const [hist, setHist] = useState<Briefing[] | null>(null);       // last 7 stored rows (watch trend), lazy
+  const histFor = useRef<string>('');
 
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2000); };
 
@@ -103,6 +105,7 @@ export default function App() {
       .catch(e => { if (!cached) setError(String(e)); });
     fetchDates(hotelId, 7).then(setDates).catch(() => setDates([]));
     fetchWatchlist(hotelId).then(setWatch).catch(() => setWatch(null));
+    setHist(null); histFor.current = '';
   }, [hotelId]);
   useEffect(load, [load]);
 
@@ -163,6 +166,14 @@ export default function App() {
     if (ex) void dropWatch(ex); else void saveWatch('month', key, null, from);
   };
   const watchActive = watchOn && watch !== null;
+  /* trend history: the stored rows behind the 7-day strip, fetched once per hotel on first expand */
+  const loadHistory = async () => {
+    if (histFor.current === hotelId) return;
+    histFor.current = hotelId;
+    const past = dates.filter(d => d !== briefing?.report_date).slice(0, 7);
+    try { setHist(await fetchHistoryRows(hotelId, past)); }
+    catch { setHist([]); }
+  };
 
   const requestRefresh = async () => {
     if (viewDate) { say('Viewing a past briefing — go back to Today first'); return; }
@@ -470,6 +481,7 @@ export default function App() {
         <MtdStrip briefing={viewBriefing ?? briefing} />
         {!viewDate && watchActive && watch && (
           <WatchlistSection briefing={briefing} prev={prevB} items={watch}
+            history={hist} onLoadHistory={() => { track('watch_expand', {}); void loadHistory(); }}
             onAdd={() => setWatchOpen(true)} onRemove={dropWatch}
             onTap={l => { track('watch_tap', { kind: l.item.kind }); nav('Pace'); }} />
         )}

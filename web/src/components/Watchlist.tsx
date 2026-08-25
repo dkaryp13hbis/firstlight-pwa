@@ -7,8 +7,9 @@ import { SectionLabel, LabelSub, EyeIcon } from './Overview';
 import { Sheet } from './Sheets';
 import {
   computeWatchLine, watchableMonths, weekendPreset, softRuns, rangeKey, rangeTitle, isoAdd,
+  watchSeries, watchStatusHistory, dayLabel,
   STATUS_LABEL, WATCH_CAP, RANGE_HORIZON_DAYS,
-  type WatchItem, type WatchLine, type WatchKind, type WatchStatus, type Seg,
+  type WatchItem, type WatchLine, type WatchKind, type WatchStatus, type WatchPoint, type Seg,
 } from '../lib/watch';
 
 const TONE: Record<WatchStatus, { bg: string; fg: string }> = {
@@ -39,29 +40,141 @@ function Line({ segs }: { segs: Seg[] }) {
   );
 }
 
-function WatchCard({ line, onRemove, onTap }: { line: WatchLine; onRemove: () => void; onTap: () => void }) {
+/* ── trend strip: this year vs last year over the stored briefings ─────── */
+
+const NAVY = '#0F2860', BLUE = '#2E7CF7', GREY = '#B8C2D6', RED = '#C43A3A';
+const GLYPH: Record<WatchStatus, string> = { new: '·', improving: '▲', worsening: '▼', steady: '—', passed: '✓', closed: '●', pending: '·' };
+
+function Sparkline({ pts, unit }: { pts: WatchPoint[]; unit: 'rooms' | '%' }) {
+  const W = 300, H = 72, PX = 8, PY = 10;
+  const vals = pts.flatMap(p => (p.ly != null ? [p.ty, p.ly] : [p.ty]));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (hi === lo) { hi = lo + 1; }
+  const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+  const x = (i: number) => PX + (i * (W - 2 * PX)) / Math.max(pts.length - 1, 1);
+  const y = (v: number) => H - PY - ((v - lo) / (hi - lo)) * (H - 2 * PY);
+  const ty = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.ty).toFixed(1)}`).join(' L');
+  const lyPts = pts.map((p, i) => (p.ly != null ? `${x(i).toFixed(1)},${y(p.ly).toFixed(1)}` : null)).filter((s): s is string => !!s);
+  const last = pts[pts.length - 1], first = pts[0];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: 72, display: 'block' }}
+      aria-label={`${unit === '%' ? 'Booked %' : 'Rooms booked'} over ${pts.length} days: ${first.label} to ${last.label}`}>
+      <defs><linearGradient id="wl-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={BLUE} stopOpacity=".18" /><stop offset="1" stopColor={BLUE} stopOpacity="0" /></linearGradient></defs>
+      <path d={`M${ty} L${x(pts.length - 1).toFixed(1)},${H} L${x(0).toFixed(1)},${H} Z`} fill="url(#wl-area)" />
+      {lyPts.length > 1 && <path d={`M${lyPts.join(' L')}`} fill="none" stroke={GREY} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" strokeDasharray="4 3" />}
+      <path d={`M${ty}`} fill="none" stroke={BLUE} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={x(0)} cy={y(first.ty)} r="3" fill={BLUE} stroke="#fff" strokeWidth="1.5" />
+      <circle cx={x(pts.length - 1)} cy={y(last.ty)} r="4.5" fill={NAVY} stroke="#fff" strokeWidth="2" />
+      {last.ly != null && <circle cx={x(pts.length - 1)} cy={y(last.ly)} r="3" fill={GREY} stroke="#fff" strokeWidth="1.5" />}
+    </svg>
+  );
+}
+
+function TrendStrip({ item, briefing, history }: { item: WatchItem; briefing: Briefing; history: Briefing[] | null }) {
+  const rows = useMemo(() => (history ? [...history, briefing] : null), [history, briefing]);
+  const pts = useMemo(() => (rows ? watchSeries(item, rows) : []), [item, rows]);
+  const statuses = useMemo(() => (rows ? watchStatusHistory(item, rows) : []), [item, rows]);
+  const muted: React.CSSProperties = { fontSize: 11.5, color: '#6E7A96', fontWeight: 600, padding: '8px 0 2px' };
+  if (!rows) return <div style={muted}>Loading the last days…</div>;
+  if (pts.length < 2) return <div style={muted}>The trend builds up day by day — one point per morning briefing. Come back tomorrow.</div>;
+  const unit = item.kind === 'month' ? 'rooms' : '%';
+  const first = pts[0], last = pts[pts.length - 1];
+  const fmt = (v: number) => (unit === '%' ? `${Math.round(v)}%` : Math.round(v).toLocaleString('en-US'));
+  /* net rooms per booking day for the month (already in today's payload) */
+  const bars = (() => {
+    if (item.kind !== 'month') return null;
+    const [y, m] = item.key.split('-').map(Number);
+    const daily = (briefing.data.pickup_daily ?? []).filter(r => r.stay_year === y && r.stay_month === m);
+    if (!daily.length) return null;
+    const byDay = new Map<string, number>();
+    for (const r of daily) byDay.set(r.ref_date, (byDay.get(r.ref_date) ?? 0) + r.net_rn);
+    return [...byDay.entries()].sort().slice(-14);
+  })();
+  const mx = bars ? Math.max(1, ...bars.map(([, v]) => Math.abs(v))) : 1;
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #EDF0F6' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 10.5, fontWeight: 700, color: '#79747E', letterSpacing: '.06em', textTransform: 'uppercase' }}>
+        <span>{unit === '%' ? 'Booked' : 'Rooms booked'} · last {pts.length} days</span>
+        <span style={{ display: 'inline-flex', gap: 10, textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>
+          <span><span style={{ display: 'inline-block', width: 10, height: 3, background: BLUE, borderRadius: 2, verticalAlign: 'middle', marginRight: 4 }} />this year</span>
+          <span><span style={{ display: 'inline-block', width: 10, height: 0, borderTop: `2px dashed ${GREY}`, verticalAlign: 'middle', marginRight: 4 }} />last year</span>
+        </span>
+      </div>
+      <Sparkline pts={pts} unit={unit} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: '#3D4C6F' }}>
+        <span>{dayLabel(first.date)} <b style={{ color: NAVY, fontWeight: 800 }}>{fmt(first.ty)}</b></span>
+        <span style={{ textAlign: 'right' }}>
+          {dayLabel(last.date)} <b style={{ color: NAVY, fontWeight: 800 }}>{fmt(last.ty)}</b>
+          {last.ly != null && <span style={{ color: '#6E7A96', fontWeight: 600 }}> · LY {fmt(last.ly)}</span>}
+        </span>
+      </div>
+      {statuses.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, gap: 2 }}>
+          {statuses.map(s => {
+            const t = TONE[s.status];
+            return (
+              <span key={s.date} title={`${dayLabel(s.date)} · ${STATUS_LABEL[s.status]}`} style={{
+                flex: 1, textAlign: 'center', fontSize: 9.5, fontWeight: 800, borderRadius: 6, padding: '3px 0',
+                background: t.bg, color: t.fg,
+              }}>{GLYPH[s.status]}</span>
+            );
+          })}
+        </div>
+      )}
+      {bars && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: '#79747E', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>
+            Net rooms per booking day · last {bars.length} days
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 34 }}>
+            {bars.map(([d, v]) => (
+              <span key={d} title={`${dayLabel(d)} · ${v >= 0 ? '+' : ''}${v}`} style={{
+                flex: 1, height: Math.max(2, (Math.abs(v) / mx) * 34), borderRadius: 2,
+                background: v >= 0 ? BLUE : RED, opacity: v === 0 ? .25 : 1,
+              }} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WatchCard({ line, briefing, history, onRemove, onTap, onExpand }: {
+  line: WatchLine; briefing: Briefing; history: Briefing[] | null;
+  onRemove: () => void; onTap: () => void; onExpand: () => void;
+}) {
+  const [open, setOpen] = useState(false);
   return (
     <div style={{
       background: '#fff', borderRadius: 18, padding: '13px 14px 10px', marginBottom: 10,
       boxShadow: '0 1px 2px rgba(10,31,77,.05), 0 6px 16px rgba(10,31,77,.06)',
     }}>
-      <div onClick={onTap} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, cursor: 'pointer', gap: 8 }}>
+      <div onClick={() => { if (!open) onExpand(); setOpen(!open); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, cursor: 'pointer', gap: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '.06em', color: '#0F2860', textTransform: 'uppercase', minWidth: 0 }}>
           {line.title}
           {line.item.label && <span style={{ fontWeight: 700, letterSpacing: 0, textTransform: 'none', color: '#5A6780', fontSize: 11.5, marginLeft: 6 }}>{line.item.label}</span>}
         </span>
-        <Pill s={line.status} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Pill s={line.status} />
+          <span style={{ color: '#9AA4B8', display: 'inline-flex', transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+          </span>
+        </span>
       </div>
       {line.lines.map((l, i) => <Line key={i} segs={l} />)}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+      {open && <TrendStrip item={line.item} briefing={briefing} history={history} />}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, marginTop: 6 }}>
+        <button onClick={onTap} style={{ border: 'none', background: 'none', padding: '4px 0', fontSize: 11, fontWeight: 700, color: '#2E7CF7' }}>Open in Pace ›</button>
         <button onClick={onRemove} style={{ border: 'none', background: 'none', padding: '4px 0', fontSize: 11, fontWeight: 700, color: '#79747E' }}>Remove</button>
       </div>
     </div>
   );
 }
 
-export function WatchlistSection({ briefing, prev, items, onAdd, onRemove, onTap }: {
+export function WatchlistSection({ briefing, prev, items, history, onLoadHistory, onAdd, onRemove, onTap }: {
   briefing: Briefing; prev: Briefing | null; items: WatchItem[];
+  history: Briefing[] | null; onLoadHistory: () => void;
   onAdd: () => void; onRemove: (item: WatchItem) => void; onTap: (line: WatchLine) => void;
 }) {
   const lines = useMemo(() => items.map(i => computeWatchLine(i, briefing, prev)), [items, briefing, prev]);
@@ -71,7 +184,8 @@ export function WatchlistSection({ briefing, prev, items, onAdd, onRemove, onTap
         Your watchlist <LabelSub>· {items.length} of {WATCH_CAP}</LabelSub>
       </SectionLabel>
       {lines.map(l => (
-        <WatchCard key={l.item.id} line={l} onRemove={() => onRemove(l.item)} onTap={() => onTap(l)} />
+        <WatchCard key={l.item.id} line={l} briefing={briefing} history={history} onExpand={onLoadHistory}
+          onRemove={() => onRemove(l.item)} onTap={() => onTap(l)} />
       ))}
       {items.length < WATCH_CAP && (
         <button onClick={onAdd} style={{
