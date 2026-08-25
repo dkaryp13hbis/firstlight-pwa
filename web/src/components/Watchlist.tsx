@@ -7,7 +7,7 @@ import { SectionLabel, LabelSub, EyeIcon } from './Overview';
 import { Sheet } from './Sheets';
 import {
   computeWatchLine, watchableMonths, weekendPreset, softRuns, rangeKey, rangeTitle, isoAdd,
-  watchSeries, watchStatusHistory, netRoomsFromSeries, dayLabel,
+  watchSeries, watchStatusHistory, dayLabel,
   STATUS_LABEL, WATCH_CAP, RANGE_HORIZON_DAYS,
   type WatchItem, type WatchLine, type WatchKind, type WatchStatus, type WatchPoint, type Seg,
 } from '../lib/watch';
@@ -42,7 +42,7 @@ function Line({ segs }: { segs: Seg[] }) {
 
 /* ── trend strip: this year vs last year over the stored briefings ─────── */
 
-const NAVY = '#0F2860', BLUE = '#2E7CF7', GREY = '#B8C2D6', RED = '#C43A3A';
+const NAVY = '#0F2860', BLUE = '#2E7CF7', GREY = '#B8C2D6';
 const GLYPH: Record<WatchStatus, string> = { new: '·', improving: '▲', worsening: '▼', steady: '—', passed: '✓', closed: '●', pending: '·' };
 
 function Sparkline({ pts, unit }: { pts: WatchPoint[]; unit: 'rooms' | '%' }) {
@@ -80,24 +80,8 @@ function TrendStrip({ item, briefing, history }: { item: WatchItem; briefing: Br
   const unit = item.kind === 'month' ? 'rooms' : '%';
   const first = pts[0], last = pts[pts.length - 1];
   const fmt = (v: number) => (unit === '%' ? `${Math.round(v)}%` : Math.round(v).toLocaleString('en-US'));
-  /* net rooms booked per day: months from today's pickup_daily (per booking
-     day, 14 d); ranges — and months without daily rows — from the change in
-     rooms on the books between consecutive morning briefings */
-  const bars = (() => {
-    if (item.kind === 'month') {
-      const [y, m] = item.key.split('-').map(Number);
-      const daily = (briefing.data.pickup_daily ?? []).filter(r => r.stay_year === y && r.stay_month === m);
-      if (daily.length) {
-        const byDay = new Map<string, number>();
-        for (const r of daily) byDay.set(r.ref_date, (byDay.get(r.ref_date) ?? 0) + r.net_rn);
-        return { rows: [...byDay.entries()].sort().slice(-14), src: 'booking day' };
-      }
-    }
-    const d = netRoomsFromSeries(pts);
-    return d.length ? { rows: d, src: 'morning briefing' } : null;
-  })();
-  const mx = bars ? Math.max(1, ...bars.rows.map(([, v]) => Math.abs(v))) : 1;
-  const netTotal = bars ? bars.rows.reduce((s, [, v]) => s + v, 0) : 0;
+  /* the current briefing is "Today" in the day strip — label it the same here */
+  const when = (d: string) => (d === briefing.report_date ? 'Today' : dayLabel(d));
   return (
     <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #EDF0F6' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 10.5, fontWeight: 700, color: '#79747E', letterSpacing: '.06em', textTransform: 'uppercase' }}>
@@ -109,9 +93,9 @@ function TrendStrip({ item, briefing, history }: { item: WatchItem; briefing: Br
       </div>
       <Sparkline pts={pts} unit={unit} />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: '#3D4C6F' }}>
-        <span>{dayLabel(first.date)} <b style={{ color: NAVY, fontWeight: 800 }}>{fmt(first.ty)}</b></span>
+        <span>{when(first.date)} <b style={{ color: NAVY, fontWeight: 800 }}>{fmt(first.ty)}</b></span>
         <span style={{ textAlign: 'right' }}>
-          {dayLabel(last.date)} <b style={{ color: NAVY, fontWeight: 800 }}>{fmt(last.ty)}</b>
+          {when(last.date)} <b style={{ color: NAVY, fontWeight: 800 }}>{fmt(last.ty)}</b>
           {last.ly != null && <span style={{ color: '#6E7A96', fontWeight: 600 }}> · LY {fmt(last.ly)}</span>}
         </span>
       </div>
@@ -120,31 +104,12 @@ function TrendStrip({ item, briefing, history }: { item: WatchItem; briefing: Br
           {statuses.map(s => {
             const t = TONE[s.status];
             return (
-              <span key={s.date} title={`${dayLabel(s.date)} · ${STATUS_LABEL[s.status]}`} style={{
+              <span key={s.date} title={`${when(s.date)} · ${STATUS_LABEL[s.status]}`} style={{
                 flex: 1, textAlign: 'center', fontSize: 9.5, fontWeight: 800, borderRadius: 6, padding: '3px 0',
                 background: t.bg, color: t.fg,
               }}>{GLYPH[s.status]}</span>
             );
           })}
-        </div>
-      )}
-      {bars && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 10.5, fontWeight: 700, color: '#79747E', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>
-            <span>Net rooms booked · per {bars.src} · {bars.rows.length} days</span>
-            <b style={{ color: netTotal >= 0 ? NAVY : RED, fontWeight: 800, letterSpacing: 0 }}>{netTotal >= 0 ? '+' : '−'}{Math.abs(netTotal)} total</b>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 34 }}>
-            {bars.rows.map(([d, v]) => (
-              <span key={d} title={`${dayLabel(d)} · ${v >= 0 ? '+' : ''}${v}`} style={{
-                flex: 1, height: Math.max(2, (Math.abs(v) / mx) * 34), borderRadius: 2,
-                background: v >= 0 ? BLUE : RED, opacity: v === 0 ? .25 : 1,
-              }} />
-            ))}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 600, color: '#9AA4B8', marginTop: 2 }}>
-            <span>{dayLabel(bars.rows[0][0])}</span><span>{dayLabel(bars.rows[bars.rows.length - 1][0])}</span>
-          </div>
         </div>
       )}
     </div>
