@@ -46,7 +46,7 @@ const NAVY = '#0F2860', BLUE = '#2E7CF7', GREY = '#B8C2D6';
 const GLYPH: Record<WatchStatus, string> = { new: '·', improving: '▲', worsening: '▼', steady: '—', passed: '✓', closed: '●', pending: '·' };
 
 function Sparkline({ pts, unit }: { pts: WatchPoint[]; unit: 'rooms' | '%' }) {
-  const W = 300, H = 72, PX = 8, PY = 10;
+  const W = 300, H = 90, PX = 8, PY = 12;
   const vals = pts.flatMap(p => (p.ly != null ? [p.ty, p.ly] : [p.ty]));
   let lo = Math.min(...vals), hi = Math.max(...vals);
   if (hi === lo) { hi = lo + 1; }
@@ -57,7 +57,7 @@ function Sparkline({ pts, unit }: { pts: WatchPoint[]; unit: 'rooms' | '%' }) {
   const lyPts = pts.map((p, i) => (p.ly != null ? `${x(i).toFixed(1)},${y(p.ly).toFixed(1)}` : null)).filter((s): s is string => !!s);
   const last = pts[pts.length - 1], first = pts[0];
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: 72, display: 'block' }}
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: 90, display: 'block' }}
       aria-label={`${unit === '%' ? 'Booked %' : 'Rooms booked'} over ${pts.length} days: ${first.label} to ${last.label}`}>
       <defs><linearGradient id="wl-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={BLUE} stopOpacity=".18" /><stop offset="1" stopColor={BLUE} stopOpacity="0" /></linearGradient></defs>
       <path d={`M${ty} L${x(pts.length - 1).toFixed(1)},${H} L${x(0).toFixed(1)},${H} Z`} fill="url(#wl-area)" />
