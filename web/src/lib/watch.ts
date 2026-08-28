@@ -136,7 +136,9 @@ function rangeLine(item: WatchItem, b: Briefing, prev: Briefing | null): WatchLi
   const title = itemTitle(item, rd) + (item.label ? '' : '');
   const rooms = b.data.total_rooms || 0;
   const monthNum = utc(from).getUTCMonth() + 1;
-  if (to < rd) return { item, title, status: 'closed', monthNum, lines: [[{ m: 'Dates have passed — shown once, then removed' }]] };
+  // report_date = yesterday and Q10 only carries stay dates from today on, so a range whose
+  // end date is <= report_date has no rows left: it has passed (not "beyond the window").
+  if (to <= rd) return { item, title, status: 'closed', monthNum, lines: [[{ m: 'Dates have passed — shown once, then removed' }]] };
 
   const inRange = (d: string) => d >= from && d <= to;
   const rows = (b.data.otb_by_date ?? []).filter(r => inRange(r.stay_date));
@@ -154,12 +156,22 @@ function rangeLine(item: WatchItem, b: Briefing, prev: Briefing | null): WatchLi
   const prevRows = (prev?.data.otb_by_date ?? []).filter(r => dates.has(r.stay_date));
   const havePrev = prevRows.length === days;
   const rnPrev = havePrev ? prevRows.reduce((s, r) => s + r.rn_ty, 0) : null;
+  const rnLyPrev = havePrev ? prevRows.reduce((s, r) => s + r.rn_stly, 0) : null;
   const occPrev = rnPrev != null ? (rnPrev / (rooms * days)) * 100 : null;
 
+  /* Status (2026-08-28): a short close-in range never moves the old ±2 occupancy
+     points in a day (Pome, 5 nights = 17 rooms), so it always read "Steady".
+     Now: today's net rooms vs what LAST YEAR gained on the same day at the same
+     lead time (rn_stly is "on the books at the same lead time last year", so
+     yesterday's-vs-today's rn_stly is last year's net for this day).
+     Tolerance = 0.5% of the range's room-nights, min 2 rooms. */
+  const net1 = rnPrev != null ? rn - rnPrev : null;
+  const netLy = rnLyPrev != null ? rnLy - rnLyPrev : null;
   let status: WatchStatus = 'new';
-  if (occPrev != null) {
-    const d = occ - occPrev;
-    status = d >= 2 ? 'improving' : d <= -2 ? 'worsening' : 'steady';
+  if (net1 != null && netLy != null) {
+    const tol = Math.max(2, Math.round(rooms * days * 0.005));
+    const diff = net1 - netLy;
+    status = diff >= tol ? 'improving' : diff <= -tol ? 'worsening' : 'steady';
   }
 
   const l1: Seg[] = [{ b: `${Math.round(occ)}%` }, ' booked vs ', { b: `${Math.round(occLy)}%` }, ' same time last year · ', { b: n(rn) }, ' rooms'];
@@ -167,7 +179,10 @@ function rangeLine(item: WatchItem, b: Briefing, prev: Briefing | null): WatchLi
   if (days < totalDays) l1.push({ m: ` · ${days} of ${totalDays} dates in view` });
 
   const l2: Seg[] = [];
-  if (rnPrev != null) l2.push({ b: signed(rn - rnPrev) }, ' rooms since yesterday');
+  if (net1 != null) {
+    l2.push({ b: signed(net1) }, ' rooms since yesterday');
+    if (netLy != null) l2.push({ m: ` (last year: ${signed(netLy)} on the same day)` });
+  }
   if (days > 1) {
     const low = rows.reduce((a, r) => (r.rn_ty < a.rn_ty ? r : a));
     if (l2.length) l2.push(' · ');
