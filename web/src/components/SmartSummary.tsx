@@ -57,6 +57,8 @@ interface Facts {
   booked7: number; cancelled7: number; net7: number;
   priorNet7: number | null; pickupTrend: 'up' | 'down' | 'flat' | null;
   churnPct: number;
+  priorCancelled7: number | null;   // cancellations the 7 days before this week (Q14); null = no data
+  weeklyCap: number;                // total_rooms × 7
   fyRev: number; fyVar: number;
   best: { month: string; v: number } | null;
   worst: { month: string; v: number } | null;
@@ -84,6 +86,17 @@ function computeFacts(b: Briefing): Facts {
     const prior = pd.filter(r => { const t = day(r); return t <= endD - 7 * 86400000 && t > endD - 14 * 86400000; });
     if (prior.length) priorNet7 = prior.reduce((s, r) => s + r.net_rn, 0);
   }
+  /* prior 7-day cancellations from Q14 rows — same window as priorNet7 */
+  const cd = (d as unknown as { cancel_daily?: { ref_date: string; cancel_rn: number }[] }).cancel_daily ?? [];
+  let priorCancelled7: number | null = null;
+  if (cd.length) {
+    const end = cd.reduce((m, r) => (r.ref_date > m ? r.ref_date : m), cd[0].ref_date);
+    const endD = new Date(end + 'T00:00:00Z').getTime();
+    const day = (r: { ref_date: string }) => new Date(r.ref_date + 'T00:00:00Z').getTime();
+    const prior = cd.filter(r => { const t = day(r); return t <= endD - 7 * 86400000 && t > endD - 14 * 86400000; });
+    if (prior.length) priorCancelled7 = prior.reduce((s, r) => s + (r.cancel_rn || 0), 0);
+  }
+  const weeklyCap = (d.total_rooms || 0) * 7;
   const pickupTrend: Facts['pickupTrend'] = priorNet7 == null ? null
     : priorNet7 <= 0 ? (net7 > 0 ? 'up' : 'flat')
     : net7 >= priorNet7 * 1.15 ? 'up' : net7 <= priorNet7 * 0.85 ? 'down' : 'flat';
@@ -100,27 +113,33 @@ function computeFacts(b: Briefing): Facts {
   return {
     weekday: WEEKDAYS[new Date(b.report_date + 'T00:00:00Z').getUTCDay()],
     ydRev: d.yesterday.revenue, ydVar, mtdRev: d.mtd.revenue, mtdVar,
-    booked7, cancelled7, net7, priorNet7, pickupTrend, churnPct,
+    booked7, cancelled7, net7, priorNet7, pickupTrend, churnPct, priorCancelled7, weeklyCap,
     fyRev, fyVar, best, worst,
     perfState: state([ydVar, mtdVar]),
     otbState: fwd.length ? state(fwd.map(x => x.v)) : 'MIXED',
   };
 }
 
-/* Rule ladder — first match wins. All numbers pre-computed; templates only fill slots. */
+/* Rule ladder — first match wins. All numbers pre-computed; templates only fill slots.
+   Mirrors backend briefing/intraday.py headline() (morning push body) — change both together.
+   Cancellation rule (2026-08-28): compares to the hotel's own prior week instead of an absolute
+   churn ratio — late-season resorts always exceeded 15% churn (new bookings dry up, cancellations
+   of old bookings continue), so every hotel showed "Watch cancellations" daily. */
 function headlineFor(f: Facts): string {
-  if (f.churnPct >= 15 && f.cancelled7 >= 10)
-    return `Watch cancellations — ${f.cancelled7} rooms out this week.`;
   if (Math.abs(f.ydVar) >= 15)
     return f.ydVar > 0
       ? `Strong ${f.weekday} — ${euro(f.ydRev)}, +${Math.round(f.ydVar)}% on last year.`
       : `Soft ${f.weekday} — ${euro(f.ydRev)}, ${Math.round(f.ydVar)}% on last year.`;
+  const cancelFloor = Math.max(10, Math.round(f.weeklyCap * 0.03));   // 3% of a week's capacity
+  if (f.priorCancelled7 != null && f.cancelled7 >= cancelFloor
+      && f.cancelled7 >= 1.5 * Math.max(f.priorCancelled7, 1) && f.churnPct >= 15)
+    return `Cancellations up — ${f.cancelled7} rooms out this week, vs ${f.priorCancelled7} the week before.`;
   if (f.worst && f.worst.v <= -5)
     return `${f.worst.month} needs attention — ${Math.round(f.worst.v)}% behind last year.`;
   if (f.pickupTrend === 'up' && f.priorNet7 != null && f.net7 >= 20)
-    return `Booking pace is accelerating — +${f.net7} rooms this week.`;
+    return `Bookings are speeding up — +${f.net7} rooms this week.`;
   if (f.pickupTrend === 'down' && f.net7 >= 0)
-    return `Booking pace is slowing — +${f.net7} rooms this week vs +${f.priorNet7} last week.`;
+    return `Bookings are slowing down — +${f.net7} rooms this week vs +${f.priorNet7} last week.`;
   return `Steady day — MTD ${f.mtdVar >= 0 ? '+' : ''}${Math.round(f.mtdVar)}% on last year.`;
 }
 
