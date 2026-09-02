@@ -3,7 +3,7 @@
  *  (OTB TY / STLY / Final LY), no per-bar labels, navy series, occupancy
  *  area fill, taller plots. Plus: Where each month stands, booking speed
  *  with trend words, demand heat with behind-LY note, ADR bridge table. */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Briefing, PaceMonth } from '../types';
 import { euro, kilo, signedPct } from '../api';
 import { SectionLabel, LabelSub, ICONS } from './Overview';
@@ -291,6 +291,10 @@ function DemandHeat({ briefing, onWatch, watched }: {
   watched?: Set<string>;                       // range keys "from..to" already watched
 }) {
   const [sel, setSel] = useState<string[]>([]);
+  /* the tapped selection belongs to ONE hotel — clear it when the briefing
+     switches to another (the component stays mounted, so state survives) */
+  const hotelKey = briefing.data.hotel_name;
+  useEffect(() => { setSel([]); }, [hotelKey]);
   const rooms = briefing.data.total_rooms;
   const otb = (briefing.data.otb_by_date ?? []).slice(0, 60);
   const runs = useMemo(() => softRuns(briefing, 20), [briefing]);
