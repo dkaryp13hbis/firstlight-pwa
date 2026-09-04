@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchLatestBriefing, fetchBriefingByDate, fetchDates, fetchPrevBriefing, fetchHistoryRows, fetchWatchlist, addWatch, removeWatch } from './api';
+import { fetchLatestBriefing, fetchBriefingByDate, fetchDates, fetchPrevBriefing, fetchHistoryRows, fetchWatchlist, addWatch, removeWatch, fetchRuns, type RefreshRun } from './api';
 import { sb, demoMode } from './lib/sb';
 import type { Briefing } from './types';
 import { WatchlistSection, WatchSheet, titleCase } from './components/Watchlist';
@@ -10,7 +10,7 @@ import { KpiRow, MtdStrip, OtbCards } from './components/Overview';
 import { PickupSection } from './components/Pickup';
 import { OtbTab, buildNextPace } from './components/Charts';
 import { AiTab, type FeedbackRequest } from './components/AiCards';
-import { FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
+import { DataHealthSheet, FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
 import { Login } from './components/Login';
 import { registerSW, isSubscribed, subscribe, unsubscribe, getPrefs, setPrefs, DEFAULT_PREFS, type PushPrefs } from './lib/push';
 import { initTracking, setTrackedHotel, track } from './lib/track';
@@ -34,6 +34,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('Overview');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [healthOpen, setHealthOpen] = useState(false);
+  const [runs, setRuns] = useState<RefreshRun[] | null>(null);
+  const [runsLoaded, setRunsLoaded] = useState(false);
+  const [movement, setMovement] = useState<number | null>(null);
   const [fb, setFb] = useState<FeedbackRequest | null>(null);
   const [lang, setLang] = useState<'en' | 'el'>('en');
   const [textSize, setTextSize] = useState<number>(() => Number(localStorage.getItem('fl_textsize') || 2));
@@ -254,6 +258,26 @@ export default function App() {
     };
   }, []);
 
+  const openHealth = async () => {
+    setSettingsOpen(false);
+    setHealthOpen(true);
+    setRunsLoaded(false);
+    track('data_health_open', {});
+    const r = await fetchRuns(hotelId);
+    setRuns(r); setRunsLoaded(true);
+    /* movement over the last 2 report days (booked + cancelled) */
+    try {
+      const rows = await fetchHistoryRows(hotelId, dates.slice(0, 2));
+      if (rows.length >= 2) {
+        const mv = rows.reduce((s, b) => {
+          const pu = b.data.pickup;
+          return s + ((pu?.last1d?.roomNights ?? 0) + (pu?.cancellations1d ?? 0));
+        }, 0);
+        setMovement(mv);
+      } else setMovement(null);
+    } catch { setMovement(null); }
+  };
+
   const signOut = async () => {
     setSettingsOpen(false);
     Object.keys(localStorage).filter(k => k.startsWith('fl_briefing_') || k === 'fl_hotels').forEach(k => localStorage.removeItem(k));
@@ -457,6 +481,19 @@ export default function App() {
             })}
           </div>
         )}
+        {!viewDate && briefing.report_date < new Date(Date.now() - 86400000).toISOString().slice(0, 10) && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+            background: '#FBEEDC', color: '#6D4C00', borderRadius: 12, padding: '9px 13px',
+            fontSize: 12, fontWeight: 700, marginBottom: 12,
+          }}>
+            <span>⚠ Data may be out of date — last update {briefing.report_date}</span>
+            <button onClick={openHealth} style={{
+              border: 'none', background: '#6D4C00', color: '#fff', borderRadius: 999,
+              padding: '4px 11px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+            }}>Data health</button>
+          </div>
+        )}
         {viewDate && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
@@ -538,6 +575,7 @@ export default function App() {
         pushPrefs={pushPrefs} onPushPref={changePushPref} bellOn={bellOn}
         year={year} onYear={setYear} comp={comp} onComp={setComp}
         textSize={textSize} onTextSize={d => setTextSize(s => Math.min(5, Math.max(1, s + d)))}
+        onDataHealth={openHealth}
         onSignOut={signOut}
       />
       <FeedbackSheet
@@ -548,6 +586,9 @@ export default function App() {
         <WatchSheet open={watchOpen} onClose={() => setWatchOpen(false)} briefing={briefing}
           existing={watchedKeys} used={watch.length} onSave={saveWatch} />
       )}
+      <DataHealthSheet open={healthOpen} onClose={() => setHealthOpen(false)}
+        reportDate={briefing?.report_date ?? null} movement={movement}
+        runs={runs} runsLoaded={runsLoaded} />
       <Toast msg={toast} />
       {pushMsg && (
         <div onClick={() => setPushMsg(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(6,21,53,.45)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>

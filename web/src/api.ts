@@ -90,6 +90,26 @@ export async function fetchHistoryRows(hotelId: string, dates: string[]): Promis
   return rows.filter((r): r is Briefing => !!r);
 }
 
+export interface RefreshRun {
+  started_at: string; completed_at: string | null;
+  run_type: string; status: string; error_type: string | null; attempt: number | null;
+}
+
+/** Last 3 days of refresh history (Data health). null = not readable yet
+ *  (RLS policy not applied) — the sheet then shows a hint instead. */
+export async function fetchRuns(hotelId: string): Promise<RefreshRun[] | null> {
+  if (!sb || hotelId === 'demo') return null;
+  try {
+    const since = new Date(Date.now() - 3 * 86400000).toISOString();
+    const { data, error } = await sb.from('refresh_runs')
+      .select('started_at,completed_at,run_type,status,error_type,attempt')
+      .eq('hotel_id', hotelId).gte('started_at', since)
+      .order('started_at', { ascending: false }).limit(25);
+    if (error) return null;
+    return (data ?? []) as RefreshRun[];
+  } catch { return null; }
+}
+
 /* ── My Watchlist (Supabase `watchlist`, own rows; demo → localStorage) ── */
 const DEMO_WATCH = 'fl_watch_demo';
 /* fixture mode only (no Supabase): two sample watches until the user edits the list */
