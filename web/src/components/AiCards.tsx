@@ -127,7 +127,7 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
     return <p style={{ textAlign: 'center', color: 'var(--n500)', padding: 24, fontSize: 13 }}>No insights for today.</p>;
   }
   return (
-    <>
+    <div data-share-root="AI Insights">
       <SectionLabel icon="star" info="ai" title="AI Insights">AI Insights</SectionLabel>
       {insights.map((ins, i) => {
         const cardId = ins.id || `card_${i + 1}`;
@@ -136,6 +136,6 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
         return <Card key={cardId} ins={ins} cardId={cardId} voted={voted} onFeedback={onFeedback}
           watchKey={watchKey} watched={!!(watchKey && watched?.has(watchKey))} onWatch={onWatch} />;
       })}
-    </>
+    </div>
   );
 }

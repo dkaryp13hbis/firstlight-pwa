@@ -124,7 +124,7 @@ export function PickupSection({ briefing, year, comp }: { briefing: Briefing; ye
   const mx = fly ? Math.max(1, ...fly.months.map(mo => Math.max(mo.w[win].b, mo.w[win].c))) * 1.08 : 1;
 
   return (
-    <>
+    <div data-share-root="Pickup Activity">
       <style>{`@keyframes pwring{0%{background-position:0 0,0% 50%}50%{background-position:0 0,100% 50%}100%{background-position:0 0,0% 50%}}`}</style>
       <SectionLabel icon="trend" info="pickup" title="Pickup Activity">Pickup Activity</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
@@ -215,6 +215,6 @@ export function PickupSection({ briefing, year, comp }: { briefing: Briefing; ye
           : buildNextPace(briefing, comp).slice(0, 4)}
         daily={(d as unknown as { pickup_daily?: DailyRow[] }).pickup_daily ?? []}
       />
-    </>
+    </div>
   );
 }

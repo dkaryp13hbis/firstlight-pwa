@@ -14,6 +14,7 @@ import { DataHealthSheet, FeedbackSheet, SettingsSheet, Toast } from './componen
 import { Login } from './components/Login';
 import { registerSW, isSubscribed, subscribe, unsubscribe, getPrefs, setPrefs, DEFAULT_PREFS, type PushPrefs } from './lib/push';
 import { initTracking, setTrackedHotel, track } from './lib/track';
+import { setShareMeta } from './lib/shareImage';
 
 const TS_ZOOM: Record<number, number> = { 1: 0.85, 2: 1, 3: 1.12, 4: 1.25, 5: 1.4 };
 
@@ -122,6 +123,16 @@ export default function App() {
       setWatchOn(WATCHLIST_EMAILS === null || WATCHLIST_EMAILS.includes(email));
     }).catch(() => setWatchOn(false));
   }, [session]);
+
+  /* branded share frame: hotel + report date */
+  useEffect(() => {
+    if (!briefing) return;
+    const dt = new Date(briefing.report_date + 'T00:00:00Z');
+    setShareMeta({
+      hotel: briefing.data.hotel_name,
+      date: `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getUTCDay()]} ${dt.getUTCDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()]}`,
+    });
+  }, [briefing]);
 
   /* per-hotel language preference */
   useEffect(() => {

@@ -5,6 +5,7 @@ import type { Briefing } from '../types';
 import { euro, signedPct, varPct } from '../api';
 import { InfoButton } from './Info';
 import { track } from '../lib/track';
+import { shareSectionImage } from '../lib/shareImage';
 
 export const ICONS: Record<string, React.ReactNode> = {
   sun: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity=".85"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>,
@@ -39,11 +40,23 @@ export function EyeIcon({ on, size = 14 }: { on: boolean; size?: number }) {
 export const LabelSub = ({ children }: { children: React.ReactNode }) =>
   <span style={{ fontSize: 11, color: '#6E7A96', fontWeight: 600 }}>{children}</span>;
 
-async function shareSection(title: string) {
+/** Share pill: capture the section (nearest [data-share-root], else the
+ *  label's parent wrapper) as a branded PNG; link-share is the fallback. */
+async function shareSection(pill: HTMLElement, title: string) {
+  const label = pill.parentElement as HTMLElement | null;
+  const root = (pill.closest('[data-share-root]') as HTMLElement | null)
+    ?? (label?.parentElement as HTMLElement | null) ?? label;
+  track('share_tap', { section: title, mode: 'image' });
+  const keep = pill.innerHTML;
+  pill.textContent = '…';
   try {
-    track('share_tap', { section: title });
-    if (navigator.share) await navigator.share({ title: `FirstLight — ${title}`, url: location.href });
-  } catch { /* dismissed */ }
+    if (root) await shareSectionImage(root, title);
+  } catch {
+    try {
+      if (navigator.share) await navigator.share({ title: `FirstLight — ${title}`, url: location.href });
+    } catch { /* dismissed */ }
+  }
+  pill.innerHTML = keep;
 }
 
 export function SectionLabel({ children, info, icon, title }: {
@@ -57,7 +70,7 @@ export function SectionLabel({ children, info, icon, title }: {
       {icon && ICONS[icon]}
       {children}
       {info && <InfoButton k={info} />}
-      <button onClick={() => shareSection(title ?? 'Briefing')} style={{
+      <button data-share-pill="1" onClick={e => void shareSection(e.currentTarget, title ?? 'Briefing')} style={{
         marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4,
         border: '1px solid #CDD4E0', background: '#fff', borderRadius: 999,
         padding: '4px 11px', fontSize: 10.5, fontWeight: 700, color: '#4D5A74',

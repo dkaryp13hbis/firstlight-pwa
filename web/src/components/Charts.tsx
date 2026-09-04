@@ -611,6 +611,7 @@ export function OtbTab({ briefing, year, comp, onWatchRange, watchedRanges }: {
   const paceAll = year === 'this' ? (briefing.data.pace ?? []) : buildNextPace(briefing, comp);
   return (
     <>
+      <div data-share-root="Pace">
       <SectionLabel icon="pace" info="pace" title="Pace">
         {year === 'this'
           ? 'Pace — OTB vs STLY vs Final LY'
@@ -630,6 +631,7 @@ export function OtbTab({ briefing, year, comp, onWatchRange, watchedRanges }: {
       <ChartCard inner title="ADR" icon="adr" legend={PACE_LEGEND} info="cadr">
         <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} />
       </ChartCard>
+      </div>
 
       <DemandHeat briefing={briefing} onWatch={onWatchRange} watched={watchedRanges} />
       {year === 'this' && <AdrBridge briefing={briefing} />}
