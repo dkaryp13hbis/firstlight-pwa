@@ -1,7 +1,8 @@
 /** Login — "Pre-dawn" design (login-1b-2a-code.html handoff, 2026-09-04):
  *  bg #0b1530, aurora glows, slow-orbit corona on the mark (30s, reduced-motion
- *  aware), Outfit UI + IBM Plex Mono microcopy, glass inputs, gradient submit.
- *  Values copied from the handoff file verbatim. */
+ *  aware), glass inputs, gradient submit. Layout/colors verbatim from the
+ *  handoff; TYPE follows the app's one-type-system rule (user 2026-09-04):
+ *  Manrope everywhere, Outfit 700 for the wordmark only. */
 import { useState } from 'react';
 import { sb } from '../lib/sb';
 
@@ -41,14 +42,14 @@ export function Login() {
   const input: React.CSSProperties = {
     height: 54, borderRadius: 15, border: '1px solid rgba(120,170,255,.28)',
     background: 'rgba(255,255,255,.06)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-    padding: '0 18px', font: "500 15px 'Outfit', sans-serif", color: '#fff', outline: 'none', width: '100%',
+    padding: '0 18px', font: "500 15px Manrope, sans-serif", color: '#fff', outline: 'none', width: '100%',
   };
 
   return (
     <div style={{
       minHeight: '100dvh', display: 'flex', flexDirection: 'column', justifyContent: 'center',
       padding: '0 26px', position: 'relative', overflow: 'hidden',
-      background: '#0b1530', fontFamily: "'Outfit', sans-serif",
+      background: '#0b1530', fontFamily: 'Manrope, sans-serif',
     }}>
       <style>{KEYFRAMES}</style>
       {/* aurora gradients */}
@@ -77,10 +78,10 @@ export function Login() {
           </g>
         </svg>
         <div>
-          <div style={{ font: "800 30px/1 'Outfit', sans-serif", letterSpacing: '-.02em', color: '#fff', textAlign: 'center' }}>
+          <div style={{ font: "700 30px/1 Outfit, sans-serif", letterSpacing: '-.02em', color: '#fff', textAlign: 'center' }}>
             First<b style={{ color: '#38E1F0', fontWeight: 800 }}>Light</b>
           </div>
-          <div style={{ font: "500 12px/1 'IBM Plex Mono', monospace", letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,.5)', marginTop: 10, textAlign: 'center' }}>
+          <div style={{ font: "600 12px/1 Manrope, sans-serif", letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,.5)', marginTop: 10, textAlign: 'center' }}>
             Before the day begins
           </div>
         </div>
@@ -95,12 +96,12 @@ export function Login() {
         <button className="fl-submit" type="submit" disabled={busy} style={{
           height: 54, borderRadius: 15, border: 'none', width: '100%',
           background: 'linear-gradient(120deg, #2E7CF7, #38E1F0)', color: '#fff',
-          font: "700 16px 'Outfit', sans-serif", cursor: 'pointer', marginTop: 8,
+          font: "700 16px Manrope, sans-serif", cursor: 'pointer', marginTop: 8,
           boxShadow: '0 0 34px rgba(56,225,240,.35)', opacity: busy ? .6 : 1,
         }}>{busy ? 'Signing in…' : 'Sign in'}</button>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
           <a href="#" onClick={e => { e.preventDefault(); void forgot(); }}
-            style={{ font: "500 13px 'Outfit', sans-serif", color: '#7fd9ff', textDecoration: 'none' }}>
+            style={{ font: "600 13px Manrope, sans-serif", color: '#7fd9ff', textDecoration: 'none' }}>
             Forgot password?
           </a>
         </div>
@@ -110,7 +111,7 @@ export function Login() {
         </div>
       </form>
 
-      <div style={{ position: 'absolute', bottom: 34, left: 0, right: 0, textAlign: 'center', font: "400 11px 'IBM Plex Mono', monospace", letterSpacing: '.14em', color: 'rgba(255,255,255,.32)' }}>
+      <div style={{ position: 'absolute', bottom: 34, left: 0, right: 0, textAlign: 'center', font: "600 11px Manrope, sans-serif", letterSpacing: '.14em', color: 'rgba(255,255,255,.32)' }}>
         POWERED BY HBIS
       </div>
     </div>
