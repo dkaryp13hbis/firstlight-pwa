@@ -79,7 +79,7 @@ export function Login() {
         </svg>
         <div>
           <div style={{ font: "700 30px/1 Outfit, sans-serif", letterSpacing: '-.02em', color: '#fff', textAlign: 'center' }}>
-            First<b style={{ color: '#38E1F0', fontWeight: 800 }}>Light</b>
+            First<b style={{ color: '#38E1F0', fontWeight: 700 }}>Light</b>
           </div>
           <div style={{ font: "600 12px/1 Manrope, sans-serif", letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,.5)', marginTop: 10, textAlign: 'center' }}>
             Before the day begins
