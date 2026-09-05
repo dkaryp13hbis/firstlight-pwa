@@ -40,7 +40,7 @@ export function LogoLockup() {
   );
 }
 
-const TABS = ['Overview', 'Pickup', 'Pace', 'AI Insights'] as const;
+const TABS = ['Overview', 'Pickup', 'Pace', 'FL Pulse'] as const;
 export type Tab = typeof TABS[number];
 
 const icoStyle: React.CSSProperties = {
@@ -150,7 +150,7 @@ export function Shell(props: {
             color: props.tab === t ? '#1E5FD0' : 'var(--n500)',
             fontWeight: 700, fontSize: 12.5, padding: '7px 10px 6px', borderRadius: 0,
           }}>
-            {t}{t === 'AI Insights' && props.aiCount ? (
+            {t}{t === 'FL Pulse' && props.aiCount ? (
               <span style={{
                 marginLeft: 5, background: 'var(--blue)', color: '#fff', borderRadius: 999,
                 fontSize: 10, fontWeight: 700, padding: '1px 6px',

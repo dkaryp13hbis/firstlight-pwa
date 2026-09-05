@@ -379,7 +379,7 @@ export default function App() {
   const [pushMsg, setPushMsg] = useState<string | null>(null);
   useEffect(() => {
     registerSW(sectionId => {
-      const t = ({ 'sec-overview': 'Overview', 'sec-pickup': 'Pickup', 'sec-pace': 'Pace', 'sec-ai': 'AI Insights' } as Record<string, Tab>)[sectionId];
+      const t = ({ 'sec-overview': 'Overview', 'sec-pickup': 'Pickup', 'sec-pace': 'Pace', 'sec-ai': 'FL Pulse' } as Record<string, Tab>)[sectionId];
       if (t) setTimeout(() => nav(t), 400);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -425,7 +425,7 @@ export default function App() {
   const nav = (t: Tab) => {
     track('tab_nav', { tab: t });
     setTab(t);
-    const id = { Overview: 'sec-overview', Pickup: 'sec-pickup', Pace: 'sec-pace', 'AI Insights': 'sec-ai' }[t];
+    const id = { Overview: 'sec-overview', Pickup: 'sec-pickup', Pace: 'sec-pace', 'FL Pulse': 'sec-ai' }[t];
     const el = document.getElementById(id);
     if (!el) return;
     const stickyH = document.getElementById('fl-sticky')?.offsetHeight ?? 46;
