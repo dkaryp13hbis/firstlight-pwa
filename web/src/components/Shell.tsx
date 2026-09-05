@@ -56,6 +56,7 @@ export function Shell(props: {
   tab: Tab;
   onTab: (t: Tab) => void;
   aiCount?: number;
+  textZoom?: number;
   refreshState: 'idle' | 'busy' | 'done' | 'error';
   onRefresh: () => void;
   bellOn: boolean;
@@ -161,7 +162,7 @@ export function Shell(props: {
       </nav>
       </div>
 
-      <main style={{ maxWidth: 560, margin: '0 auto', padding: '14px 14px 40px' }}>
+      <main style={{ maxWidth: 560, margin: '0 auto', padding: '14px 14px 40px', ...(props.textZoom && props.textZoom !== 1 ? { zoom: props.textZoom } as React.CSSProperties : {}) }}>
         {props.children}
       </main>
     </div>

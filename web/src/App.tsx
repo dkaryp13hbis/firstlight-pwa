@@ -141,9 +141,10 @@ export default function App() {
     if (hotelId) setLang((localStorage.getItem(`fl_lang_${hotelId}`) as 'en' | 'el') || 'en');
   }, [hotelId]);
 
-  /* text size (body zoom, like the current app) */
+  /* text size: scales the REPORT content only (Shell <main>); the header,
+     tabs and bottom sheets stay at normal size so controls (✕, Save) never
+     leave the screen on any device (user rule 2026-09-05). */
   useEffect(() => {
-    (document.body.style as unknown as { zoom: string }).zoom = String(TS_ZOOM[textSize] ?? 1);
     localStorage.setItem('fl_textsize', String(textSize));
   }, [textSize]);
 
@@ -438,7 +439,7 @@ export default function App() {
   if (!session) return <Login />;
   if (error) return <p style={{ padding: 32, textAlign: 'center' }}>Could not load briefing: {error}</p>;
   if (!briefing) return (
-    <Shell hotels={hotels} hotelId={hotelId} onHotel={changeHotel} tab={tab} onTab={setTab} aiCount={0}
+    <Shell textZoom={TS_ZOOM[textSize] ?? 1} hotels={hotels} hotelId={hotelId} onHotel={changeHotel} tab={tab} onTab={setTab} aiCount={0}
       refreshState="idle" onRefresh={() => undefined} bellOn={bellOn} onBell={() => undefined}
       onSettings={() => setSettingsOpen(true)}>
       <p style={{ padding: '40px 0', textAlign: 'center', color: 'var(--n500)', fontSize: 13, fontWeight: 600 }}>Loading briefing…</p>
@@ -469,6 +470,7 @@ export default function App() {
       </div>}
       <div style={{ transform: `translateY(${pull}px)`, transition: pull === 0 ? 'transform .2s' : 'none' }}>
       <Shell
+        textZoom={TS_ZOOM[textSize] ?? 1}
         hotels={hotels} hotelId={hotelId} onHotel={changeHotel}
         tab={tab} onTab={nav}
         aiCount={briefing.ai_insights?.insights?.length ?? 0}
