@@ -633,6 +633,7 @@ export function OtbTab({ briefing, year, comp, onWatchRange, watchedRanges }: {
       </ChartCard>
       </div>
 
+      <div id="sec-cal" style={{ scrollMarginTop: 46 }} />
       <DemandHeat briefing={briefing} onWatch={onWatchRange} watched={watchedRanges} />
       {year === 'this' && <AdrBridge briefing={briefing} />}
       {year === 'this' && <TopSources briefing={briefing} />}
