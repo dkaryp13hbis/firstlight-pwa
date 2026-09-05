@@ -47,6 +47,8 @@ const icoStyle: React.CSSProperties = {
   width: 36, height: 36, borderRadius: '50%',
   background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.11)',
   color: 'rgba(255,255,255,.85)', fontSize: 14,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  padding: 0, lineHeight: 1,
 };
 
 export function Shell(props: {
