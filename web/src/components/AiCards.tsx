@@ -19,6 +19,21 @@ const TAG_STYLE: Record<string, { bg: string; fg: string; bd: string; label: str
   MONITOR:     { fg: '#8A6D1F', bg: '#FBF3DF', bd: '#EDDCA8', label: 'Watch' },
 };
 
+/** Signed numbers (+24.2%, −56.1pts) tinted green/red for bare-eye scanning.
+ *  Only explicit signs count — the dash in a range like "Sep 9–11" is
+ *  preceded by a digit and stays plain. */
+function SignedText({ text }: { text: string }) {
+  const parts = String(text).split(/(^|[\s(])([+\-−]€?\d[\d.,]*(?:%|\s?pts|\s?pp)?)/g);
+  return (
+    <>
+      {parts.map((p, i) =>
+        /^[+\-−]€?\d/.test(p)
+          ? <b key={i} style={{ color: p.startsWith('+') ? '#1A7A50' : '#B0433A', fontWeight: 700 }}>{p}</b>
+          : <span key={i}>{p}</span>)}
+    </>
+  );
+}
+
 function statColor(v: string): string {
   if (/^\+/.test(v)) return '#1A7A50';
   if (/^[-−]/.test(v)) return '#B0433A';
@@ -57,7 +72,7 @@ function Card({ ins, cardId, voted, onFeedback, watchKey, watched, onWatch }: {
         <span style={{
           flex: 1, fontSize: 14, fontWeight: open ? 700 : 600, lineHeight: 1.35,
           color: '#0f1b34', textWrap: 'pretty' as never,
-        }}>{ins.headline ?? ins.title}</span>
+        }}><SignedText text={ins.headline ?? ins.title ?? ''} /></span>
         <span style={{
           fontSize: 11, fontWeight: 600, letterSpacing: '.03em', padding: '5px 10px',
           borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
@@ -82,17 +97,17 @@ function Card({ ins, cardId, voted, onFeedback, watchKey, watched, onWatch }: {
           )}
           {ins.what_happened && (
             <p style={{ fontSize: 13.5, lineHeight: 1.55, color: '#3D4A66', textWrap: 'pretty' as never }}>
-              <b style={{ color: '#0f1b34', fontWeight: 700 }}>What happened:</b> {ins.what_happened}
+              <b style={{ color: '#0f1b34', fontWeight: 700 }}>What happened:</b> <SignedText text={ins.what_happened} />
             </p>
           )}
           {ins.why_it_matters && (
             <p style={{ fontSize: 13.5, lineHeight: 1.55, color: '#3D4A66', textWrap: 'pretty' as never }}>
-              <b style={{ color: '#0f1b34', fontWeight: 700 }}>Why it matters:</b> {ins.why_it_matters}
+              <b style={{ color: '#0f1b34', fontWeight: 700 }}>Why it matters:</b> <SignedText text={ins.why_it_matters} />
             </p>
           )}
           {ins.recommended_action && (
             <p style={{ fontSize: 13.5, lineHeight: 1.55, color: '#1E3A70', textWrap: 'pretty' as never }}>
-              <b style={{ fontWeight: 700 }}>Suggested review:</b> {ins.recommended_action.replace(/\s*At stake: €[\d.,]+\.?/gi, '')}
+              <b style={{ fontWeight: 700 }}>Suggested review:</b> <SignedText text={ins.recommended_action.replace(/\s*At stake: €[\d.,]+\.?/gi, '')} />
               {ins.by_when && <> <b style={{ fontWeight: 700 }}>By when:</b> {ins.by_when}</>}
             </p>
           )}
