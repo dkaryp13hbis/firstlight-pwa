@@ -156,11 +156,11 @@ function Section(props: { label: string; pill?: React.ReactNode; children: React
   return (
     <div style={{ padding: '10px 0', borderTop: '1px solid rgba(255,255,255,.12)' }}>
       <div style={{
-        fontSize: 10.5, letterSpacing: '.14em', textTransform: 'uppercase',
+        fontSize: 9.5, letterSpacing: '.14em', textTransform: 'uppercase',
         color: 'var(--cyan)', fontWeight: 600, marginBottom: 4,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}><span>{props.label}</span>{props.pill}</div>
-      <div style={{ fontSize: 14.5, lineHeight: 1.55, color: 'rgba(255,255,255,.78)', fontWeight: 600 }}>
+      <div style={{ fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,.78)', fontWeight: 600 }}>
         {props.children}
       </div>
     </div>
@@ -181,9 +181,7 @@ export function SmartSummary({ briefing }: { briefing: Briefing }) {
 
   return (
     <div style={{
-      /* masthead: full-bleed under the navy header (main pads 14px) */
-      margin: '-14px -14px 14px', borderRadius: '0 0 22px 22px',
-      padding: '18px 20px 20px', color: '#fff',
+      borderRadius: 'var(--r-card)', padding: 20, marginBottom: 14, color: '#fff',
       background:
         'radial-gradient(90% 100% at 92% 0%, rgba(56,225,240,.4) 0%, rgba(46,124,247,.16) 40%, rgba(10,31,77,0) 70%),' +
         'linear-gradient(160deg, #0F2860, #0A1F4D)',
@@ -208,13 +206,7 @@ export function SmartSummary({ briefing }: { briefing: Briefing }) {
         </span>
       </div>
 
-      <div style={{ fontSize: 12.5, fontWeight: 600, color: 'rgba(255,255,255,.62)', marginBottom: 6 }}>
-        {(() => {
-          const dt = new Date(new Date(briefing.report_date + 'T00:00:00Z').getTime() + 86400000);
-          return `Καλημέρα · ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dt.getUTCDay()]} ${dt.getUTCDate()} ${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][dt.getUTCMonth()]}`;
-        })()}
-      </div>
-      <div style={{ fontSize: 27, fontWeight: 800, lineHeight: 1.25, letterSpacing: '-.02em', marginBottom: 12 }}>
+      <div style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.3, letterSpacing: '-.02em', marginBottom: 12 }}>
         <Rich text={headline} />
       </div>
       <Section label="Performance" pill={<StatePill s={f.perfState} />}>
@@ -251,7 +243,7 @@ export function SmartSummary({ briefing }: { briefing: Briefing }) {
       ) : (
         <button onClick={() => { track('hero_expand', {}); setOpen(true); }} style={{
           border: 'none', background: 'none', color: 'var(--cyan)',
-          fontSize: 14.5, fontWeight: 700, marginTop: 5, padding: 0,
+          fontSize: 13.5, fontWeight: 700, marginTop: 3, padding: 0,
         }}>Read the full briefing →</button>
       ))}
     </div>
