@@ -69,13 +69,18 @@ function ChartCard({ title, sub, icon, info, legend, inner, children }: {
 
 const W = 560, H = 268, BOT = 200, CH = 172;
 
+/* body zoom cannot reach inside width-constrained SVGs — the app sets this
+   from the text-size setting and chart text multiplies by it */
+let TXS = 1;
+export function setChartTextScale(s: number) { TXS = s; }
+
 function Grid({ mx, fmt }: { mx: number; fmt: (v: number) => string }) {
   return (
     <>
       {[0, 1 / 3, 2 / 3, 1].map(f => (
         <g key={f}>
           <line x1={62} y1={BOT - f * CH} x2={W - 10} y2={BOT - f * CH} stroke="#EBEEF4" strokeWidth={f === 0 ? 1.5 : 1} />
-          <text x={56} y={BOT - f * CH + 4} textAnchor="end" style={{ fontSize: 13, fontWeight: 600, fill: '#79747E' }}>{fmt(f * mx)}</text>
+          <text x={56} y={BOT - f * CH + 4} textAnchor="end" style={{ fontSize: 13 * TXS, fontWeight: 600, fill: '#79747E' }}>{fmt(f * mx)}</text>
         </g>
       ))}
     </>
@@ -127,10 +132,10 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: {
                 x2={x + bw + 7} y2={BOT - (m[fieldFinal] as number) / mx * CH}
                 stroke={GREEN} strokeWidth={2.5} strokeDasharray="4,3" />
             )}
-            <text x={x} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
-            <rect x={x - 27} y={BOT + 22} width={54} height={22} rx={5}
+            <text x={x} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15 * TXS, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
+            <rect x={x - 27 * TXS} y={BOT + 22} width={54 * TXS} height={22 * TXS} rx={5}
               fill={vs >= 0 ? 'rgba(26,122,80,0.10)' : 'rgba(184,58,27,0.10)'} />
-            <text x={x} y={BOT + 38} textAnchor="middle" style={{ fontSize: 14.5, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
+            <text x={x} y={BOT + 22 + 16 * TXS} textAnchor="middle" style={{ fontSize: 14.5 * TXS, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
               {vs >= 0 ? '+' : ''}{Math.round(vs)}%
             </text>
           </g>
@@ -218,14 +223,14 @@ function OccPace({ months }: { months: PaceMonth[] }) {
         return (
           <g key={m.month}>
             <circle cx={x(i)} cy={y(m.occ)} r={3.5} fill={NAVY} />
-            <rect x={x(i) - 22} y={y(m.occ) - 28} width={44} height={19} rx={4} fill="white" opacity={0.92} />
-            <text x={x(i)} y={y(m.occ) - 14} textAnchor="middle" style={{ fontSize: 13.5, fontWeight: 800, fill: beat ? GREEN : '#1A2540' }}>
+            <rect x={x(i) - 22 * TXS} y={y(m.occ) - 28 * TXS} width={44 * TXS} height={19 * TXS} rx={4} fill="white" opacity={0.92} />
+            <text x={x(i)} y={y(m.occ) - 14 * TXS} textAnchor="middle" style={{ fontSize: 13.5 * TXS, fontWeight: 800, fill: beat ? GREEN : '#1A2540' }}>
               {Math.round(m.occ * 100)}%
             </text>
-            <text x={x(i)} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
-            <rect x={x(i) - 27} y={BOT + 22} width={54} height={22} rx={5}
+            <text x={x(i)} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15 * TXS, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
+            <rect x={x(i) - 27 * TXS} y={BOT + 22} width={54 * TXS} height={22 * TXS} rx={5}
               fill={vs >= 0 ? 'rgba(26,122,80,0.10)' : 'rgba(184,58,27,0.10)'} />
-            <text x={x(i)} y={BOT + 38} textAnchor="middle" style={{ fontSize: 14.5, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
+            <text x={x(i)} y={BOT + 22 + 16 * TXS} textAnchor="middle" style={{ fontSize: 14.5 * TXS, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
               {vs >= 0 ? '+' : ''}{Math.round(vs)}%
             </text>
           </g>

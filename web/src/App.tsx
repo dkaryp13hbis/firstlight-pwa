@@ -8,7 +8,7 @@ import { Shell, type Tab } from './components/Shell';
 import { SmartSummary } from './components/SmartSummary';
 import { KpiRow, MtdStrip, OtbCards } from './components/Overview';
 import { PickupSection } from './components/Pickup';
-import { OtbTab, buildNextPace } from './components/Charts';
+import { OtbTab, buildNextPace, setChartTextScale } from './components/Charts';
 import { AiTab, type FeedbackRequest } from './components/AiCards';
 import { DataHealthSheet, FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
 import { Login } from './components/Login';
@@ -65,6 +65,8 @@ export default function App() {
   const [watchOn, setWatchOn] = useState(demoMode);
   const [hist, setHist] = useState<Briefing[] | null>(null);       // last 7 stored rows (watch trend), lazy
   const histFor = useRef<string>('');
+
+  setChartTextScale(TS_ZOOM[textSize] ?? 1);   // SVG chart text follows the setting
 
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2000); };
 

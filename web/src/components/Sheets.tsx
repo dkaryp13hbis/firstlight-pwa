@@ -14,6 +14,7 @@ export function Sheet(props: { open: boolean; onClose: () => void; children: Rea
         position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1101,
         background: '#fff', borderRadius: '22px 22px 0 0', color: '#1B2A4A',
         padding: '8px 22px calc(24px + env(safe-area-inset-bottom))',
+        maxHeight: '88dvh', overflowY: 'auto',   /* big text sizes: header/✕ stay reachable */
         transform: props.open ? 'translateY(0)' : 'translateY(105%)',
         transition: 'transform .25s ease',
       }}>
