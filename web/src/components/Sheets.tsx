@@ -138,6 +138,7 @@ export function SettingsSheet(props: {
       </div>
       <div style={{ ...rowStyle, borderBottom: 'none' }}>
         <button onClick={props.onSignOut} style={{ border: 'none', background: 'none', padding: 0, fontSize: 15, fontWeight: 700, color: '#D64545' }}>Sign out</button>
+        <span style={{ fontSize: 10, fontWeight: 600, color: '#9AA4B8', letterSpacing: '.06em' }}>v{__BUILD__}</span>
       </div>
     </Sheet>
   );
