@@ -82,6 +82,14 @@ function Grid({ mx, fmt }: { mx: number; fmt: (v: number) => string }) {
   );
 }
 
+/** Column with a Booking-Speed-style rounded top (r = half width), flat base. */
+function roundTopBar(x: number, yTop: number, w: number, h: number, bot: number): string {
+  const r = Math.min(w / 2, Math.max(h, 0));
+  if (h <= 0.5) return '';
+  return `M${x},${bot} L${x},${(yTop + r).toFixed(1)} Q${x},${yTop} ${(x + r).toFixed(1)},${yTop} ` +
+         `L${(x + w - r).toFixed(1)},${yTop} Q${x + w},${yTop} ${x + w},${(yTop + r).toFixed(1)} L${x + w},${bot} Z`;
+}
+
 function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: {
   months: PaceMonth[]; field: 'rev' | 'adr'; fieldStly: 'rev_stly' | 'adr_stly';
   fieldFinal: 'rev_final' | 'adr_final_ly'; fmt: (v: number) => string;
@@ -111,9 +119,9 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: {
             onClick={e => e.stopPropagation()}
             style={{ cursor: 'pointer', touchAction: 'pan-y' }}>
             <rect x={62 + i * step} y={0} width={step} height={BOT + 44} fill="transparent" />
-            <rect x={x - bw - 1} y={BOT - vTy} width={bw} height={vTy} rx={1.5}
+            <path d={roundTopBar(x - bw - 1, BOT - vTy, bw, vTy, BOT)}
               fill={(m[field] as number) >= ((m[fieldFinal] as number) || Infinity) ? GREEN : NAVY} />
-            <rect x={x + 1} y={BOT - vLy} width={bw} height={vLy} rx={1.5} fill={GREY} />
+            <path d={roundTopBar(x + 1, BOT - vLy, bw, vLy, BOT)} fill={GREY} />
             {(m[fieldFinal] as number) > 0 && m.month_num >= curM && (
               <line x1={x - bw - 7} y1={BOT - (m[fieldFinal] as number) / mx * CH}
                 x2={x + bw + 7} y2={BOT - (m[fieldFinal] as number) / mx * CH}
