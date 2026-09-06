@@ -43,12 +43,15 @@ export function LogoLockup() {
 const TABS = ['Overview', 'Pickup', 'Pace', 'Calendar', 'FL Pulse'] as const;
 export type Tab = typeof TABS[number];
 
+/* Same geometry as the in-report section icons (ICONS in Overview.tsx):
+   Overview=sun (Yesterday), Pickup=trend (Pickup Activity), Pace=pace,
+   Calendar=heat (Next 60 Days Demand), FL Pulse=pulse — keep in sync. */
 const TAB_ICONS: Record<Tab, React.ReactNode> = {
-  Overview: <><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" /></>,
-  Pickup: <><path d="M4 19l5-6 4 3 7-9" /><path d="M15 7h5v5" /></>,
-  Pace: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>,
-  Calendar: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 9.5h18" /><circle cx="12" cy="15" r="1.6" fill="currentColor" stroke="none" /></>,
-  'FL Pulse': <><path d="M3 16h3l2.4-5 3.2 8 2.4-5H21" strokeWidth="2.2" /><g opacity=".8"><path d="M12 3.2v2.2" /><path d="M5.6 5.6l1.5 1.5" /><path d="M18.4 5.6l-1.5 1.5" /></g></>,
+  Overview: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></>,
+  Pickup: <><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>,
+  Pace: <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />,
+  Calendar: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" fill="currentColor" fillOpacity=".35" /></>,
+  'FL Pulse': <><path d="M3 16h3l2.4-5 3.2 8 2.4-5H21" strokeWidth="2.2" /><path d="M12 2v2.4M5 4.6l1.6 1.6M19 4.6l-1.6 1.6" stroke="#38E1F0" strokeWidth="1.8" opacity=".85" /></>,
 };
 
 const icoStyle: React.CSSProperties = {
@@ -212,7 +215,7 @@ export function Shell(props: {
                 borderRadius: '0 0 3px 3px', background: 'linear-gradient(90deg,#2E7CF7,#38E1F0)',
               }} />}
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{TAB_ICONS[t]}</svg>
-              <span style={{ fontSize: 10, fontWeight: on ? 700 : 600 }}>{t}</span>
+              <span style={{ fontSize: 11.5, fontWeight: on ? 700 : 600, whiteSpace: 'nowrap' }}>{t}</span>
               {t === 'FL Pulse' && props.aiCount ? (
                 <span style={{
                   position: 'absolute', top: -4, right: 'calc(50% - 22px)',
