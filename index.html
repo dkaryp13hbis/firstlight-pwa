@@ -1110,17 +1110,28 @@ async function enableNotifications() {
     const { data: { session } } = await db.auth.getSession();
     if (!session) { alert('Not logged in — cannot save subscription.'); return; }
 
-    // Register subscription for every hotel this user has access to
+    // Register subscription for every hotel this user has access to.
+    // Save failures MUST surface — a swallowed error here means the bell
+    // says "on" while the server has no subscription (incident 2026-08-14).
+    let saved = 0, lastErr = null;
     for (const hotel of _hotels) {
-      await db.from('push_subscriptions').upsert(
+      const { error } = await db.from('push_subscriptions').upsert(
         { hotel_id: hotel.id, user_id: session.user.id, subscription: sub.toJSON() },
         { onConflict: 'user_id,hotel_id' }
       );
+      if (error) { lastErr = error; console.error('[push] save failed', hotel.id, error); }
+      else saved++;
+    }
+    if (!saved) {
+      localStorage.setItem('fl_push', 'off');
+      _setBellState(false);
+      alert('Could not save the notification subscription — notifications are NOT enabled.\n' + (lastErr?.message || 'unknown error'));
+      return;
     }
 
     localStorage.setItem('fl_push', 'on');
     _setBellState(true);
-    _pushToast(`Notifications on — morning briefing for ${_hotels.length} hotel${_hotels.length > 1 ? 's' : ''}`);
+    _pushToast(`Notifications on — morning briefing for ${saved} hotel${saved > 1 ? 's' : ''}`);
   } catch (e) {
     alert('Error: ' + e.message);
   }

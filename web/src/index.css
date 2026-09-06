@@ -58,3 +58,13 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: var(--r-card);
   box-shadow: var(--card-shadow);
 }
+
+/* v2.2 §7: loading skeletons */
+@keyframes fl-shimmer { from { background-position: -460px 0; } to { background-position: 460px 0; } }
+.fl-skel {
+  border-radius: 16px;
+  background: linear-gradient(90deg, #EDF0F6, #F8FAFD 45%, #EDF0F6 90%);
+  background-size: 460px 100%;
+  animation: fl-shimmer 1.1s linear infinite;
+  margin-bottom: 10px;
+}

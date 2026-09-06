@@ -53,6 +53,8 @@ export default function App() {
     track('setting_change', { setting: 'reporting_year', value: k });
     setYearState(k); setComp(k === 'this' ? 'prev' : 'this');
   };
+  const [skel, setSkel] = useState(false);
+  const [offlineAt, setOfflineAt] = useState<string | null>(null);
   const [pull, setPull] = useState(0);
   const pullRef = useRef(0);
   const [pushPrefs, setPushPrefs] = useState<PushPrefs | null>(null);
@@ -106,10 +108,13 @@ export default function App() {
     if (cached) setBriefing(cached);
     fetchLatestBriefing(hotelId)
       .then(b => {
-        setBriefing(b); setError(null); writeCache(`fl_briefing_${hotelId}`, b);
+        setBriefing(b); setError(null); setOfflineAt(null); writeCache(`fl_briefing_${hotelId}`, b);
         fetchPrevBriefing(hotelId, b.report_date).then(setPrevB).catch(() => setPrevB(null));
       })
-      .catch(e => { if (!cached) setError(String(e)); });
+      .catch(e => {
+        if (cached) setOfflineAt(cached.data.generated_at || '');   // §7 offline
+        else setError(String(e));
+      });
     fetchDates(hotelId, 7).then(setDates).catch(() => setDates([]));
     fetchWatchlist(hotelId).then(setWatch).catch(() => setWatch(null));
     setHist(null); histFor.current = '';
@@ -149,6 +154,7 @@ export default function App() {
   }, [textSize]);
 
   const changeHotel = (id: string) => {
+    setTab('Overview');          // §8: new hotel starts at the top, nav reset
     setViewDate(null);
     setWatch(null); setPrevB(null);
     setTrackedHotel(id);
@@ -195,6 +201,7 @@ export default function App() {
 
   const requestRefresh = async () => {
     if (viewDate) { say('Viewing a past briefing — go back to Today first'); return; }
+    setSkel(true); setTimeout(() => setSkel(false), 1500);   // §7
     track('refresh_tap', {});
     setRefreshState('busy');
     if (!sb) { setTimeout(() => { setRefreshState('idle'); say('Demo mode — no live refresh'); }, 1200); return; }
@@ -442,7 +449,12 @@ export default function App() {
     <Shell textZoom={TS_ZOOM[textSize] ?? 1} hotels={hotels} hotelId={hotelId} onHotel={changeHotel} tab={tab} onTab={setTab} aiCount={0}
       refreshState="idle" onRefresh={() => undefined} bellOn={bellOn} onBell={() => undefined}
       onSettings={() => setSettingsOpen(true)}>
-      <p style={{ padding: '40px 0', textAlign: 'center', color: 'var(--n500)', fontSize: 13, fontWeight: 600 }}>Loading briefing…</p>
+      <div>
+        <div className="fl-skel" style={{ height: 210, borderRadius: 18 }} />
+        <div className="fl-skel" style={{ height: 120 }} />
+        <div className="fl-skel" style={{ height: 120 }} />
+        <div className="fl-skel" style={{ height: 160 }} />
+      </div>
     </Shell>
   );
 
@@ -468,7 +480,7 @@ export default function App() {
           transform: `rotate(${pull * 3.2}deg)`,
         }}>↻</span>
       </div>}
-      <div style={{ transform: `translateY(${pull}px)`, transition: pull === 0 ? 'transform .2s' : 'none' }}>
+      <div style={{ transform: pull > 0 ? `translateY(${pull}px)` : undefined, transition: pull === 0 ? 'transform .2s' : 'none' }}>
       <Shell
         textZoom={TS_ZOOM[textSize] ?? 1}
         hotels={hotels} hotelId={hotelId} onHotel={changeHotel}
@@ -478,9 +490,27 @@ export default function App() {
         bellOn={bellOn} onBell={toggleBell}
         onSettings={() => setSettingsOpen(true)}
       >
+        {skel && (
+          <div>
+            <div className="fl-skel" style={{ height: 210, borderRadius: 18 }} />
+            <div className="fl-skel" style={{ height: 120 }} />
+            <div className="fl-skel" style={{ height: 120 }} />
+            <div className="fl-skel" style={{ height: 160 }} />
+          </div>
+        )}
+        <div style={skel ? { display: 'none' } : undefined}>
         <div id="sec-overview" style={{ scrollMarginTop: 46 }} />
+        {offlineAt && (
+          <div style={{
+            background: '#E8EBF2', border: '1px solid #D5DCE9', color: '#4D5A74',
+            borderRadius: 12, padding: '9px 13px', fontSize: 12, fontWeight: 700, marginBottom: 12,
+          }}>
+            Offline · showing briefing as of {offlineAt.slice(0, 10)}
+          </div>
+        )}
         {dates.length > 1 && (
-          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', margin: '0 0 12px', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ position: 'relative', margin: '0 0 12px' }}>
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, paddingRight: 40, WebkitOverflowScrolling: 'touch' }}>
             {dates.map((d, i) => {
               const on = viewDate === d || (viewDate === null && i === 0);
               const dt = new Date(d + 'T00:00:00Z');
@@ -494,6 +524,11 @@ export default function App() {
                 }}>{label}</button>
               );
             })}
+          </div>
+          <div style={{
+            position: 'absolute', top: 0, right: 0, bottom: 2, width: 44, pointerEvents: 'none',
+            background: 'linear-gradient(90deg, transparent, #EAEDF1 78%)',
+          }} />
           </div>
         )}
         {!viewDate && briefing.report_date < new Date(Date.now() - 86400000).toISOString().slice(0, 10) && (
@@ -512,10 +547,15 @@ export default function App() {
         {viewDate && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-            background: '#FBEEDC', color: '#6D4C00', borderRadius: 12, padding: '9px 13px',
-            fontSize: 12, fontWeight: 700, marginBottom: 12,
+            background: '#FBF3DF', border: '1px solid #EDDCA8', color: '#6D4C00', borderRadius: 12,
+            padding: '9px 13px', fontSize: 12, fontWeight: 700, marginBottom: 12,
           }}>
-            <span>Viewing the briefing of {(() => { const dt = new Date(viewDate + 'T00:00:00Z'); return `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getUTCDay()]} ${dt.getUTCDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()]}`; })()}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" />
+              </svg>
+              Viewing {(() => { const dt = new Date(viewDate + 'T00:00:00Z'); return `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getUTCDay()]} ${dt.getUTCDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()]}`; })()} · not live
+            </span>
             <button onClick={() => selectDate(null)} style={{
               border: 'none', background: '#6D4C00', color: '#fff', borderRadius: 999,
               padding: '4px 11px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
@@ -580,6 +620,7 @@ export default function App() {
             background: 'rgba(46,124,247,.08)', color: 'var(--blue)', textDecoration: 'none',
             borderRadius: 999, padding: '4px 11px', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap',
           }}>an HBIS app</a>
+        </div>
         </div>
       </Shell>
       </div>

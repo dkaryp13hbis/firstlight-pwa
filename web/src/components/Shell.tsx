@@ -1,6 +1,6 @@
 /** App chrome: navy top bar with the CANONICAL lockup B (verbatim geometry —
  *  never redraw), icon cluster, hotel row with picker, refresh, tab bar. */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
 export function LogoLockup() {
@@ -43,6 +43,14 @@ export function LogoLockup() {
 const TABS = ['Overview', 'Pickup', 'Pace', 'Calendar', 'FL Pulse'] as const;
 export type Tab = typeof TABS[number];
 
+const TAB_ICONS: Record<Tab, React.ReactNode> = {
+  Overview: <><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" /></>,
+  Pickup: <><path d="M4 19l5-6 4 3 7-9" /><path d="M15 7h5v5" /></>,
+  Pace: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>,
+  Calendar: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 9.5h18" /><circle cx="12" cy="15" r="1.6" fill="currentColor" stroke="none" /></>,
+  'FL Pulse': <><path d="M3 16h3l2.4-5 3.2 8 2.4-5H21" strokeWidth="2.2" /><g opacity=".8"><path d="M12 3.2v2.2" /><path d="M5.6 5.6l1.5 1.5" /><path d="M18.4 5.6l-1.5 1.5" /></g></>,
+};
+
 const icoStyle: React.CSSProperties = {
   width: 36, height: 36, borderRadius: '50%',
   background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.11)',
@@ -67,16 +75,47 @@ export function Shell(props: {
   children: ReactNode;
 }) {
   const [pickOpen, setPickOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    let col = false;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (!col && y > 60) { col = true; setCollapsed(true); }
+      else if (col && y < 20) { col = false; setCollapsed(false); }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   const current = props.hotels.find(h => h.id === props.hotelId)?.name ?? 'Hotel';
   const busy = props.refreshState === 'busy';
   return (
     <div>
       <div id="fl-sticky" style={{ position: 'sticky', top: 0, zIndex: 999 }}>
       <header style={{ background: 'var(--app-top)', padding: 'calc(10px + env(safe-area-inset-top)) 16px 10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <LogoLockup />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: collapsed ? 48 : undefined }}>
+          {collapsed ? (
+            <span onClick={() => { if (props.hotels.length > 1) { window.scrollTo({ top: 0, behavior: 'smooth' }); setPickOpen(true); } }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: props.hotels.length > 1 ? 'pointer' : 'default', minWidth: 0 }}>
+              <svg width="22" height="22" viewBox="0 0 100 100" fill="none" style={{ flexShrink: 0 }}>
+                <g transform="translate(50,50) scale(.78) translate(-52,-50)">
+                  <path d="M18 38 38 28 54 33 74 16" stroke="#2E7CF7" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="74" cy="16" r="5" fill="#38E1F0" />
+                  <rect x="18" y="50" width="8" height="36" rx="4" fill="#fff" /><rect x="18" y="50" width="26" height="8" rx="4" fill="#fff" /><rect x="18" y="64" width="19" height="8" rx="4" fill="#fff" />
+                  <rect x="62" y="50" width="8" height="36" rx="4" fill="#fff" /><rect x="62" y="78" width="24" height="8" rx="4" fill="#fff" />
+                </g>
+              </svg>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '46vw' }}>{current}</span>
+              {props.hotels.length > 1 && <span style={{ color: 'rgba(255,255,255,.6)', fontSize: 11 }}>▾</span>}
+            </span>
+          ) : <LogoLockup />}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button style={{ ...icoStyle, position: 'relative', overflow: 'visible', color: props.bellOn ? '#38E1F0' : icoStyle.color, borderColor: 'rgba(56,225,240,.4)' }}
+            {collapsed && (
+              <button onClick={props.onRefresh} disabled={busy} title="Refresh"
+                style={{ ...icoStyle, width: 30, height: 30, fontSize: 12, color: 'var(--cyan)', borderColor: 'rgba(56,225,240,.45)' }}>
+                {busy ? '…' : '↻'}
+              </button>
+            )}
+            <button style={{ ...icoStyle, display: collapsed ? 'none' : icoStyle.display, position: 'relative', overflow: 'visible', color: props.bellOn ? '#38E1F0' : icoStyle.color, borderColor: 'rgba(56,225,240,.4)' }}
               onClick={props.onBell} title={props.bellOn ? 'Notifications on' : 'Notifications off'}>
               🔔
               <span style={{
@@ -91,7 +130,7 @@ export function Shell(props: {
                 </svg>
               </span>
             </button>
-            <button style={icoStyle} title="Share"
+            <button style={{ ...icoStyle, display: collapsed ? 'none' : icoStyle.display }} title="Share"
               onClick={() => { if (navigator.share) navigator.share({ title: 'FirstLight — Morning Briefing', url: location.href }).catch(() => undefined); }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
@@ -106,7 +145,12 @@ export function Shell(props: {
             </button>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, position: 'relative' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, position: 'relative',
+          marginTop: collapsed ? 0 : 12, maxHeight: collapsed ? 0 : 44, opacity: collapsed ? 0 : 1,
+          overflow: pickOpen ? 'visible' : 'hidden', transition: 'max-height .25s ease, opacity .25s ease, margin .25s ease',
+          pointerEvents: collapsed ? 'none' : undefined,
+        }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.7)' }}>Hotel</span>
           <div onClick={() => props.hotels.length > 1 && setPickOpen(!pickOpen)} style={{
             flex: 1, padding: '7px 12px', borderRadius: 8, color: '#fff',
@@ -142,31 +186,45 @@ export function Shell(props: {
         </div>
       </header>
 
-      <nav style={{
-        display: 'flex', justifyContent: 'space-around', background: '#fff',
-        padding: '8px 10px', borderBottom: '1px solid #E8EBF2',
-      }}>
-        {TABS.map(t => (
-          <button key={t} onClick={() => props.onTab(t)} style={{
-            border: 'none', background: 'transparent',
-            borderBottom: props.tab === t ? '2px solid #2E7CF7' : '2px solid transparent',
-            color: props.tab === t ? '#1E5FD0' : 'var(--n500)',
-            fontWeight: 700, fontSize: 12.5, padding: '7px 8px 6px', borderRadius: 0,
-          }}>
-            {t}{t === 'FL Pulse' && props.aiCount ? (
-              <span style={{
-                marginLeft: 5, background: 'var(--blue)', color: '#fff', borderRadius: 999,
-                fontSize: 10, fontWeight: 700, padding: '1px 6px',
-              }}>{props.aiCount}</span>
-            ) : null}
-          </button>
-        ))}
-      </nav>
       </div>
 
-      <main style={{ maxWidth: 560, margin: '0 auto', padding: '14px 14px 40px', ...(props.textZoom && props.textZoom !== 1 ? { zoom: props.textZoom } as React.CSSProperties : {}) }}>
+      <main style={{ maxWidth: 560, margin: '0 auto', padding: '14px 14px calc(84px + env(safe-area-inset-bottom))', ...(props.textZoom && props.textZoom !== 1 ? { zoom: props.textZoom } as React.CSSProperties : {}) }}>
         {props.children}
       </main>
+
+      {/* §1 bottom tab bar (v2.2). §9 tablet rail: PLACEHOLDER — not built yet. */}
+      <nav style={{
+        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1000,
+        background: '#fff', borderTop: '1px solid #E2E7F0',
+        boxShadow: '0 -6px 18px rgba(10,20,45,.06)', display: 'flex',
+        padding: '8px 8px calc(8px + env(safe-area-inset-bottom))',
+      }}>
+        {TABS.map(t => {
+          const on = props.tab === t;
+          return (
+            <button key={t} onClick={() => { navigator.vibrate?.(10); props.onTab(t); }} style={{
+              flex: 1, border: 'none', background: 'none', position: 'relative',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              color: on ? '#1E5FD0' : '#6E7A96', padding: '2px 0',
+            }}>
+              {on && <span style={{
+                position: 'absolute', top: -8, left: '22%', right: '22%', height: 3,
+                borderRadius: '0 0 3px 3px', background: 'linear-gradient(90deg,#2E7CF7,#38E1F0)',
+              }} />}
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{TAB_ICONS[t]}</svg>
+              <span style={{ fontSize: 10, fontWeight: on ? 700 : 600 }}>{t}</span>
+              {t === 'FL Pulse' && props.aiCount ? (
+                <span style={{
+                  position: 'absolute', top: -4, right: 'calc(50% - 22px)',
+                  background: 'var(--blue)', color: '#fff', borderRadius: 999,
+                  fontSize: 9, fontWeight: 700, minWidth: 15, height: 15,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
+                }}>{props.aiCount}</span>
+              ) : null}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
