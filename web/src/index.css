@@ -68,3 +68,19 @@ button { font-family: inherit; cursor: pointer; }
   animation: fl-shimmer 1.1s linear infinite;
   margin-bottom: 10px;
 }
+
+/* Frosted bottom nav (bottom-nav-frosted.html): 72% white + 14px blur,
+   1.5px brand-gradient hairline on top; solid white when blur unsupported. */
+.fl-tabbar {
+  background: rgba(255, 255, 255, .72);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-top: 1.5px solid transparent;
+  border-image: linear-gradient(90deg, #2E7CF7, #38E1F0) 1;
+}
+@supports not ((backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px))) {
+  .fl-tabbar {
+    background: #fff;
+    box-shadow: 0 -6px 18px rgba(10, 20, 45, .08);
+  }
+}
