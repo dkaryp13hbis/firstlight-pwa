@@ -43,15 +43,30 @@ export function LogoLockup() {
 const TABS = ['Overview', 'Pickup', 'Pace', 'Calendar', 'FL Pulse'] as const;
 export type Tab = typeof TABS[number];
 
-/* Same geometry as the in-report section icons (ICONS in Overview.tsx):
-   Overview=sun (Yesterday), Pickup=trend (Pickup Activity), Pace=pace,
-   Calendar=heat (Next 60 Days Demand), FL Pulse=pulse — keep in sync. */
-const TAB_ICONS: Record<Tab, React.ReactNode> = {
-  Overview: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></>,
-  Pickup: <><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>,
-  Pace: <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />,
-  Calendar: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" fill="currentColor" fillOpacity=".35" /></>,
-  'FL Pulse': <><path d="M3 16h3l2.4-5 3.2 8 2.4-5H21" strokeWidth="2.2" /><path d="M12 2v2.4M5 4.6l1.6 1.6M19 4.6l-1.6 1.6" stroke="#38E1F0" strokeWidth="1.8" opacity=".85" /></>,
+/* Bottom-nav icons per the user's bottom-nav-final.html design: each tab has
+   an outline (line) and an active (fill) variant. Pace = icon B, TY bars
+   solid / LY bars hollow — MUST stay identical to ICONS.pace in Overview.tsx. */
+const TAB_ICONS: Record<Tab, { line: React.ReactNode; fill: React.ReactNode }> = {
+  Overview: {
+    line: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg>,
+    fill: <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg>,
+  },
+  Pickup: {
+    line: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17 9 11l4 4 8-8" /><path d="M15 7h6v6" /></svg>,
+    fill: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17 9 11l4 4 8-8" /><path d="M15 7h6v6" /></svg>,
+  },
+  Pace: {
+    line: <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><rect x="4" y="12" width="2.6" height="8" rx="1.3" stroke="currentColor" strokeWidth="1.1" /><rect x="9.2" y="4" width="2.6" height="16" rx="1.3" fill="currentColor" /><rect x="14.4" y="14" width="2.6" height="6" rx="1.3" stroke="currentColor" strokeWidth="1.1" /><rect x="19.6" y="9" width="2.6" height="11" rx="1.3" fill="currentColor" /></svg>,
+    fill: <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><rect x="4" y="12" width="2.6" height="8" rx="1.3" stroke="currentColor" strokeWidth="1.1" /><rect x="9.2" y="4" width="2.6" height="16" rx="1.3" fill="currentColor" /><rect x="14.4" y="14" width="2.6" height="6" rx="1.3" stroke="currentColor" strokeWidth="1.1" /><rect x="19.6" y="9" width="2.6" height="11" rx="1.3" fill="currentColor" /></svg>,
+  },
+  Calendar: {
+    line: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 10h18" /><circle cx="12" cy="15" r="1.6" fill="currentColor" stroke="none" /></svg>,
+    fill: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" fill="currentColor" /><path d="M8 2v4M16 2v4" /><path d="M3.5 10h17" stroke="#fff" strokeWidth="1.6" /><circle cx="12" cy="15" r="1.6" fill="#fff" stroke="none" /></svg>,
+  },
+  'FL Pulse': {
+    line: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M3 16h3l2.4-5 3.2 8 2.4-5H21" stroke="currentColor" strokeWidth="2.2" /><path d="M12 2v2.4M5 4.6l1.6 1.6M19 4.6l-1.6 1.6" stroke="currentColor" strokeWidth="1.8" opacity=".6" /></svg>,
+    fill: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M3 16h3l2.4-5 3.2 8 2.4-5H21" stroke="currentColor" strokeWidth="2.6" /><path d="M12 2v2.4M5 4.6l1.6 1.6M19 4.6l-1.6 1.6" stroke="currentColor" strokeWidth="1.8" /></svg>,
+  },
 };
 
 const icoStyle: React.CSSProperties = {
@@ -207,23 +222,25 @@ export function Shell(props: {
           return (
             <button key={t} onClick={() => { navigator.vibrate?.(10); props.onTab(t); }} style={{
               flex: 1, border: 'none', background: 'none', position: 'relative',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
               color: on ? '#1E5FD0' : '#6E7A96', padding: '2px 0',
             }}>
               {on && <span style={{
-                position: 'absolute', top: -8, left: '22%', right: '22%', height: 3,
+                position: 'absolute', top: -9, left: '22%', right: '22%', height: 3,
                 borderRadius: '0 0 3px 3px', background: 'linear-gradient(90deg,#2E7CF7,#38E1F0)',
               }} />}
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{TAB_ICONS[t]}</svg>
-              <span style={{ fontSize: 11.5, fontWeight: on ? 700 : 600, whiteSpace: 'nowrap' }}>{t}</span>
-              {t === 'FL Pulse' && props.aiCount ? (
-                <span style={{
-                  position: 'absolute', top: -4, right: 'calc(50% - 22px)',
-                  background: 'var(--blue)', color: '#fff', borderRadius: 999,
-                  fontSize: 9, fontWeight: 700, minWidth: 15, height: 15,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
-                }}>{props.aiCount}</span>
-              ) : null}
+              <span style={{ position: 'relative', display: 'inline-flex' }}>
+                {on ? TAB_ICONS[t].fill : TAB_ICONS[t].line}
+                {t === 'FL Pulse' && props.aiCount ? (
+                  <span style={{
+                    position: 'absolute', top: -5, right: -10,
+                    background: '#2E7CF7', color: '#fff', borderRadius: 999,
+                    fontSize: 9, fontWeight: 700, minWidth: 15, height: 15,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
+                  }}>{props.aiCount}</span>
+                ) : null}
+              </span>
+              <span style={{ fontSize: 11.5, fontWeight: on ? 800 : 600, whiteSpace: 'nowrap' }}>{t}</span>
             </button>
           );
         })}
