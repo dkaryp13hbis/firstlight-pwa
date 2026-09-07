@@ -213,7 +213,7 @@ export function Shell(props: {
       {/* §1 bottom tab bar (v2.2). §9 tablet rail: PLACEHOLDER — not built yet. */}
       <nav className="fl-tabbar" style={{
         position: 'fixed', left: 12, right: 12, zIndex: 1000, display: 'flex',
-        bottom: 'calc(12px + env(safe-area-inset-bottom))',
+        bottom: 'calc(4px + env(safe-area-inset-bottom) / 2)',
         maxWidth: 536, margin: '0 auto', padding: '10px 8px',
       }}>
         {TABS.map(t => {
