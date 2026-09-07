@@ -1,6 +1,7 @@
 /** App chrome: navy top bar with the CANONICAL lockup B (verbatim geometry —
  *  never redraw), icon cluster, hotel row with picker, refresh, tab bar. */
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 
 export function LogoLockup() {
@@ -210,7 +211,10 @@ export function Shell(props: {
         {props.children}
       </main>
 
-      {/* §1 bottom tab bar (v2.2). §9 tablet rail: PLACEHOLDER — not built yet. */}
+      {/* §1 bottom tab bar (v2.2). §9 tablet rail: PLACEHOLDER — not built yet.
+          Portaled to <body>: the pull-to-refresh wrapper transforms while
+          dragging, and a transformed ancestor would drag the fixed bar down. */}
+      {createPortal(
       <nav className="fl-tabbar" style={{
         position: 'fixed', left: 12, right: 12, zIndex: 1000, display: 'flex',
         bottom: 'calc(4px + env(safe-area-inset-bottom) / 2)',
@@ -243,7 +247,8 @@ export function Shell(props: {
             </button>
           );
         })}
-      </nav>
+      </nav>,
+      document.body)}
     </div>
   );
 }
