@@ -96,20 +96,11 @@ export function Shell(props: {
   const [pickOpen, setPickOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
-    // direction-based: collapse while scrolling down, expand as soon as the
-    // user scrolls up ~12px (or is near the top) — not only back at the top
-    let col = false, lastY = window.scrollY, up = 0;
+    let col = false;
     const onScroll = () => {
       const y = window.scrollY;
-      const dy = y - lastY;
-      lastY = y;
-      if (dy > 0) {
-        up = 0;
-        if (!col && y > 60) { col = true; setCollapsed(true); }
-      } else if (dy < 0) {
-        up -= dy;
-        if (col && (up > 12 || y < 20)) { col = false; up = 0; setCollapsed(false); }
-      }
+      if (!col && y > 60) { col = true; setCollapsed(true); }
+      else if (col && y < 20) { col = false; setCollapsed(false); }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
