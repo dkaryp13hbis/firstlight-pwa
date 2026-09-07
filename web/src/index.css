@@ -69,13 +69,16 @@ button { font-family: inherit; cursor: pointer; }
   margin-bottom: 10px;
 }
 
-/* Frosted bottom nav (bottom-nav-frosted.html; gradient hairline swapped for
-   a plain grey one — user): 72% white + 14px blur; solid white when unsupported. */
+/* Frosted bottom nav, FLOATING pill (user screenshot 2026-09-07): detached
+   from the edges, rounded, soft shadow; 72% white + 14px blur; solid white
+   when blur is unsupported. */
 .fl-tabbar {
-  background: rgba(255, 255, 255, .72);
+  background: rgba(255, 255, 255, .78);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
-  border-top: 1px solid #DDE3EC;
+  border: 1px solid #E2E7F0;
+  border-radius: 22px;
+  box-shadow: 0 10px 30px rgba(10, 20, 45, .14), 0 2px 8px rgba(10, 20, 45, .06);
 }
 @supports not ((backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px))) {
   .fl-tabbar {

@@ -206,14 +206,15 @@ export function Shell(props: {
 
       </div>
 
-      <main style={{ maxWidth: 560, margin: '0 auto', padding: '14px 14px calc(84px + env(safe-area-inset-bottom))', ...(props.textZoom && props.textZoom !== 1 ? { zoom: props.textZoom } as React.CSSProperties : {}) }}>
+      <main style={{ maxWidth: 560, margin: '0 auto', padding: '14px 14px calc(96px + env(safe-area-inset-bottom))', ...(props.textZoom && props.textZoom !== 1 ? { zoom: props.textZoom } as React.CSSProperties : {}) }}>
         {props.children}
       </main>
 
       {/* §1 bottom tab bar (v2.2). §9 tablet rail: PLACEHOLDER — not built yet. */}
       <nav className="fl-tabbar" style={{
-        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1000, display: 'flex',
-        padding: '10px 8px calc(10px + env(safe-area-inset-bottom))',
+        position: 'fixed', left: 12, right: 12, zIndex: 1000, display: 'flex',
+        bottom: 'calc(12px + env(safe-area-inset-bottom))',
+        maxWidth: 536, margin: '0 auto', padding: '10px 8px',
       }}>
         {TABS.map(t => {
           const on = props.tab === t;
@@ -224,7 +225,7 @@ export function Shell(props: {
               color: on ? '#1E5FD0' : '#6E7A96', padding: '2px 0',
             }}>
               {on && <span style={{
-                position: 'absolute', top: -11.5, left: '22%', right: '22%', height: 3,
+                position: 'absolute', top: -11, left: '22%', right: '22%', height: 3,
                 borderRadius: '0 0 3px 3px', background: 'linear-gradient(90deg,#2E7CF7,#38E1F0)',
               }} />}
               <span style={{ position: 'relative', display: 'inline-flex' }}>
