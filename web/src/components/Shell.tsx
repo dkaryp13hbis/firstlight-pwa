@@ -1,6 +1,6 @@
 /** App chrome: navy top bar with the CANONICAL lockup B (verbatim geometry —
  *  never redraw), icon cluster, hotel row with picker, refresh, tab bar. */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 
@@ -105,6 +105,27 @@ export function Shell(props: {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+  /* liquid-glass lens morph: stretch mid-flight like a drop, settle on the
+     target; stretch + duration scale with travel distance (WAAPI — a CSS
+     left-transition can only slide, it cannot flex) */
+  const lensRef = useRef<HTMLSpanElement>(null);
+  const lensIdx = Math.max(TABS.indexOf(props.tab), 0);
+  const prevIdx = useRef(lensIdx);
+  useEffect(() => {
+    const el = lensRef.current;
+    const from = prevIdx.current;
+    prevIdx.current = lensIdx;
+    if (!el || from === lensIdx) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const d = lensIdx - from;
+    const stretch = Math.min(1 + Math.abs(d) * 0.3, 1.9);
+    el.animate([
+      { transform: `translateX(${from * 100}%) scale(1, 1)` },
+      { transform: `translateX(${((from + lensIdx) / 2) * 100}%) scale(${stretch}, .88)`, offset: .45 },
+      { transform: `translateX(${lensIdx * 100}%) scale(1.05, .97)`, offset: .82 },
+      { transform: `translateX(${lensIdx * 100}%) scale(1, 1)` },
+    ], { duration: 420 + Math.abs(d) * 70, easing: 'cubic-bezier(.3, .9, .3, 1)' });
+  }, [lensIdx]);
   const current = props.hotels.find(h => h.id === props.hotelId)?.name ?? 'Hotel';
   const busy = props.refreshState === 'busy';
   return (
@@ -221,8 +242,8 @@ export function Shell(props: {
         maxWidth: 536, margin: '0 auto', padding: '10px 8px',
       }}>
         <div style={{ position: 'relative', display: 'flex', flex: 1 }}>
-        {/* liquid-glass lens: morphs to the active tab (left animates) */}
-        <span className="fl-lens" style={{ left: `${Math.max(TABS.indexOf(props.tab), 0) * 20}%` }} />
+        {/* liquid-glass lens: rests via transform, morphs via WAAPI above */}
+        <span ref={lensRef} className="fl-lens" style={{ transform: `translateX(${lensIdx * 100}%)` }} />
         {TABS.map(t => {
           const on = props.tab === t;
           return (

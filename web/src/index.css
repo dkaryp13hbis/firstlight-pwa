@@ -90,16 +90,18 @@ button { font-family: inherit; cursor: pointer; }
   }
 }
 
-/* the lens: a glass bubble under the active tab that slides/morphs across */
+/* the lens: a glass bubble under the active tab; resting position is a
+   translateX set inline, travel is a WAAPI stretch-morph (Shell.tsx) */
 .fl-lens {
   position: absolute;
   top: -5px;
   bottom: -5px;
+  left: 0;
   width: 20%;
   border-radius: 19px;
   background: linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(255, 255, 255, .45));
   box-shadow: 0 3px 10px rgba(10, 20, 45, .16), inset 0 1px 0 rgba(255, 255, 255, .95);
-  transition: left .45s cubic-bezier(.3, 1.15, .35, 1);
+  will-change: transform;
   pointer-events: none;
 }
 /* chromatic edge: thin rainbow-tinted refraction ring on the lens rim */
@@ -117,7 +119,4 @@ button { font-family: inherit; cursor: pointer; }
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   opacity: .7;
-}
-@media (prefers-reduced-motion: reduce) {
-  .fl-lens { transition: none; }
 }
