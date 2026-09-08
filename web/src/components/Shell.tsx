@@ -220,18 +220,17 @@ export function Shell(props: {
         bottom: 'calc(4px + env(safe-area-inset-bottom) / 2)',
         maxWidth: 536, margin: '0 auto', padding: '10px 8px',
       }}>
+        <div style={{ position: 'relative', display: 'flex', flex: 1 }}>
+        {/* liquid-glass lens: morphs to the active tab (left animates) */}
+        <span className="fl-lens" style={{ left: `${Math.max(TABS.indexOf(props.tab), 0) * 20}%` }} />
         {TABS.map(t => {
           const on = props.tab === t;
           return (
             <button key={t} onClick={() => { navigator.vibrate?.(10); props.onTab(t); }} style={{
-              flex: 1, border: 'none', background: 'none', position: 'relative',
+              flex: 1, border: 'none', background: 'none', position: 'relative', zIndex: 1,
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
               color: on ? '#1E5FD0' : '#6E7A96', padding: '2px 0',
             }}>
-              {on && <span style={{
-                position: 'absolute', top: -11, left: '22%', right: '22%', height: 3,
-                borderRadius: '0 0 3px 3px', background: 'linear-gradient(90deg,#2E7CF7,#38E1F0)',
-              }} />}
               <span style={{ position: 'relative', display: 'inline-flex' }}>
                 {on ? TAB_ICONS[t].fill : TAB_ICONS[t].line}
                 {t === 'FL Pulse' && props.aiCount ? (
@@ -247,6 +246,7 @@ export function Shell(props: {
             </button>
           );
         })}
+        </div>
       </nav>,
       document.body)}
     </div>
