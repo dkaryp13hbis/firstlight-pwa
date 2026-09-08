@@ -96,7 +96,7 @@ button { font-family: inherit; cursor: pointer; }
   top: -5px;
   bottom: -5px;
   width: 20%;
-  border-radius: 999px;
+  border-radius: 19px;
   background: linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(255, 255, 255, .45));
   box-shadow: 0 3px 10px rgba(10, 20, 45, .16), inset 0 1px 0 rgba(255, 255, 255, .95);
   transition: left .28s cubic-bezier(.32, 1.36, .48, 1);
