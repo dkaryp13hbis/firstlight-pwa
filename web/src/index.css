@@ -99,7 +99,7 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: 19px;
   background: linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(255, 255, 255, .45));
   box-shadow: 0 3px 10px rgba(10, 20, 45, .16), inset 0 1px 0 rgba(255, 255, 255, .95);
-  transition: left .28s cubic-bezier(.32, 1.36, .48, 1);
+  transition: left .45s cubic-bezier(.3, 1.15, .35, 1);
   pointer-events: none;
 }
 /* chromatic edge: thin rainbow-tinted refraction ring on the lens rim */
