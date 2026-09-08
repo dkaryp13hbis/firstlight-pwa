@@ -361,7 +361,7 @@ function DemandHeat({ briefing, onWatch, watched }: {
 
   return (
     <div style={{ marginBottom: 12 }}>
-      <SectionLabel icon="heat" info="heat" title="Next 60 Days Demand">Next 60 Days Demand</SectionLabel>
+      <SectionLabel icon="cal60" info="heat" title="Next 60 Days Demand">Next 60 Days Demand</SectionLabel>
       <div className="card" style={{ padding: '18px 18px 14px' }}>
       <div style={{ fontSize: 11, color: 'var(--n600)', lineHeight: 1.5, margin: '4px 0 12px' }}>
         Occupancy on the books per stay date — darker = fuller. A red outline marks a date far behind last year.
