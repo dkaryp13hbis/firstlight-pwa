@@ -226,7 +226,12 @@ export function Shell(props: {
         {TABS.map(t => {
           const on = props.tab === t;
           return (
-            <button key={t} onClick={() => { navigator.vibrate?.(10); props.onTab(t); }} style={{
+            <button key={t}
+              /* select on touch-DOWN like the native iOS tab bar; the
+                 guarded onClick keeps keyboard activation working */
+              onPointerDown={() => { navigator.vibrate?.(10); props.onTab(t); }}
+              onClick={e => { if (e.detail === 0) props.onTab(t); }}
+              style={{
               flex: 1, border: 'none', background: 'none', position: 'relative', zIndex: 1,
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
               color: on ? '#1E5FD0' : '#6E7A96', padding: '2px 0',
