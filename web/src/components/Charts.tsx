@@ -70,7 +70,7 @@ function ChartCard({ title, sub, icon, info, legend, inner, children }: {
 const W = 560, H0 = 268, BOT0 = 200, CH0 = 172;
 /* `tall` (portfolio, 12 months in one row): plot ~1.9× taller so the bars
    carry the detail that the narrow month step cannot */
-const H1 = 428, BOT1 = 360, CH1 = 330;
+const H1 = 360, BOT1 = 292, CH1 = 262;
 
 /* body zoom cannot reach inside width-constrained SVGs — the app sets this
    from the text-size setting and chart text multiplies by it */
@@ -105,10 +105,11 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, ta
   tall?: boolean;   // portfolio: 12 months in one row, taller plot
 }) {
   const H = tall ? H1 : H0, BOT = tall ? BOT1 : BOT0, CH = tall ? CH1 : CH0;
-  const n = months.length, step = (W - 82) / n, bw = n > 6 ? 13 : 15;
-  /* the 54px variance pills never exceed the month step (12 months → 40px):
-     pill and its text scale together; month labels shrink a little */
-  const pz = Math.min(54 * TXS, step - 3) / 54, mz = TXS * (n > 8 ? 0.85 : 1);
+  const n = months.length, step = (W - 82) / n, bw = tall ? 10 : n > 6 ? 13 : 15;
+  /* the 54px variance pills never exceed the month step (12 months → 40px);
+     a tight pill keeps its text large (12.5px) and only trims its box */
+  const pw = Math.min(54 * TXS, step - 3), tight = pw < 54 * TXS;
+  const ph = (tight ? 20 : 22) * TXS, pf = (tight ? 12.5 : 14.5) * TXS, mz = TXS * (n > 8 ? 0.85 : 1);
   const curM = new Date().getMonth() + 1;
   const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.08;
   const [tip, setTip] = useState<number | null>(null);
@@ -141,9 +142,9 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, ta
                 stroke={GREEN} strokeWidth={2.5} strokeDasharray="4,3" />
             )}
             <text x={x} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15 * mz, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
-            <rect x={x - 27 * pz} y={BOT + 22} width={54 * pz} height={22 * pz} rx={5}
+            <rect x={x - pw / 2} y={BOT + 22} width={pw} height={ph} rx={5}
               fill={vs >= 0 ? 'rgba(26,122,80,0.10)' : 'rgba(184,58,27,0.10)'} />
-            <text x={x} y={BOT + 22 + 16 * pz} textAnchor="middle" style={{ fontSize: 14.5 * pz, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
+            <text x={x} y={BOT + 22 + ph * 0.73} textAnchor="middle" style={{ fontSize: pf, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
               {vs >= 0 ? '+' : ''}{Math.round(vs)}%
             </text>
           </g>
@@ -199,7 +200,9 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, ta
 export function OccPace({ months, tall }: { months: PaceMonth[]; tall?: boolean }) {
   const H = tall ? H1 : H0, BOT = tall ? BOT1 : BOT0, CH = tall ? CH1 : CH0;
   const n = months.length, step = (W - 82) / n;
-  const pz = Math.min(54 * TXS, step - 3) / 54, mz = TXS * (n > 8 ? 0.85 : 1);   // see BarPace
+  const pw = Math.min(54 * TXS, step - 3), tight = pw < 54 * TXS;   // see BarPace
+  const ph = (tight ? 20 : 22) * TXS, pf = (tight ? 12.5 : 14.5) * TXS, mz = TXS * (n > 8 ? 0.85 : 1);
+  const cw = Math.min(44 * TXS, step - 3), chh = (tight ? 18 : 19) * TXS, cf = (tight ? 12 : 13.5) * TXS;   // occupancy chips
   const curM = new Date().getMonth() + 1;
   const x = (i: number) => 62 + i * step + step / 2;
   const y = (v: number) => BOT - Math.min(v, 1.05) * CH;
@@ -233,14 +236,14 @@ export function OccPace({ months, tall }: { months: PaceMonth[]; tall?: boolean 
         return (
           <g key={m.month}>
             <circle cx={x(i)} cy={y(m.occ)} r={3.5} fill={NAVY} />
-            <rect x={x(i) - 22 * pz} y={y(m.occ) - 28 * pz} width={44 * pz} height={19 * pz} rx={4} fill="white" opacity={0.92} />
-            <text x={x(i)} y={y(m.occ) - 14 * pz} textAnchor="middle" style={{ fontSize: 13.5 * pz, fontWeight: 800, fill: beat ? GREEN : '#1A2540' }}>
+            <rect x={x(i) - cw / 2} y={y(m.occ) - (chh + 9)} width={cw} height={chh} rx={4} fill="white" opacity={0.92} />
+            <text x={x(i)} y={y(m.occ) - (chh + 9) + chh * 0.74} textAnchor="middle" style={{ fontSize: cf, fontWeight: 800, fill: beat ? GREEN : '#1A2540' }}>
               {Math.round(m.occ * 100)}%
             </text>
             <text x={x(i)} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15 * mz, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
-            <rect x={x(i) - 27 * pz} y={BOT + 22} width={54 * pz} height={22 * pz} rx={5}
+            <rect x={x(i) - pw / 2} y={BOT + 22} width={pw} height={ph} rx={5}
               fill={vs >= 0 ? 'rgba(26,122,80,0.10)' : 'rgba(184,58,27,0.10)'} />
-            <text x={x(i)} y={BOT + 22 + 16 * pz} textAnchor="middle" style={{ fontSize: 14.5 * pz, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
+            <text x={x(i)} y={BOT + 22 + ph * 0.73} textAnchor="middle" style={{ fontSize: pf, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
               {vs >= 0 ? '+' : ''}{Math.round(vs)}%
             </text>
           </g>
