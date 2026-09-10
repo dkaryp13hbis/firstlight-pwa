@@ -6,6 +6,7 @@ import { WatchlistSection, WatchSheet, titleCase } from './components/Watchlist'
 import { WATCHLIST_EMAILS, WATCH_CAP, itemTitle, monthKey, rangeKey, type WatchItem, type WatchKind } from './lib/watch';
 import { Shell, type Tab } from './components/Shell';
 import { SmartSummary } from './components/SmartSummary';
+import { SinceYesterday } from './components/SinceYesterday';
 import { KpiRow, MtdStrip, OtbCards } from './components/Overview';
 import { PickupSection } from './components/Pickup';
 import { OtbTab, buildNextPace, setChartTextScale } from './components/Charts';
@@ -602,6 +603,10 @@ export default function App() {
           </div>
         )}
         <SmartSummary briefing={viewBriefing ?? briefing} />
+        {!viewDate && (
+          <SinceYesterday briefing={briefing} prev={prevB} watch={watch}
+            net={revMode === 'net' && netAvailable} />
+        )}
         {revMode === 'net' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-6px 0 14px', fontSize: 12, fontWeight: 600, color: '#5A6780' }}>
             <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.08em', color: '#0F2860', background: '#E9EDF4', borderRadius: 999, padding: '3px 9px' }}>NET</span>

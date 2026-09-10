@@ -130,6 +130,11 @@ function WatchCard({ line, briefing, history, onRemove, onTap, onExpand }: {
         <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '.06em', color: '#0F2860', textTransform: 'uppercase', minWidth: 0 }}>
           {line.title}
           {line.item.label && <span style={{ fontWeight: 700, letterSpacing: 0, textTransform: 'none', color: '#5A6780', fontSize: 11.5, marginLeft: 6 }}>{line.item.label}</span>}
+          {line.item.source === 'firstlight' && <span style={{
+            fontWeight: 800, letterSpacing: '.06em', fontSize: 9, marginLeft: 6,
+            color: '#1E5FD0', background: '#EAF1FE', border: '1px solid #CBDCFB',
+            borderRadius: 6, padding: '2px 6px', verticalAlign: 2,
+          }}>FIRSTLIGHT</span>}
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <Pill s={line.status} />
@@ -142,7 +147,11 @@ function WatchCard({ line, briefing, history, onRemove, onTap, onExpand }: {
       {open && <TrendStrip item={line.item} briefing={briefing} history={history} />}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, marginTop: 6 }}>
         <button onClick={onTap} style={{ border: 'none', background: 'none', padding: '4px 0', fontSize: 11, fontWeight: 700, color: '#2E7CF7' }}>Open in Pace ›</button>
-        <button onClick={onRemove} style={{ border: 'none', background: 'none', padding: '4px 0', fontSize: 11, fontWeight: 700, color: '#79747E' }}>Remove</button>
+        {line.item.source === 'firstlight' ? (
+          <span style={{ padding: '4px 0', fontSize: 11, fontWeight: 600, color: '#9AA4B8' }}>removes itself on recovery</span>
+        ) : (
+          <button onClick={onRemove} style={{ border: 'none', background: 'none', padding: '4px 0', fontSize: 11, fontWeight: 700, color: '#79747E' }}>Remove</button>
+        )}
       </div>
     </div>
   );
@@ -154,21 +163,23 @@ export function WatchlistSection({ briefing, prev, items, history, onLoadHistory
   onAdd: () => void; onRemove: (item: WatchItem) => void; onTap: (line: WatchLine) => void;
 }) {
   const lines = useMemo(() => items.map(i => computeWatchLine(i, briefing, prev)), [items, briefing, prev]);
+  /* FirstLight's self-resolving items never count against the owner's cap */
+  const ownCount = items.filter(i => i.source !== 'firstlight').length;
   return (
     <div style={{ marginBottom: 22 }}>
       <SectionLabel icon="eye" info="watch" title="Your watchlist">
-        Your watchlist <LabelSub>· {items.length} of {WATCH_CAP}</LabelSub>
+        Your watchlist <LabelSub>· {ownCount} of {WATCH_CAP}</LabelSub>
       </SectionLabel>
       {lines.map(l => (
         <WatchCard key={l.item.id} line={l} briefing={briefing} history={history} onExpand={onLoadHistory}
           onRemove={() => onRemove(l.item)} onTap={() => onTap(l)} />
       ))}
-      {items.length < WATCH_CAP && (
+      {ownCount < WATCH_CAP && (
         <button onClick={onAdd} style={{
           width: '100%', border: '1.5px dashed #C9D2E3', background: 'transparent', borderRadius: 14,
           padding: '11px 12px', fontSize: 12.5, fontWeight: 700, color: '#2E7CF7',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-        }}><EyeIcon on={false} size={14} />{items.length ? '+ Watch another month or date range' : 'Watch a month or a date range'}</button>
+        }}><EyeIcon on={false} size={14} />{ownCount ? '+ Watch another month or date range' : 'Watch a month or a date range'}</button>
       )}
     </div>
   );

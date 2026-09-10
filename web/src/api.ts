@@ -122,14 +122,21 @@ const demoList = (): WatchItem[] => {
 };
 const saveDemo = (l: WatchItem[]) => { try { localStorage.setItem(DEMO_WATCH, JSON.stringify(l)); } catch { /* ignore */ } };
 const WL_COLS = 'id, hotel_id, kind, key, label, note, created_at';
+/* follow-up engine columns (2026-09-10) — fetch falls back to WL_COLS until
+   the SQL is pasted, so the watchlist never disappears on a missing column */
+const WL_COLS_FL = WL_COLS + ', source, flagged_date, first_gap, last_gap';
 
 /** null = the table isn't there yet (SQL not pasted) → section hidden. */
 export async function fetchWatchlist(hotelId: string): Promise<WatchItem[] | null> {
   if (!sb || hotelId === 'demo') return demoList().filter(w => w.hotel_id === hotelId);
-  const { data, error } = await sb.from('watchlist').select(WL_COLS)
+  let res: { data: unknown; error: unknown } = await sb.from('watchlist').select(WL_COLS_FL)
     .eq('hotel_id', hotelId).order('created_at', { ascending: true });
-  if (error) return null;
-  return (data ?? []) as WatchItem[];
+  if (res.error) {
+    res = await sb.from('watchlist').select(WL_COLS)
+      .eq('hotel_id', hotelId).order('created_at', { ascending: true });
+  }
+  if (res.error) return null;
+  return ((res.data ?? []) as WatchItem[]);
 }
 
 export async function addWatch(hotelId: string, kind: WatchKind, key: string, label: string | null)

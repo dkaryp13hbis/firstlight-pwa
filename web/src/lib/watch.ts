@@ -16,6 +16,10 @@ export type WatchKind = 'month' | 'range';
 export interface WatchItem {
   id: string; hotel_id: string; kind: WatchKind; key: string;
   label?: string | null; note?: string | null; created_at?: string;
+  /* follow-up engine (2026-09-10): 'firstlight' rows are auto-added by the
+     analyst and self-resolving; absent/'user' = added by a person */
+  source?: 'user' | 'firstlight' | null;
+  flagged_date?: string | null; first_gap?: number | null; last_gap?: number | null;
 }
 
 export type WatchStatus = 'new' | 'improving' | 'worsening' | 'steady' | 'passed' | 'closed' | 'pending';

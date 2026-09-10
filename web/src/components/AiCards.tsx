@@ -84,6 +84,20 @@ function Card({ ins, cardId, voted, onFeedback, watchKey, watched, onWatch }: {
       </button>
       {open && (
         <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {ins.follow_up && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, fontWeight: 700, flexWrap: 'wrap' }}>
+              <span style={{
+                fontSize: 10, fontWeight: 800, letterSpacing: '.06em', textTransform: 'uppercase',
+                color: '#8A6D1F', background: '#FBF3DF', border: '1px solid #EDDCA8',
+                borderRadius: 999, padding: '3px 9px',
+              }}>Watching · day {ins.follow_up.day}</span>
+              {ins.follow_up.first_gap != null && ins.follow_up.last_gap != null && (
+                <span style={{ color: '#6E7A96', fontWeight: 600 }}>
+                  gap {Math.abs(Math.round(ins.follow_up.first_gap))}% → {Math.abs(Math.round(ins.follow_up.last_gap))}% since flagged
+                </span>
+              )}
+            </div>
+          )}
           {kpis.length > 0 && (
             <div style={{ display: 'flex', gap: 10 }}>
               {kpis.slice(0, 2).map((k, i) => (
@@ -137,7 +151,8 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
   onWatch?: (monthKey: string) => void;      // "Watch" on month-scoped cards
 }) {
   const insights = briefing.ai_insights?.insights ?? [];
-  if (!insights.length) {
+  const closures = briefing.ai_insights?.watch_closures ?? [];
+  if (!insights.length && !closures.length) {
     return <p style={{ textAlign: 'center', color: 'var(--n500)', padding: 24, fontSize: 13 }}>No insights for today.</p>;
   }
   return (
@@ -150,6 +165,16 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
           alignItems: 'center', justifyContent: 'center', padding: '0 5px',
         }}>{insights.length}</span>
       </SectionLabel>
+      {/* follow-up engine closings: one green line, then gone tomorrow */}
+      {closures.map(c => (
+        <div key={c.key} style={{
+          display: 'flex', alignItems: 'center', gap: 10, background: '#E7F5EC',
+          borderRadius: 12, padding: '11px 14px', marginBottom: 10,
+        }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1A7A50" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20 6 9 17l-5-5" /></svg>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#1A7A50', lineHeight: 1.45 }}>{c.text}</span>
+        </div>
+      ))}
       {insights.map((ins, i) => {
         const cardId = ins.id || `card_${i + 1}`;
         const voted = localStorage.getItem(`fl_fb_${hotelId}_${briefing.report_date}_${cardId}`);

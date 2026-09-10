@@ -67,6 +67,8 @@ export interface Insight {
   at_stake?: { value: string };
   evidence?: { label: string; value: string; sub?: string }[];
   kpis?: { label: string; value: string; sub?: string; direction?: string }[];
+  /* follow-up engine: present from day 2 on a card whose month is being watched */
+  follow_up?: { flagged: string; day: number; first_gap?: number | null; last_gap?: number | null };
 }
 
 /* Signal-query rows (fail-open on the backend — always optional here) */
@@ -94,6 +96,7 @@ export interface Briefing {
   report_date: string;
   generated_at: string;   // ISO
   data: BriefingData;
-  ai_insights: { executive_summary?: string; insights?: Insight[] };
+  ai_insights: { executive_summary?: string; insights?: Insight[];
+    watch_closures?: { key: string; kind: 'resolve' | 'retire'; title: string; text: string }[] };
   kpi_summary?: unknown;
 }
