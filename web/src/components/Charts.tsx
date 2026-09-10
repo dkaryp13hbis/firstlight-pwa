@@ -95,17 +95,18 @@ function roundTopBar(x: number, yTop: number, w: number, h: number, bot: number)
          `L${(x + w - r).toFixed(1)},${yTop} Q${x + w},${yTop} ${x + w},${(yTop + r).toFixed(1)} L${x + w},${bot} Z`;
 }
 
-export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: {
+export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, mx: mxIn }: {
   months: PaceMonth[]; field: 'rev' | 'adr'; fieldStly: 'rev_stly' | 'adr_stly';
   fieldFinal: 'rev_final' | 'adr_final_ly'; fmt: (v: number) => string;
   fmtFull: (v: number) => string;
+  mx?: number;   // shared y-scale when a year is drawn as two stacked halves (portfolio)
 }) {
   const n = months.length, step = (W - 82) / n, bw = n > 6 ? 13 : 15;
-  /* 12-month (year-round / portfolio) charts: the 54px variance pills would
-     overlap at a 40px step — scale pills and month labels down to fit */
+  /* 12-month (year-round) charts: the 54px variance pills would overlap at a
+     40px step — scale pills and month labels down to fit */
   const pz = TXS * (n > 8 ? 0.74 : 1), mz = TXS * (n > 8 ? 0.85 : 1);
   const curM = new Date().getMonth() + 1;
-  const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.08;
+  const mx = mxIn ?? Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.08;
   const [tip, setTip] = useState<number | null>(null);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}

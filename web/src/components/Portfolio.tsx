@@ -298,6 +298,11 @@ function Pace({ D, f }: { D: PortfolioData; f: number }) {
   const fresh = D.hotels.filter(h => !h.stale);
   const list = sel === 'portfolio' ? fresh : D.hotels.filter(h => h.id === sel);
   const months = useMemo(() => toPace(list, k, f), [list, k, f]);
+  const halves = [months.slice(0, 6), months.slice(6)];
+  const mx = k === 'occ' ? undefined : k === 'rev'
+    ? Math.max(1, ...months.map(m => Math.max(m.rev, m.rev_stly, m.rev_final || 0))) * 1.08
+    : Math.max(1, ...months.map(m => Math.max(m.adr, m.adr_stly, m.adr_final_ly || 0))) * 1.08;
+  const fmtAxis = (v: number) => v >= 1e6 ? `€${(v / 1e6).toFixed(1)}M` : kilo(v);
   const icon = { rev: 'euro', occ: 'occ', adr: 'adr', revpar: 'bridge' }[k];
   const title = { rev: 'Revenue OTB', occ: 'Occupancy', adr: 'ADR', revpar: 'RevPAR' }[k];
   const legend: [string, string, boolean?][] = [[NAVY, 'OTB TY'], [GREY, 'STLY'], [GREEN, 'Final LY', true]];
@@ -343,11 +348,18 @@ function Pace({ D, f }: { D: PortfolioData; f: number }) {
           <span style={{ fontSize: 11, color: 'var(--n600)', fontWeight: 600, flex: 1, minWidth: 0 }}>Showing <b style={{ color: NAVY, fontWeight: 800 }}>{sel === 'portfolio' ? `Portfolio · ${fresh.length} hotels` : list[0]?.name}</b></span>
           <Seg options={[{ k: 'rev', l: 'Revenue' }, { k: 'occ', l: 'Occ' }, { k: 'adr', l: 'ADR' }, { k: 'revpar', l: 'RevPAR' }]} value={k} onChange={setK} />
         </div>
-        {k === 'occ'
-          ? <OccPace months={months} />
-          : k === 'rev'
-            ? <BarPace months={months} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} fmtFull={v => euro(v)} />
-            : <BarPace months={months} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} />}
+        {/* a full year as two stacked halves (Jan–Jun, Jul–Dec) on ONE shared
+            y-scale: each half gets the whole card width, so pills and month
+            labels stay full size and the chart is twice as tall */}
+        {halves.map((h, i) => (
+          <div key={i} style={{ marginTop: i ? 6 : 0, paddingTop: i ? 6 : 0, borderTop: i ? '1px solid #EDF0F6' : 'none' }}>
+            {k === 'occ'
+              ? <OccPace months={h} />
+              : k === 'rev'
+                ? <BarPace months={h} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={fmtAxis} fmtFull={v => euro(v)} mx={mx} />
+                : <BarPace months={h} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} mx={mx} />}
+          </div>
+        ))}
       </div>
       <div style={cardBox}>
         <style>{`@keyframes pwring{0%{background-position:0 0,0% 50%}50%{background-position:0 0,100% 50%}100%{background-position:0 0,0% 50%}}`}</style>
