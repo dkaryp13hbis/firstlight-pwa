@@ -113,6 +113,9 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, ta
   const curM = new Date().getMonth() + 1;
   const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.08;
   const [tip, setTip] = useState<number | null>(null);
+  /* new hotel/briefing = new months array — an open tooltip must not carry
+     over to another hotel's chart (same bug class as DemandHeat sel reset) */
+  useEffect(() => { setTip(null); }, [months]);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}
       onMouseLeave={() => setTip(null)}
