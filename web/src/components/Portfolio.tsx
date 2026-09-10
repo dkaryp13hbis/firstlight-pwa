@@ -41,15 +41,17 @@ export function Seg<T extends string>({ options, value, onChange }: {
       { transform: `translateX(${idx * 100}%) scale(1, 1)` },
     ], { duration: 420 + Math.abs(d) * 70, easing: 'cubic-bezier(.3, .9, .3, 1)' });
   }, [idx]);
+  /* grid with equal 1fr columns: every column is as wide as the widest label,
+     so the 1/n pill lines up and no label spills into its neighbour */
   return (
-    <div style={{ display: 'flex', position: 'relative', background: '#F1F3F8', borderRadius: 10, padding: 3, flex: 'none' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${options.length}, 1fr)`, position: 'relative', background: '#F1F3F8', borderRadius: 10, padding: 3, flex: 'none' }}>
       <span ref={pill} style={{
         position: 'absolute', top: 3, bottom: 3, left: 3, width: `calc((100% - 6px) / ${options.length})`,
         borderRadius: 8, background: NAVY, transform: `translateX(${idx * 100}%)`, pointerEvents: 'none',
       }} />
       {options.map(o => (
         <button key={o.k} onClick={() => onChange(o.k)} style={{
-          flex: 1, position: 'relative', zIndex: 1, border: 'none', background: 'none',
+          position: 'relative', zIndex: 1, border: 'none', background: 'none', textAlign: 'center',
           fontSize: 11.5, fontWeight: 700, padding: '6px 10px', whiteSpace: 'nowrap',
           color: o.k === value ? '#fff' : '#4D5A74', transition: 'color .2s',
         }}>{o.l}</button>
@@ -115,7 +117,7 @@ const Val = ({ children, dim }: { children: React.ReactNode; dim?: boolean }) =>
   <span style={{ display: 'block', fontSize: 12.5, fontWeight: dim ? 700 : 800, color: dim ? '#6E7A96' : MC.ink, whiteSpace: 'nowrap' }}>{children}</span>
 );
 const cardBox: React.CSSProperties = { background: '#fff', border: '1px solid #e2e7f0', borderRadius: 20, padding: 16, marginBottom: 22 };
-const cardTop: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 };
+const cardTop: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' };
 const cardTitle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: 'var(--text)', flex: 1, minWidth: 0 };
 const headSpan = (left?: boolean, on?: boolean): React.CSSProperties => ({
   textAlign: left ? 'left' : 'center', fontSize: 10, fontWeight: 800, letterSpacing: '.06em', padding: left ? '0 8px' : '0 4px',
@@ -310,8 +312,13 @@ function Pace({ D, f }: { D: PortfolioData; f: number }) {
     const stickyH = document.getElementById('fl-sticky')?.offsetHeight ?? 46;
     if (el.getBoundingClientRect().top < stickyH) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - stickyH - 70, behavior: 'smooth' });
   };
+  /* selected row = the app's gradient ring (same as the pickup boxes); every
+     row carries a transparent 1.8px border so the selection never shifts layout */
   const yrRow = (id: string, name: React.ReactNode, r: K & { fin: number | null }, i: number, last: boolean, dim?: boolean) => (
-    <div key={id} onClick={() => pickRow(id)} style={rowStyle(cols, i, last, { cursor: 'pointer', ...(sel === id ? { boxShadow: 'inset 0 0 0 2px #2E7CF7', background: '#F1F6FF' } : {}), ...(dim ? { opacity: .5 } : {}) })}>
+    <div key={id} onClick={() => pickRow(id)} style={rowStyle(cols, i, last, {
+      cursor: 'pointer', borderTop: 'none', border: '1.8px solid transparent', borderRadius: i === 0 ? '12px 12px 0 0' : last ? '0 0 12px 12px' : 0,
+      ...(sel === id ? { ...ringStyle, borderRadius: 12 } : {}), ...(dim ? { opacity: .5 } : {}),
+    })}>
       {name}
       <Cell><Val>{fmtK(k, r.ty, true)}</Val><Pill v={vOf(r)} /></Cell>
       <Cell><Val dim>{fmtK(k, r.fin, true)}</Val><Pill v={r.fin ? varPct(r.ty ?? 0, r.fin) : null} /></Cell>
@@ -332,7 +339,7 @@ function Pace({ D, f }: { D: PortfolioData; f: number }) {
             ))}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, color: 'var(--n600)', fontWeight: 600, flex: 1, minWidth: 0 }}>Showing <b style={{ color: NAVY, fontWeight: 800 }}>{sel === 'portfolio' ? `Portfolio · ${fresh.length} hotels` : list[0]?.name}</b></span>
           <Seg options={[{ k: 'rev', l: 'Revenue' }, { k: 'occ', l: 'Occ' }, { k: 'adr', l: 'ADR' }, { k: 'revpar', l: 'RevPAR' }]} value={k} onChange={setK} />
         </div>
@@ -343,6 +350,7 @@ function Pace({ D, f }: { D: PortfolioData; f: number }) {
             : <BarPace months={months} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} />}
       </div>
       <div style={cardBox}>
+        <style>{`@keyframes pwring{0%{background-position:0 0,0% 50%}50%{background-position:0 0,100% 50%}100%{background-position:0 0,0% 50%}}`}</style>
         <div style={cardTop}><span style={cardTitle}>Full year by hotel <LabelSub>· tap a row to chart it</LabelSub></span></div>
         <div style={{ display: 'grid', gridTemplateColumns: cols, padding: '0 0 6px' }}>
           <span style={headSpan(true)}>HOTEL</span><span style={headSpan()}>{KPI_LABEL[k].toUpperCase()} 2026 · VS STLY</span><span style={headSpan()}>FINAL LY · VS FINAL</span>

@@ -101,6 +101,9 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: 
   fmtFull: (v: number) => string;
 }) {
   const n = months.length, step = (W - 82) / n, bw = n > 6 ? 13 : 15;
+  /* 12-month (year-round / portfolio) charts: the 54px variance pills would
+     overlap at a 40px step — scale pills and month labels down to fit */
+  const pz = TXS * (n > 8 ? 0.74 : 1), mz = TXS * (n > 8 ? 0.85 : 1);
   const curM = new Date().getMonth() + 1;
   const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.08;
   const [tip, setTip] = useState<number | null>(null);
@@ -132,10 +135,10 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: 
                 x2={x + bw + 7} y2={BOT - (m[fieldFinal] as number) / mx * CH}
                 stroke={GREEN} strokeWidth={2.5} strokeDasharray="4,3" />
             )}
-            <text x={x} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15 * TXS, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
-            <rect x={x - 27 * TXS} y={BOT + 22} width={54 * TXS} height={22 * TXS} rx={5}
+            <text x={x} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15 * mz, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
+            <rect x={x - 27 * pz} y={BOT + 22} width={54 * pz} height={22 * pz} rx={5}
               fill={vs >= 0 ? 'rgba(26,122,80,0.10)' : 'rgba(184,58,27,0.10)'} />
-            <text x={x} y={BOT + 22 + 16 * TXS} textAnchor="middle" style={{ fontSize: 14.5 * TXS, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
+            <text x={x} y={BOT + 22 + 16 * pz} textAnchor="middle" style={{ fontSize: 14.5 * pz, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
               {vs >= 0 ? '+' : ''}{Math.round(vs)}%
             </text>
           </g>
@@ -190,6 +193,7 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: 
 
 export function OccPace({ months }: { months: PaceMonth[] }) {
   const n = months.length, step = (W - 82) / n;
+  const pz = TXS * (n > 8 ? 0.74 : 1), mz = TXS * (n > 8 ? 0.85 : 1);   // see BarPace
   const curM = new Date().getMonth() + 1;
   const x = (i: number) => 62 + i * step + step / 2;
   const y = (v: number) => BOT - Math.min(v, 1.05) * CH;
@@ -223,14 +227,14 @@ export function OccPace({ months }: { months: PaceMonth[] }) {
         return (
           <g key={m.month}>
             <circle cx={x(i)} cy={y(m.occ)} r={3.5} fill={NAVY} />
-            <rect x={x(i) - 22 * TXS} y={y(m.occ) - 28 * TXS} width={44 * TXS} height={19 * TXS} rx={4} fill="white" opacity={0.92} />
-            <text x={x(i)} y={y(m.occ) - 14 * TXS} textAnchor="middle" style={{ fontSize: 13.5 * TXS, fontWeight: 800, fill: beat ? GREEN : '#1A2540' }}>
+            <rect x={x(i) - 22 * pz} y={y(m.occ) - 28 * pz} width={44 * pz} height={19 * pz} rx={4} fill="white" opacity={0.92} />
+            <text x={x(i)} y={y(m.occ) - 14 * pz} textAnchor="middle" style={{ fontSize: 13.5 * pz, fontWeight: 800, fill: beat ? GREEN : '#1A2540' }}>
               {Math.round(m.occ * 100)}%
             </text>
-            <text x={x(i)} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15 * TXS, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
-            <rect x={x(i) - 27 * TXS} y={BOT + 22} width={54 * TXS} height={22 * TXS} rx={5}
+            <text x={x(i)} y={BOT + 15} textAnchor="middle" style={{ fontSize: 15 * mz, fontWeight: 700, fill: '#4D5A74' }}>{m.month}</text>
+            <rect x={x(i) - 27 * pz} y={BOT + 22} width={54 * pz} height={22 * pz} rx={5}
               fill={vs >= 0 ? 'rgba(26,122,80,0.10)' : 'rgba(184,58,27,0.10)'} />
-            <text x={x(i)} y={BOT + 22 + 16 * TXS} textAnchor="middle" style={{ fontSize: 14.5 * TXS, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
+            <text x={x(i)} y={BOT + 22 + 16 * pz} textAnchor="middle" style={{ fontSize: 14.5 * pz, fontWeight: 800, fill: vs >= 0 ? GREEN : RED }}>
               {vs >= 0 ? '+' : ''}{Math.round(vs)}%
             </text>
           </g>
