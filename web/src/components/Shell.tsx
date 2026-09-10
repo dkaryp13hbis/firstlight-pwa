@@ -91,8 +91,10 @@ export function Shell(props: {
   bellOn: boolean;
   onBell: () => void;
   onSettings: () => void;
+  tabs?: readonly Tab[];        // portfolio view: Overview · Pickup · Pace · Calendar (no FL Pulse)
   children: ReactNode;
 }) {
+  const tabs = props.tabs ?? TABS;
   const [pickOpen, setPickOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
@@ -109,7 +111,7 @@ export function Shell(props: {
      target; stretch + duration scale with travel distance (WAAPI — a CSS
      left-transition can only slide, it cannot flex) */
   const lensRef = useRef<HTMLSpanElement>(null);
-  const lensIdx = Math.max(TABS.indexOf(props.tab), 0);
+  const lensIdx = Math.max(tabs.indexOf(props.tab), 0);
   const prevIdx = useRef(lensIdx);
   useEffect(() => {
     const el = lensRef.current;
@@ -243,8 +245,8 @@ export function Shell(props: {
       }}>
         <div style={{ position: 'relative', display: 'flex', flex: 1 }}>
         {/* liquid-glass lens: rests via transform, morphs via WAAPI above */}
-        <span ref={lensRef} className="fl-lens" style={{ transform: `translateX(${lensIdx * 100}%)` }} />
-        {TABS.map(t => {
+        <span ref={lensRef} className="fl-lens" style={{ transform: `translateX(${lensIdx * 100}%)`, width: `${100 / tabs.length}%` }} />
+        {tabs.map(t => {
           const on = props.tab === t;
           return (
             <button key={t}

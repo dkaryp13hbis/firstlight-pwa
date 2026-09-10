@@ -95,7 +95,7 @@ function roundTopBar(x: number, yTop: number, w: number, h: number, bot: number)
          `L${(x + w - r).toFixed(1)},${yTop} Q${x + w},${yTop} ${x + w},${(yTop + r).toFixed(1)} L${x + w},${bot} Z`;
 }
 
-function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: {
+export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: {
   months: PaceMonth[]; field: 'rev' | 'adr'; fieldStly: 'rev_stly' | 'adr_stly';
   fieldFinal: 'rev_final' | 'adr_final_ly'; fmt: (v: number) => string;
   fmtFull: (v: number) => string;
@@ -188,7 +188,7 @@ function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull }: {
   );
 }
 
-function OccPace({ months }: { months: PaceMonth[] }) {
+export function OccPace({ months }: { months: PaceMonth[] }) {
   const n = months.length, step = (W - 82) / n;
   const curM = new Date().getMonth() + 1;
   const x = (i: number) => 62 + i * step + step / 2;

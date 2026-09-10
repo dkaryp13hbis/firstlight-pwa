@@ -12,11 +12,18 @@ import { OtbTab, buildNextPace, setChartTextScale } from './components/Charts';
 import { AiTab, type FeedbackRequest } from './components/AiCards';
 import { DataHealthSheet, FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
 import { Login } from './components/Login';
+import { PortfolioView } from './components/Portfolio';
+import { PORTFOLIO_PREVIEW_EMAILS } from './fixtures/portfolio';
 import { registerSW, isSubscribed, subscribe, unsubscribe, getPrefs, setPrefs, DEFAULT_PREFS, type PushPrefs } from './lib/push';
 import { initTracking, setTrackedHotel, track } from './lib/track';
 import { setShareMeta } from './lib/shareImage';
 
 const TS_ZOOM: Record<number, number> = { 1: 0.85, 2: 1, 3: 1.12, 4: 1.25, 5: 1.4 };
+
+/* Portfolio preview: one more entry in the hotel picker (admin emails only,
+   fictional data) — same chrome, four tabs, no FL Pulse. */
+const PORTFOLIO_ID = 'portfolio';
+const PORTFOLIO_TABS: readonly Tab[] = ['Overview', 'Pickup', 'Pace', 'Calendar'];
 
 /* Local cache → instant paint on open (stale-while-revalidate). */
 function readCache<T>(key: string): T | null {
@@ -65,6 +72,8 @@ export default function App() {
   const [prevB, setPrevB] = useState<Briefing | null>(null);
   const [watchOpen, setWatchOpen] = useState(false);
   const [watchOn, setWatchOn] = useState(demoMode);
+  const [portfolioOn, setPortfolioOn] = useState(demoMode);
+  const isPortfolio = hotelId === PORTFOLIO_ID;
   const [hist, setHist] = useState<Briefing[] | null>(null);       // last 7 stored rows (watch trend), lazy
   const histFor = useRef<string>('');
 
@@ -96,14 +105,14 @@ export default function App() {
       if (!list.length) return;
       setHotels(list);
       writeCache('fl_hotels', list);
-      setHotelId(prev => (prev && list.some(h => h.id === prev)) ? prev
+      setHotelId(prev => (prev && (list.some(h => h.id === prev) || prev === PORTFOLIO_ID)) ? prev
         : (list.find(h => h.id === localStorage.getItem('fl_hotel'))?.id ?? list[0].id));
     })();
   }, [session]);
 
   /* briefing */
   const load = useCallback(() => {
-    if (!hotelId) return;
+    if (!hotelId || hotelId === PORTFOLIO_ID) return;
     const cached = readCache<Briefing>(`fl_briefing_${hotelId}`);
     if (cached) setBriefing(cached);
     fetchLatestBriefing(hotelId)
@@ -128,8 +137,13 @@ export default function App() {
     sb.auth.getSession().then(({ data }) => {
       const email = (data.session?.user.email ?? '').toLowerCase();
       setWatchOn(WATCHLIST_EMAILS === null || WATCHLIST_EMAILS.includes(email));
-    }).catch(() => setWatchOn(false));
+      setPortfolioOn(PORTFOLIO_PREVIEW_EMAILS.includes(email));
+    }).catch(() => { setWatchOn(false); setPortfolioOn(false); });
   }, [session]);
+  /* picker list: the admin preview entry sits after the real hotels */
+  const shellHotels = useMemo(
+    () => portfolioOn ? [...hotels, { id: PORTFOLIO_ID, name: 'Portfolio · preview' }] : hotels,
+    [hotels, portfolioOn]);
 
   /* branded share frame: hotel + report date */
   useEffect(() => {
@@ -157,8 +171,7 @@ export default function App() {
     setTab('Overview');          // §8: new hotel starts at the top, nav reset
     setViewDate(null);
     setWatch(null); setPrevB(null);
-    setTrackedHotel(id);
-    track('hotel_switch', {});
+    if (id !== PORTFOLIO_ID) { setTrackedHotel(id); track('hotel_switch', {}); }
     setHotelId(id);
     localStorage.setItem('fl_hotel', id);
     window.scrollTo(0, 0);
@@ -308,7 +321,7 @@ export default function App() {
 
   const netAvailable = (briefing?.data.mtd as unknown as { revenueNet?: number } | undefined)?.revenueNet != null;
   const changeRevMode = (m: 'gross' | 'net') => {
-    if (m === 'net' && !netAvailable) {
+    if (m === 'net' && !netAvailable && !isPortfolio) {
       say('Net figures arrive with the next data refresh'); return;
     }
     track('setting_change', { setting: 'revenue', value: m });
@@ -394,12 +407,12 @@ export default function App() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  useEffect(() => { if (session && hotelId) isSubscribed(hotelId).then(setBellOn); }, [session, hotelId]);
-  useEffect(() => { if (session && hotelId && bellOn) getPrefs(hotelId).then(setPushPrefs); else setPushPrefs(null); }, [session, hotelId, bellOn]);
+  useEffect(() => { if (session && hotelId && hotelId !== PORTFOLIO_ID) isSubscribed(hotelId).then(setBellOn); }, [session, hotelId]);
+  useEffect(() => { if (session && hotelId && hotelId !== PORTFOLIO_ID && bellOn) getPrefs(hotelId).then(setPushPrefs); else setPushPrefs(null); }, [session, hotelId, bellOn]);
 
   const trackedInit = useRef(false);
   useEffect(() => {
-    if (session && hotelId && !trackedInit.current) { trackedInit.current = true; void initTracking(hotelId); }
+    if (session && hotelId && hotelId !== PORTFOLIO_ID && !trackedInit.current) { trackedInit.current = true; void initTracking(hotelId); }
   }, [session, hotelId]);
 
   const changePushPref = async (k: 'morning' | 'alerts' | 'momentum', v: boolean) => {
@@ -444,9 +457,35 @@ export default function App() {
   };
 
   if (!session) return <Login />;
+  if (isPortfolio) return (
+    <>
+      <Shell
+        textZoom={TS_ZOOM[textSize] ?? 1}
+        hotels={shellHotels} hotelId={hotelId} onHotel={changeHotel}
+        tab={tab} onTab={nav} tabs={PORTFOLIO_TABS} aiCount={0}
+        refreshState="idle" onRefresh={() => say('Portfolio preview — fictional data, no live refresh')}
+        bellOn={false} onBell={() => say('Notifications stay per hotel')}
+        onSettings={() => setSettingsOpen(true)}
+      >
+        <div id="sec-overview" style={{ scrollMarginTop: 46 }} />
+        <PortfolioView revMode={revMode} onToast={say} />
+      </Shell>
+      <SettingsSheet
+        open={settingsOpen} onClose={() => setSettingsOpen(false)}
+        lang={lang} onLang={changeLang}
+        revMode={revMode} onRevMode={changeRevMode}
+        pushPrefs={null} onPushPref={changePushPref} bellOn={false}
+        year={year} onYear={setYear} comp={comp} onComp={setComp}
+        textSize={textSize} onTextSize={d => setTextSize(s => Math.min(5, Math.max(1, s + d)))}
+        onDataHealth={() => { setSettingsOpen(false); say('Preview — fictional data'); }}
+        onSignOut={signOut}
+      />
+      <Toast msg={toast} />
+    </>
+  );
   if (error) return <p style={{ padding: 32, textAlign: 'center' }}>Could not load briefing: {error}</p>;
   if (!briefing) return (
-    <Shell textZoom={TS_ZOOM[textSize] ?? 1} hotels={hotels} hotelId={hotelId} onHotel={changeHotel} tab={tab} onTab={setTab} aiCount={0}
+    <Shell textZoom={TS_ZOOM[textSize] ?? 1} hotels={shellHotels} hotelId={hotelId} onHotel={changeHotel} tab={tab} onTab={setTab} aiCount={0}
       refreshState="idle" onRefresh={() => undefined} bellOn={bellOn} onBell={() => undefined}
       onSettings={() => setSettingsOpen(true)}>
       <div>
@@ -483,7 +522,7 @@ export default function App() {
       <div style={{ transform: pull > 0 ? `translateY(${pull}px)` : undefined, transition: pull === 0 ? 'transform .2s' : 'none' }}>
       <Shell
         textZoom={TS_ZOOM[textSize] ?? 1}
-        hotels={hotels} hotelId={hotelId} onHotel={changeHotel}
+        hotels={shellHotels} hotelId={hotelId} onHotel={changeHotel}
         tab={tab} onTab={nav}
         aiCount={briefing.ai_insights?.insights?.length ?? 0}
         refreshState={refreshState} onRefresh={requestRefresh}

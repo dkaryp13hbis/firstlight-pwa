@@ -92,7 +92,7 @@ const KIcon = ({ children }: { children: React.ReactNode }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2e7cf7"
     strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
 );
-const KIcons = {
+export const KIcons = {
   rooms: <KIcon><path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6" /><path d="M3 18h18" /><path d="M7 10V7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3" /></KIcon>,
   occ: <KIcon><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5" /><circle cx="17" cy="9" r="2.4" /><path d="M16 14.7c2 .3 3.6 1.6 4.3 4.3" /></KIcon>,
   adr: <KIcon><path d="M17 7a6 6 0 1 0 0 10" /><path d="M5 10h9" /><path d="M5 14h9" /></KIcon>,
