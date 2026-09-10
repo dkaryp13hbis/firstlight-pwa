@@ -67,20 +67,23 @@ function ChartCard({ title, sub, icon, info, legend, inner, children }: {
 
 /* ── Pace bar charts: axis + gridlines, no per-bar labels ─────────────── */
 
-const W = 560, H = 268, BOT = 200, CH = 172;
+const W = 560, H0 = 268, BOT0 = 200, CH0 = 172;
+/* `tall` (portfolio, 12 months in one row): plot ~1.9× taller so the bars
+   carry the detail that the narrow month step cannot */
+const H1 = 428, BOT1 = 360, CH1 = 330;
 
 /* body zoom cannot reach inside width-constrained SVGs — the app sets this
    from the text-size setting and chart text multiplies by it */
 let TXS = 1;
 export function setChartTextScale(s: number) { TXS = s; }
 
-function Grid({ mx, fmt }: { mx: number; fmt: (v: number) => string }) {
+function Grid({ mx, fmt, bot = BOT0, ch = CH0 }: { mx: number; fmt: (v: number) => string; bot?: number; ch?: number }) {
   return (
     <>
       {[0, 1 / 3, 2 / 3, 1].map(f => (
         <g key={f}>
-          <line x1={62} y1={BOT - f * CH} x2={W - 10} y2={BOT - f * CH} stroke="#EBEEF4" strokeWidth={f === 0 ? 1.5 : 1} />
-          <text x={56} y={BOT - f * CH + 4} textAnchor="end" style={{ fontSize: 13 * TXS, fontWeight: 600, fill: '#79747E' }}>{fmt(f * mx)}</text>
+          <line x1={62} y1={bot - f * ch} x2={W - 10} y2={bot - f * ch} stroke="#EBEEF4" strokeWidth={f === 0 ? 1.5 : 1} />
+          <text x={56} y={bot - f * ch + 4} textAnchor="end" style={{ fontSize: 13 * TXS, fontWeight: 600, fill: '#79747E' }}>{fmt(f * mx)}</text>
         </g>
       ))}
     </>
@@ -95,24 +98,25 @@ function roundTopBar(x: number, yTop: number, w: number, h: number, bot: number)
          `L${(x + w - r).toFixed(1)},${yTop} Q${x + w},${yTop} ${x + w},${(yTop + r).toFixed(1)} L${x + w},${bot} Z`;
 }
 
-export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, mx: mxIn }: {
+export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, tall }: {
   months: PaceMonth[]; field: 'rev' | 'adr'; fieldStly: 'rev_stly' | 'adr_stly';
   fieldFinal: 'rev_final' | 'adr_final_ly'; fmt: (v: number) => string;
   fmtFull: (v: number) => string;
-  mx?: number;   // shared y-scale when a year is drawn as two stacked halves (portfolio)
+  tall?: boolean;   // portfolio: 12 months in one row, taller plot
 }) {
+  const H = tall ? H1 : H0, BOT = tall ? BOT1 : BOT0, CH = tall ? CH1 : CH0;
   const n = months.length, step = (W - 82) / n, bw = n > 6 ? 13 : 15;
-  /* 12-month (year-round) charts: the 54px variance pills would overlap at a
-     40px step — scale pills and month labels down to fit */
-  const pz = TXS * (n > 8 ? 0.74 : 1), mz = TXS * (n > 8 ? 0.85 : 1);
+  /* the 54px variance pills never exceed the month step (12 months → 40px):
+     pill and its text scale together; month labels shrink a little */
+  const pz = Math.min(54 * TXS, step - 3) / 54, mz = TXS * (n > 8 ? 0.85 : 1);
   const curM = new Date().getMonth() + 1;
-  const mx = mxIn ?? Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.08;
+  const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.08;
   const [tip, setTip] = useState<number | null>(null);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}
       onMouseLeave={() => setTip(null)}
       onPointerDown={e => { if (e.pointerType !== 'mouse' && e.target === e.currentTarget) setTip(null); }}>
-      <Grid mx={mx} fmt={fmt} />
+      <Grid mx={mx} fmt={fmt} bot={BOT} ch={CH} />
       {months.map((m, i) => {
         const x = 62 + i * step + step / 2;
         const vTy = (m[field] as number) / mx * CH;
@@ -192,9 +196,10 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, mx
   );
 }
 
-export function OccPace({ months }: { months: PaceMonth[] }) {
+export function OccPace({ months, tall }: { months: PaceMonth[]; tall?: boolean }) {
+  const H = tall ? H1 : H0, BOT = tall ? BOT1 : BOT0, CH = tall ? CH1 : CH0;
   const n = months.length, step = (W - 82) / n;
-  const pz = TXS * (n > 8 ? 0.74 : 1), mz = TXS * (n > 8 ? 0.85 : 1);   // see BarPace
+  const pz = Math.min(54 * TXS, step - 3) / 54, mz = TXS * (n > 8 ? 0.85 : 1);   // see BarPace
   const curM = new Date().getMonth() + 1;
   const x = (i: number) => 62 + i * step + step / 2;
   const y = (v: number) => BOT - Math.min(v, 1.05) * CH;
@@ -217,7 +222,7 @@ export function OccPace({ months }: { months: PaceMonth[] }) {
   const area = `${path(occPts)} L${occPts[occPts.length - 1][0]},${BOT} L${occPts[0][0]},${BOT} Z`;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
-      <Grid mx={1} fmt={v => `${Math.round(v * 100)}%`} />
+      <Grid mx={1} fmt={v => `${Math.round(v * 100)}%`} bot={BOT} ch={CH} />
       <path d={area} fill="rgba(15,40,96,.07)" />
       <path d={path(stlyPts)} fill="none" stroke={GREY} strokeWidth={2.5} />
       {finPts.length > 1 && <path d={path(finPts)} fill="none" stroke={GREEN} strokeWidth={2.2} strokeDasharray="5,3.5" strokeLinecap="round" />}
