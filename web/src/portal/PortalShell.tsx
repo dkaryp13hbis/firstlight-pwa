@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { sessionEmail } from '../api';
 import { ClientsView } from '../components/AdminPortal';
 import { HotelsView, HealthView, FeedbackView, AuditView, FinanceView } from './sections';
+import { CompaniesView, OnboardingView } from './company';
 import { Boundary } from './kit';
 
 const ADMIN_EMAILS = ['dk@bi-automations.com', 'd.karypidis@hbis.io'];
@@ -19,7 +20,7 @@ type Section =
 const SECTIONS: { name: Section; ready: boolean; soon: string }[] = [
   { name: 'Overview', ready: true, soon: '' },
   { name: 'Hotels', ready: true, soon: '' },
-  { name: 'Onboarding', ready: false, soon: 'New-hotel wizard, connector instructions, dry run — portal step 8' },
+  { name: 'Onboarding', ready: true, soon: '' },
   { name: 'Clients', ready: true, soon: '' },
   { name: 'Finance', ready: true, soon: '' },
   { name: 'Users', ready: false, soon: 'Create with temporary password, reset, lock, sessions, impersonation — arrives with the own-login system (C3)' },
@@ -136,8 +137,9 @@ export default function PortalShell() {
         <div style={{ fontSize: 21, fontWeight: 800, color: '#0F2860', letterSpacing: '-.02em', marginBottom: 14 }}>{sec}</div>
         <Boundary key={sec}>
           {sec === 'Overview' && <Overview />}
-          {sec === 'Clients' && <ClientsView />}
+          {sec === 'Clients' && <CompaniesView />}
           {sec === 'Finance' && <FinanceView />}
+          {sec === 'Onboarding' && <OnboardingView />}
           {sec === 'Hotels' && <HotelsView />}
           {sec === 'Health' && <HealthView />}
           {sec === 'Feedback' && <FeedbackView />}

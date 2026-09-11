@@ -217,6 +217,35 @@ export interface AdminFinance {
 }
 export const fetchAdminFinance = () => adminGet<AdminFinance>('/admin/finance');
 
+export interface AdminCompany {
+  id: string; name: string; legal_name: string | null; vat_number: string | null;
+  country: string; contact_name: string | null; contact_phone: string | null;
+  contract: { status: string | null; start_date: string | null;
+    monthly_eur: number | null; annual_eur: number | null;
+    billing_anchor: string | null; notes: string | null } | null;
+  hotels: AdminClient[];
+  users_n: number; events_30d: number; last_seen: string | null;
+}
+export const fetchAdminCompanies = () =>
+  adminGet<{ companies: AdminCompany[]; since: string }>('/admin/companies');
+
+export async function saveCompany(body: Record<string, unknown>): Promise<{ ok: boolean; error: string }> {
+  if (!sb) return { ok: false, error: 'no session' };
+  try {
+    const { data } = await sb.auth.getSession();
+    const tok = data.session?.access_token;
+    if (!tok) return { ok: false, error: 'no session' };
+    const r = await fetch(`${API}/admin/companies`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (r.ok) return { ok: true, error: '' };
+    const detail = (await r.json().catch(() => null)) as { detail?: string } | null;
+    return { ok: false, error: detail?.detail ?? `save failed (${r.status})` };
+  } catch { return { ok: false, error: 'network error' }; }
+}
+
 export async function saveSubscription(hotelId: string, sub: Record<string, unknown>): Promise<boolean> {
   if (!sb) return false;
   try {
