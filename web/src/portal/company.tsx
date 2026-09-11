@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react';
 import {
   fetchAdminCompanies, saveCompany, fetchAdminHotels,
-  type AdminCompany, type AdminHotel,
+  fetchAdminGroups, saveGroup,
+  type AdminCompany, type AdminHotel, type AdminGroup,
 } from '../api';
 import {
   panel, FilterBar, Search, Pick, Th, Tr, TableWrap, tdS, tdR,
@@ -36,17 +37,34 @@ export function CompanyForm({ initial, onSaved }: {
     annual_eur: c?.contract?.annual_eur != null ? String(c.contract.annual_eur) : '',
     notes: c?.contract?.notes ?? '',
   });
+  const [groupId, setGroupId] = useState<string>(c?.group_id ?? '');
+  const [groups, setGroups] = useState<AdminGroup[]>([]);
+  const [newGroup, setNewGroup] = useState('');
   const [hotels, setHotels] = useState<AdminHotel[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set(c?.hotels.map(h => h.hotel_id) ?? []));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  useEffect(() => { void fetchAdminHotels().then(r => setHotels(r?.hotels ?? [])); }, []);
+  useEffect(() => {
+    void fetchAdminHotels().then(r => setHotels(r?.hotels ?? []));
+    void fetchAdminGroups().then(r => setGroups(r?.groups ?? []));
+  }, []);
+  const createGroup = async () => {
+    const name = newGroup.trim();
+    if (!name) return;
+    const r = await saveGroup(name);
+    if (r) {
+      setGroups(g => [...g, { id: r.id, name, companies: 0 }]);
+      setGroupId(r.id);
+      setNewGroup('');
+    }
+  };
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF(v => ({ ...v, [k]: e.target.value }));
   const save = async () => {
     setBusy(true); setMsg(null);
     const r = await saveCompany({
-      id: c?.id, name: f.name, legal_name: f.legal_name, vat_number: f.vat_number,
+      id: c?.id, group_id: groupId || null,
+      name: f.name, legal_name: f.legal_name, vat_number: f.vat_number,
       country: f.country, contact_name: f.contact_name, contact_phone: f.contact_phone,
       hotel_ids: [...picked],
       contract: {
@@ -62,6 +80,22 @@ export function CompanyForm({ initial, onSaved }: {
   };
   return (
     <div style={{ padding: '14px 16px' }}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12, alignItems: 'flex-end' }}>
+        <F label="Group (owner umbrella, optional)" w={200}>
+          <select style={inp} value={groupId} onChange={e => setGroupId(e.target.value)}>
+            <option value="">— no group —</option>
+            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
+        </F>
+        <F label="… or create a group" w={200}>
+          <input style={inp} value={newGroup} onChange={e => setNewGroup(e.target.value)} placeholder="Myconian Collection" />
+        </F>
+        <button onClick={() => void createGroup()} disabled={!newGroup.trim()} style={{
+          border: '1px solid #CBDCFB', background: '#fff', color: '#1E5FD0', borderRadius: 9,
+          padding: '8px 14px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit',
+          cursor: 'pointer', opacity: newGroup.trim() ? 1 : 0.5,
+        }}>+ Group</button>
+      </div>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <F label="Company (trading name) *"><input style={inp} value={f.name} onChange={set('name')} placeholder="Pome Hotels" /></F>
         <F label="Legal name" w={220}><input style={inp} value={f.legal_name} onChange={set('legal_name')} placeholder="POME HOTELS A.E." /></F>
@@ -114,6 +148,7 @@ export function CompaniesView() {
   const [data, setData] = useState<{ companies: AdminCompany[]; since: string } | null>(null);
   const [q, setQ] = useState('');
   const [fStatus, setFStatus] = useState('');
+  const [fGroup, setFGroup] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
   const { sort, toggle } = useSort({ k: 'name', dir: 1 });
   const loadIt = () => void fetchAdminCompanies().then(setData);
@@ -129,8 +164,9 @@ export function CompaniesView() {
     start: cp.contract?.start_date ?? null,
   }));
   let list = rows.filter(r =>
-    (!q || `${r.name} ${r.vat_number ?? ''} ${r.contact_name ?? ''} ${r.hotels.map(h => h.name).join(' ')}`.toLowerCase().includes(q.toLowerCase()))
-    && (!fStatus || r.status === fStatus));
+    (!q || `${r.name} ${r.group_name ?? ''} ${r.vat_number ?? ''} ${r.contact_name ?? ''} ${r.hotels.map(h => h.name).join(' ')}`.toLowerCase().includes(q.toLowerCase()))
+    && (!fStatus || r.status === fStatus)
+    && (!fGroup || r.group_name === fGroup));
   list = sortRows(list as unknown as Record<string, unknown>[], sort) as unknown as Row[];
 
   return (
@@ -138,10 +174,12 @@ export function CompaniesView() {
       <FilterBar>
         <Search value={q} onChange={setQ} placeholder="Filter company / VAT / contact / hotel…" />
         <Pick value={fStatus} onChange={setFStatus} options={['trial', 'active', 'suspended', 'ended']} all="All statuses" />
+        <Pick value={fGroup} onChange={setFGroup} options={[...new Set(rows.map(r => r.group_name).filter((g): g is string => !!g))]} all="All groups" />
         <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: '#6E7A96' }}>{list.length} of {rows.length} · usage since {data.since}</span>
       </FilterBar>
       <TableWrap minWidth={1050}>
         <thead><tr>
+          <Th label="Group" k="group_name" sort={sort} onSort={toggle} />
           <Th label="Company" k="name" sort={sort} onSort={toggle} />
           <Th label="VAT" k="vat_number" sort={sort} onSort={toggle} />
           <Th label="Contact" k="contact_name" sort={sort} onSort={toggle} />
@@ -157,6 +195,7 @@ export function CompaniesView() {
         <tbody>
           {list.flatMap((cp, i) => [
             <Tr key={cp.id} i={i} clickable onClick={() => setOpenId(openId === cp.id ? null : cp.id)}>
+              <td style={{ ...tdS, color: '#5A6780', fontWeight: 700 }}>{cp.group_name ?? '—'}</td>
               <td style={{ ...tdS, fontWeight: 800, color: '#0F2860' }}>{openId === cp.id ? '▾ ' : '▸ '}{cp.name}</td>
               <td style={tdS}>{cp.vat_number ?? '—'}</td>
               <td style={tdS}>{cp.contact_name ?? '—'}{cp.contact_phone ? ` · ${cp.contact_phone}` : ''}</td>
@@ -170,7 +209,7 @@ export function CompaniesView() {
               <td style={tdR}>{cp.events_30d.toLocaleString()}</td>
             </Tr>,
             ...(openId === cp.id ? [
-              <tr key={cp.id + ':d'}><td colSpan={11} style={{ padding: 0, background: '#F4F7FB', borderTop: '1px solid #D5DCE9' }}>
+              <tr key={cp.id + ':d'}><td colSpan={12} style={{ padding: 0, background: '#F4F7FB', borderTop: '1px solid #D5DCE9' }}>
                 <TableWrap minWidth={620}>
                   <thead><tr><Th label="Hotel user" /><Th label="Last seen" /><Th label="Opens 30d" right /><Th label="Active days" right /><Th label="Events" right /></tr></thead>
                   <tbody>
@@ -203,8 +242,11 @@ export function OnboardingView() {
     <div>
       <div style={{ ...panel, padding: '14px 16px 4px' }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: '#0F2860' }}>New client</div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#6E7A96' }}>
-          Company, VAT, contact, contract rates, and the hotels it owns — everything Finance reports from.
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#6E7A96', lineHeight: 1.6 }}>
+          The hierarchy: <b>Group</b> (the owner umbrella, e.g. Myconian Collection — optional)
+          → <b>Company</b> (the legal entity with the VAT and the contract; a group can hold several)
+          → <b>Hotels</b> (assigned to their company). Create the group once, then one form
+          per company. Finance reports per company and can roll up per group.
         </div>
       </div>
       <div style={{ ...panel }}>

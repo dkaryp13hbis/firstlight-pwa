@@ -217,9 +217,28 @@ export interface AdminFinance {
 }
 export const fetchAdminFinance = () => adminGet<AdminFinance>('/admin/finance');
 
+export interface AdminGroup { id: string; name: string; companies: number }
+export const fetchAdminGroups = () => adminGet<{ groups: AdminGroup[] }>('/admin/groups');
+export async function saveGroup(name: string): Promise<{ id: string } | null> {
+  if (!sb) return null;
+  try {
+    const { data } = await sb.auth.getSession();
+    const tok = data.session?.access_token;
+    if (!tok) return null;
+    const r = await fetch(`${API}/admin/groups`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!r.ok) return null;
+    return await r.json() as { id: string };
+  } catch { return null; }
+}
+
 export interface AdminCompany {
   id: string; name: string; legal_name: string | null; vat_number: string | null;
   country: string; contact_name: string | null; contact_phone: string | null;
+  group_id: string | null; group_name: string | null;
   contract: { status: string | null; start_date: string | null;
     monthly_eur: number | null; annual_eur: number | null;
     billing_anchor: string | null; notes: string | null } | null;
