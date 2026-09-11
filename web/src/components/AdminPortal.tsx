@@ -20,11 +20,6 @@ const EVENT_LABEL: Record<string, string> = {
   voice_play: 'voice', data_health_open: 'data health', setting_change: 'settings',
 };
 
-const PLAN_COLOR: Record<string, [string, string]> = {
-  trial: ['#8A6D1F', '#FBF3DF'], monthly: ['#1E5FD0', '#EAF1FE'], annual: ['#1A7A50', '#E7F5EC'],
-};
-const STATUS_COLOR: Record<string, string> = { active: '#1A7A50', paused: '#B47D09', cancelled: '#B0433A' };
-
 const inp: React.CSSProperties = {
   border: '1.5px solid #E2E7F0', borderRadius: 9, padding: '7px 10px',
   fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#1B2A4A',
