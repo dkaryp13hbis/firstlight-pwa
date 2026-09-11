@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { sessionEmail } from '../api';
 import { ClientsView } from '../components/AdminPortal';
+import { HotelsView, HealthView, FeedbackView, AuditView } from './sections';
 
 const ADMIN_EMAILS = ['dk@bi-automations.com', 'd.karypidis@hbis.io'];
 
@@ -16,15 +17,15 @@ type Section =
 
 const SECTIONS: { name: Section; ready: boolean; soon: string }[] = [
   { name: 'Overview', ready: true, soon: '' },
-  { name: 'Hotels', ready: false, soon: 'PMS status, tunnel, run history, timeline, token rotate — portal step 4' },
+  { name: 'Hotels', ready: true, soon: '' },
   { name: 'Onboarding', ready: false, soon: 'New-hotel wizard, connector instructions, dry run — portal step 8' },
   { name: 'Clients', ready: true, soon: '' },
   { name: 'Users', ready: false, soon: 'Create with temporary password, reset, lock, sessions, impersonation — arrives with the own-login system (C3)' },
-  { name: 'Health', ready: false, soon: 'Pipeline matrix 7d, AI validator/fallback rates, infra — portal step 6' },
-  { name: 'Feedback', ready: false, soon: 'All 👍/👎 with card text, grouped and exportable — portal step 10' },
+  { name: 'Health', ready: true, soon: '' },
+  { name: 'Feedback', ready: true, soon: '' },
   { name: 'Notifications', ready: false, soon: 'Per-hotel schedules, delivery stats, test push — portal step 11' },
   { name: 'Kill switches', ready: false, soon: 'AI narration / push / logins / pipeline, each with reason + audit — portal step 7' },
-  { name: 'Audit log', ready: false, soon: 'Every admin action, append-only, searchable — first thing built after C3' },
+  { name: 'Audit log', ready: true, soon: '' },
   { name: 'Security', ready: false, soon: 'Active sessions with revoke, failed logins by user/IP — portal step 12' },
 ];
 
@@ -133,6 +134,10 @@ export default function PortalShell() {
         <div style={{ fontSize: 21, fontWeight: 800, color: '#0F2860', letterSpacing: '-.02em', marginBottom: 14 }}>{sec}</div>
         {sec === 'Overview' && <Overview />}
         {sec === 'Clients' && <ClientsView />}
+        {sec === 'Hotels' && <HotelsView />}
+        {sec === 'Health' && <HealthView />}
+        {sec === 'Feedback' && <FeedbackView />}
+        {sec === 'Audit log' && <AuditView />}
         {!active.ready && (
           <div style={{ background: '#fff', borderRadius: 16, padding: '22px 22px', maxWidth: 560, boxShadow: '0 1px 3px rgba(10,20,45,.07)' }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: '#0F2860', marginBottom: 6 }}>Being built</div>

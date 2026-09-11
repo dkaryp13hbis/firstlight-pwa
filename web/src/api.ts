@@ -150,6 +150,60 @@ async function adminGet<T>(path: string): Promise<T | null> {
 
 export const fetchAdminClients = () => adminGet<AdminClients>('/admin/clients');
 
+async function adminPost<T>(path: string, body?: unknown): Promise<T | null> {
+  if (!sb) return null;
+  try {
+    const { data } = await sb.auth.getSession();
+    const tok = data.session?.access_token;
+    if (!tok) return null;
+    const r = await fetch(`${API}${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!r.ok) return null;
+    return await r.json() as T;
+  } catch { return null; }
+}
+
+/* portal sections (ADMIN_PLAN §2/§6/§7/§10) */
+export interface AdminHotel {
+  id: string; name: string; active: boolean; total_rooms: number | null;
+  pms_type: string; fetch_mode: string | null; tunnel_hostname: string | null;
+  credentials_present: boolean; token_present: boolean; last_briefing: string | null;
+  runs_30d: number; ok_30d: number; degraded_30d: number; failed_30d: number;
+  cost_30d_usd: number; last_run_at: string | null; last_status: string | null;
+}
+export interface AdminRun {
+  started_at: string; completed_at: string | null; run_type: string; status: string;
+  error_type: string | null; attempt: number | null; rows_fetched: number | null;
+  estimated_cost_usd: number | null; fetch_path: string | null; fallbacks: number;
+}
+export interface AdminHealth {
+  verdict: string[] | { error: string };
+  matrix: { day: string; run_type: string; status: string; n: number }[];
+  ai: { card_id: string; n: number; fallbacks: number }[];
+  infra: { db_size_mb: number | null; storage_mode: string; build: string };
+}
+export interface AdminFeedbackRow {
+  hotel: string; hotel_id: string; report_date: string; card_id: string;
+  verdict: number; note: string | null; created_at: string;
+}
+export interface AdminAuditRow {
+  id: number; at: string; admin_email: string; action: string;
+  target_type: string | null; target_id: string | null; reason: string | null;
+}
+
+export const fetchAdminHotels = () => adminGet<{ hotels: AdminHotel[] }>('/admin/hotels');
+export const fetchAdminHotelRuns = (id: string) => adminGet<{ runs: AdminRun[] }>(`/admin/hotels/${id}/runs`);
+export const adminHotelRefresh = (id: string) => adminPost<{ queued: boolean }>(`/admin/hotels/${id}/refresh`);
+export const adminHotelToken = (id: string) => adminPost<{ api_token: string }>(`/admin/hotels/${id}/token/rotate`);
+export const adminHotelActive = (id: string, active: boolean, reason: string) =>
+  adminPost<{ active: boolean }>(`/admin/hotels/${id}/active`, { active, reason });
+export const fetchAdminHealth = () => adminGet<AdminHealth>('/admin/health');
+export const fetchAdminFeedback = () => adminGet<{ rows: AdminFeedbackRow[] }>('/admin/feedback');
+export const fetchAdminAudit = () => adminGet<{ rows: AdminAuditRow[] }>('/admin/audit');
+
 export async function saveSubscription(hotelId: string, sub: Record<string, unknown>): Promise<boolean> {
   if (!sb) return false;
   try {
