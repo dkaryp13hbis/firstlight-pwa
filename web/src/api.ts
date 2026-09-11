@@ -205,6 +205,18 @@ export const fetchAdminHealth = () => adminGet<AdminHealth>('/admin/health');
 export const fetchAdminFeedback = () => adminGet<{ rows: AdminFeedbackRow[] }>('/admin/feedback');
 export const fetchAdminAudit = () => adminGet<{ rows: AdminAuditRow[] }>('/admin/audit');
 
+export interface AdminFinance {
+  daily: { day: string; cost_usd: number; input_tokens: number; output_tokens: number; rows: number }[];
+  cost: { this_month_usd: number; last_30d_usd: number };
+  revenue: {
+    mrr_eur: number; arr_eur: number; active_clients: number;
+    by_plan: Record<string, { clients: number; mrr: number }>;
+    lines: { hotel_id: string; name: string; plan: string | null; status: string | null;
+      price_eur: number | null; started_on: string | null; renews_on: string | null }[];
+  };
+}
+export const fetchAdminFinance = () => adminGet<AdminFinance>('/admin/finance');
+
 export async function saveSubscription(hotelId: string, sub: Record<string, unknown>): Promise<boolean> {
   if (!sb) return false;
   try {

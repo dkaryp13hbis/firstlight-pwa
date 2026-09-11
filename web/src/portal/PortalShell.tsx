@@ -7,13 +7,13 @@
 import { useEffect, useState } from 'react';
 import { sessionEmail } from '../api';
 import { ClientsView } from '../components/AdminPortal';
-import { HotelsView, HealthView, FeedbackView, AuditView } from './sections';
+import { HotelsView, HealthView, FeedbackView, AuditView, FinanceView } from './sections';
 import { Boundary } from './kit';
 
 const ADMIN_EMAILS = ['dk@bi-automations.com', 'd.karypidis@hbis.io'];
 
 type Section =
-  | 'Overview' | 'Hotels' | 'Onboarding' | 'Clients' | 'Users' | 'Health'
+  | 'Overview' | 'Hotels' | 'Onboarding' | 'Clients' | 'Finance' | 'Users' | 'Health'
   | 'Feedback' | 'Notifications' | 'Kill switches' | 'Audit log' | 'Security';
 
 const SECTIONS: { name: Section; ready: boolean; soon: string }[] = [
@@ -21,6 +21,7 @@ const SECTIONS: { name: Section; ready: boolean; soon: string }[] = [
   { name: 'Hotels', ready: true, soon: '' },
   { name: 'Onboarding', ready: false, soon: 'New-hotel wizard, connector instructions, dry run — portal step 8' },
   { name: 'Clients', ready: true, soon: '' },
+  { name: 'Finance', ready: true, soon: '' },
   { name: 'Users', ready: false, soon: 'Create with temporary password, reset, lock, sessions, impersonation — arrives with the own-login system (C3)' },
   { name: 'Health', ready: true, soon: '' },
   { name: 'Feedback', ready: true, soon: '' },
@@ -136,6 +137,7 @@ export default function PortalShell() {
         <Boundary key={sec}>
           {sec === 'Overview' && <Overview />}
           {sec === 'Clients' && <ClientsView />}
+          {sec === 'Finance' && <FinanceView />}
           {sec === 'Hotels' && <HotelsView />}
           {sec === 'Health' && <HealthView />}
           {sec === 'Feedback' && <FeedbackView />}

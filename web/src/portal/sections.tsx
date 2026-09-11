@@ -304,3 +304,123 @@ export function AuditView() {
     </div>
   );
 }
+
+
+/* ── Finance: daily AI cost + data volume, revenue by plan (2026-09-11) ── */
+import { fetchAdminFinance, type AdminFinance } from '../api';
+
+function Bars({ data, fmt, color, title }: {
+  data: { day: string; v: number }[]; fmt: (v: number) => string;
+  color: string; title: string;
+}) {
+  const W = 900, H = 190, BOT = 150, L = 56;
+  const mx = Math.max(1e-9, ...data.map(d => d.v)) * 1.15;
+  const step = (W - L - 10) / Math.max(data.length, 1);
+  const bw = Math.min(22, step * 0.6);
+  return (
+    <div style={{ padding: '12px 14px' }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: '#0F2860', marginBottom: 4 }}>{title}</div>
+      <div style={{ overflowX: 'auto' }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 620, height: 'auto' }}>
+          {[0, 0.5, 1].map(f => (
+            <g key={f}>
+              <line x1={L} y1={BOT - f * (BOT - 18)} x2={W - 8} y2={BOT - f * (BOT - 18)} stroke="#EBEEF4" strokeWidth={f === 0 ? 1.5 : 1} />
+              <text x={L - 6} y={BOT - f * (BOT - 18) + 4} textAnchor="end" style={{ fontSize: 10.5, fontWeight: 600, fill: '#79747E' }}>{fmt(f * mx)}</text>
+            </g>
+          ))}
+          {data.map((d, i) => {
+            const h = (d.v / mx) * (BOT - 18);
+            const x = L + i * step + (step - bw) / 2;
+            return (
+              <g key={d.day}>
+                <rect x={x} y={BOT - h} width={bw} height={Math.max(h, d.v > 0 ? 2 : 0)} rx={3} fill={color}>
+                  <title>{`${d.day} - ${fmt(d.v)}`}</title>
+                </rect>
+                {(i % Math.ceil(data.length / 10) === 0) && (
+                  <text x={x + bw / 2} y={BOT + 16} textAnchor="middle" style={{ fontSize: 9.5, fontWeight: 700, fill: '#6E7A96' }}>{d.day.slice(5)}</text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+export function FinanceView() {
+  const [d, setD] = useState<AdminFinance | null>(null);
+  useEffect(() => { void fetchAdminFinance().then(setD); }, []);
+  if (!d) return <div style={{ fontSize: 13, fontWeight: 600, color: '#6E7A96' }}>Loading finance…</div>;
+  const cost = d.daily.map(x => ({ day: x.day, v: Number(x.cost_usd) || 0 }));
+  const rows = d.daily.map(x => ({ day: x.day, v: Number(x.rows) || 0 }));
+  const tokens30 = d.daily.reduce((s, x) => s + (x.input_tokens || 0) + (x.output_tokens || 0), 0);
+  const exportCsv = () => {
+    const head = 'client,plan,status,price_eur,started_on,renews_on';
+    const body = d.revenue.lines.map(l =>
+      [l.name, l.plan ?? '', l.status ?? '', l.price_eur ?? '', l.started_on ?? '', l.renews_on ?? '']
+        .map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([head + '\n' + body], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `firstlight-clients-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  return (
+    <div>
+      <div style={{ ...panel, padding: '12px 16px', display: 'flex', gap: 26, flexWrap: 'wrap', fontVariantNumeric: 'tabular-nums' }}>
+        {[
+          ['AI cost · this month', `$${d.cost.this_month_usd.toFixed(2)}`],
+          ['AI cost · last 30d', `$${d.cost.last_30d_usd.toFixed(2)}`],
+          ['Tokens · last 30d', tokens30.toLocaleString()],
+          ['Active clients', String(d.revenue.active_clients)],
+          ['Monthly revenue', `€${d.revenue.mrr_eur.toLocaleString()}`],
+          ['Annualised', `€${d.revenue.arr_eur.toLocaleString()}`],
+        ].map(([k, v]) => (
+          <span key={k}>
+            <span style={{ display: 'block', fontSize: 9.5, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase', color: '#6E7A96' }}>{k}</span>
+            <span style={{ fontSize: 18, fontWeight: 800, color: '#0F2860' }}>{v}</span>
+          </span>
+        ))}
+      </div>
+      <div style={panel}><Bars data={cost} color="#2E7CF7" title="Anthropic cost per day (USD)" fmt={v => `$${v.toFixed(2)}`} /></div>
+      <div style={panel}><Bars data={rows} color="#0F2860" title="Data processed per day (PMS rows fetched)" fmt={v => v >= 1000 ? `${Math.round(v / 1000)}K` : String(Math.round(v))} /></div>
+      <div style={panel}>
+        <FilterBar>
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#0F2860' }}>Revenue by plan</span>
+          <button onClick={exportCsv} style={{ marginLeft: 'auto', border: '1px solid #CBDCFB', background: '#fff', color: '#1E5FD0', borderRadius: 8, padding: '5px 12px', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Export CSV (invoicing)</button>
+        </FilterBar>
+        <TableWrap minWidth={420}>
+          <thead><tr><Th label="Plan" /><Th label="Active clients" right /><Th label="Monthly €" right /></tr></thead>
+          <tbody>
+            {Object.entries(d.revenue.by_plan).map(([plan, p], i) => (
+              <Tr key={plan} i={i}>
+                <td style={tdS}><StatusPill s={plan} /></td>
+                <td style={tdR}>{p.clients}</td>
+                <td style={tdR}>€{p.mrr.toLocaleString()}</td>
+              </Tr>
+            ))}
+            {Object.keys(d.revenue.by_plan).length === 0 && <tr><td style={tdS} colSpan={3}>No active subscriptions yet — set plans in Clients.</td></tr>}
+          </tbody>
+        </TableWrap>
+        <TableWrap minWidth={620}>
+          <thead><tr><Th label="Client" /><Th label="Plan" /><Th label="Status" /><Th label="€ / mo" right /><Th label="Started" /><Th label="Renews" /></tr></thead>
+          <tbody>
+            {d.revenue.lines.map((l, i) => (
+              <Tr key={l.hotel_id} i={i}>
+                <td style={{ ...tdS, fontWeight: 800, color: '#0F2860' }}>{l.name}</td>
+                <td style={tdS}>{l.plan ? <StatusPill s={l.plan} /> : '—'}</td>
+                <td style={tdS}>{l.status ? <StatusPill s={l.status} /> : '—'}</td>
+                <td style={tdR}>{l.price_eur != null ? `€${l.price_eur}` : '—'}</td>
+                <td style={tdS}>{l.started_on ?? '—'}</td>
+                <td style={tdS}>{l.renews_on ?? '—'}</td>
+              </Tr>
+            ))}
+            {d.revenue.lines.length === 0 && <tr><td style={tdS} colSpan={6}>Subscriptions table not pasted yet, or no clients recorded.</td></tr>}
+          </tbody>
+        </TableWrap>
+      </div>
+    </div>
+  );
+}
