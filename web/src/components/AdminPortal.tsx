@@ -79,23 +79,19 @@ function SubEditor({ c, onSaved }: { c: AdminClient; onSaved: () => void }) {
   );
 }
 
-export function AdminPortal({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** The clients content, embeddable (in-app overlay AND the superadmin
+ *  portal's Clients section render this same view). */
+export function ClientsView() {
   const [data, setData] = useState<AdminClients | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const loadIt = () => { setLoading(true); void fetchAdminClients().then(d => { setData(d); setLoading(false); }); };
-  useEffect(() => { if (open) loadIt(); }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
-  if (!open) return null;
+  useEffect(() => { loadIt(); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   const totalUsers = data ? new Set(data.hotels.flatMap(h => h.users.map(u => u.user_id))).size : 0;
   const mrr = data ? data.hotels.reduce((s, h) =>
     s + (h.subscription?.status === 'active' && h.subscription.price_eur
       ? (h.subscription.plan === 'annual' ? h.subscription.price_eur : h.subscription.price_eur) : 0), 0) : 0;
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: '#EAEDF1', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '18px 16px 60px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em', color: '#0F2860' }}>Clients</div>
-          <button onClick={onClose} style={{ border: 'none', background: '#fff', borderRadius: '50%', width: 34, height: 34, fontSize: 15, color: '#5A6780', boxShadow: '0 1px 3px rgba(10,20,45,.1)' }}>✕</button>
-        </div>
+    <div>
         <div style={{ fontSize: 12.5, fontWeight: 600, color: '#6E7A96', marginBottom: 14 }}>
           {data ? <>{data.hotels.length} hotels · {totalUsers} users{mrr > 0 && <> · €{Math.round(mrr).toLocaleString()}/mo active</>} · usage since {data.since}</>
             : 'Your whole book of business in one place.'}
@@ -150,6 +146,24 @@ export function AdminPortal({ open, onClose }: { open: boolean; onClose: () => v
             Coming with the own-login system: create client, temporary passwords, reset, sign out everywhere, view as client.
           </div>
         )}
+    </div>
+  );
+}
+
+/** In-app full-screen wrapper (Settings → Admin on the phone). */
+export function AdminPortal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: '#EAEDF1', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: '18px 16px 60px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em', color: '#0F2860' }}>Clients</div>
+          <span style={{ display: 'flex', gap: 8 }}>
+            <a href="/superadmin-control" style={{ display: 'inline-flex', alignItems: 'center', border: 'none', background: '#0F2860', color: '#fff', borderRadius: 999, padding: '7px 14px', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>Full portal ›</a>
+            <button onClick={onClose} style={{ border: 'none', background: '#fff', borderRadius: '50%', width: 34, height: 34, fontSize: 15, color: '#5A6780', boxShadow: '0 1px 3px rgba(10,20,45,.1)' }}>✕</button>
+          </span>
+        </div>
+        <ClientsView />
       </div>
     </div>
   );
