@@ -6,14 +6,6 @@
 import { useEffect, useState } from 'react';
 import { fetchAdminClients, saveSubscription, type AdminClient, type AdminClients } from '../api';
 
-function rel(iso: string | null): string {
-  if (!iso) return 'never';
-  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (m < 60) return `${m}m ago`;
-  if (m < 60 * 24) return `${Math.round(m / 60)}h ago`;
-  return `${Math.round(m / 1440)}d ago`;
-}
-
 const EVENT_LABEL: Record<string, string> = {
   app_open: 'opens', tab_nav: 'tabs', refresh_tap: 'refreshes', share_tap: 'shares',
   card_expand: 'cards', hero_expand: 'hero', watch_expand: 'watchlist', watch_tap: 'watch taps',
