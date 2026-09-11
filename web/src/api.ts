@@ -173,9 +173,9 @@ async function adminGet<T>(path: string): Promise<T | null> {
 /* C2 (2026-09-11): the app's data plane goes THROUGH the API (PG-first
    server-side); every caller keeps its old Supabase-direct path as an
    automatic fallback — that is the parallel-run safety net. */
-const jwtGet = adminGet;
+export const jwtGet = adminGet;
 
-async function jwtSend(method: string, path: string, body?: unknown):
+export async function jwtSend(method: string, path: string, body?: unknown):
   Promise<{ status: number; data: unknown } | null> {
   if (!sb) return null;
   try {

@@ -3,6 +3,7 @@
  *  break the app. GATED: only the demo account is tracked for now; widen by
  *  editing TRACKED_EMAILS (or set it to null to track everyone). */
 import { sb } from './sb';
+import { jwtSend } from '../api';
 
 const TRACKED_EMAILS: string[] | null = null;   // 2026-09-11: everyone (admin usage view)
 
@@ -17,7 +18,13 @@ async function flush() {
   if (!sb || !queue.length) return;
   const batch = queue;
   queue = [];
-  try { await sb.from('usage_events').insert(batch); } catch { /* never break the app */ }
+  try {
+    const jr = await jwtSend('POST', '/events', {
+      events: batch.map(b => ({ hotel_id: b.hotel_id, session_id: b.session_id, event: b.event, props: b.props })),
+    });
+    if (jr && jr.status < 300) return;
+    await sb.from('usage_events').insert(batch);
+  } catch { /* never break the app */ }
 }
 
 export async function initTracking(currentHotelId: string | undefined) {

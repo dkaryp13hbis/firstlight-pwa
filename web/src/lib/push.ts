@@ -3,6 +3,7 @@
  *  the backend sender (briefing/cloud_push.py). Bell state is derived from
  *  the browser subscription + server rows, never from a local flag. */
 import { sb } from './sb';
+import { jwtGet, jwtSend } from '../api';
 
 export const VAPID_PUBLIC_KEY =
   'BNhurScgTQdq7pGz55B3_0TVKYvNEstr2XVhZ9Q84Nake5-r-Ujas9QBlrlTPRR1sIWFLO_naItavzS_-0ZmgTM';
@@ -41,6 +42,8 @@ export async function isSubscribed(hotelId: string): Promise<boolean> {
     const sub = await reg.pushManager.getSubscription();
     if (!sub) return false;
     if (!sb) return true;
+    const j = await jwtGet<{ subscribed: boolean }>(`/push/status?hotel_id=${hotelId}`);
+    if (j) return j.subscribed;
     const { data } = await sb.from('push_subscriptions').select('id').eq('hotel_id', hotelId).limit(1);
     return !!(data && data.length);
   } catch { return false; }
@@ -60,7 +63,9 @@ export async function subscribe(hotelId: string, hotelName: string): Promise<{ o
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return { ok: false, msg: 'Not signed in — cannot save the subscription.' };
   const uid = session.user.id;
-  /* delete-then-insert for THIS hotel: works with or without the
+  const jr = await jwtSend('POST', '/push/subscribe', { hotel_id: hotelId, subscription: sub.toJSON() });
+  if (jr && jr.status < 300) return { ok: true, msg: `Notifications on — morning briefing for ${hotelName}` };
+  /* fallback: delete-then-insert for THIS hotel: works with or without the
      (user_id,hotel_id) unique index. */
   await sb.from('push_subscriptions').delete().eq('user_id', uid).eq('hotel_id', hotelId);
   const { error } = await sb.from('push_subscriptions')
@@ -78,7 +83,8 @@ export async function unsubscribe(hotelId: string, hotelName: string): Promise<s
   if (sb) {
     const { data: { session } } = await sb.auth.getSession();
     if (session) {
-      await sb.from('push_subscriptions').delete().eq('user_id', session.user.id).eq('hotel_id', hotelId);
+      const jr = await jwtSend('POST', '/push/unsubscribe', { hotel_id: hotelId });
+      if (!jr) await sb.from('push_subscriptions').delete().eq('user_id', session.user.id).eq('hotel_id', hotelId);
       const { data: left } = await sb.from('push_subscriptions').select('id').limit(1);
       if (left && left.length) return `Notifications off for ${hotelName}`;
     }
@@ -99,6 +105,8 @@ export const DEFAULT_PREFS: PushPrefs = { morning: true, alerts: true, momentum:
 export async function getPrefs(hotelId: string): Promise<PushPrefs | null> {
   if (!sb) return DEFAULT_PREFS;
   try {
+    const j = await jwtGet<{ subscribed: boolean; notification_prefs: Partial<PushPrefs> | null }>(`/push/status?hotel_id=${hotelId}`);
+    if (j) return j.subscribed ? { ...DEFAULT_PREFS, ...(j.notification_prefs ?? {}) } : null;
     const { data, error } = await sb.from('push_subscriptions')
       .select('notification_prefs').eq('hotel_id', hotelId).limit(1);
     if (error || !data?.length) return null;
@@ -111,6 +119,8 @@ export async function setPrefs(hotelId: string, prefs: PushPrefs): Promise<boole
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return false;
+    const jr = await jwtSend('PUT', '/push/prefs', { hotel_id: hotelId, notification_prefs: prefs });
+    if (jr) return jr.status < 300;
     const { error } = await sb.from('push_subscriptions')
       .update({ notification_prefs: prefs })
       .eq('user_id', session.user.id).eq('hotel_id', hotelId);

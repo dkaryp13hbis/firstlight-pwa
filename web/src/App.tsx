@@ -7,7 +7,7 @@ import { WATCHLIST_EMAILS, WATCH_CAP, itemTitle, monthKey, rangeKey, type WatchI
 import { Shell, type Tab } from './components/Shell';
 import { SmartSummary } from './components/SmartSummary';
 import { SinceYesterday } from './components/SinceYesterday';
-import { sessionEmail } from './api';
+import { sessionEmail, jwtSend } from './api';
 import { KpiRow, MtdStrip, OtbCards } from './components/Overview';
 import { PickupSection } from './components/Pickup';
 import { OtbTab, buildNextPace, setChartTextScale } from './components/Charts';
@@ -250,7 +250,10 @@ export default function App() {
     setLang(l);
     localStorage.setItem(`fl_lang_${hotelId}`, l);
     if (sb) {
-      await sb.from('hotel_prefs').upsert({ hotel_id: hotelId, language: l, updated_at: new Date().toISOString() });
+      const jr = await jwtSend('PUT', '/prefs', { hotel_id: hotelId, language: l });
+      if (!jr || jr.status >= 300) {
+        await sb.from('hotel_prefs').upsert({ hotel_id: hotelId, language: l, updated_at: new Date().toISOString() });
+      }
       say(l === 'el' ? 'Το αυριανό briefing στα Ελληνικά' : "Tomorrow's briefing in English");
     } else say('Demo mode');
   };
@@ -264,6 +267,14 @@ export default function App() {
         hotel_id: hotelId, report_date: briefing?.report_date, card_id: fb.cardId,
         verdict: fb.verdict, reason: note || null, card_content: fb.card ?? null,
       };
+      const jr = await jwtSend('POST', '/feedback', row);
+      if (jr && jr.status < 300) {
+        const changedNow = localStorage.getItem(key) && localStorage.getItem(key) !== String(fb.verdict);
+        localStorage.setItem(key, String(fb.verdict));
+        say(changedNow ? 'Feedback updated' : 'Thanks for the feedback');
+        setFb(null);
+        return;
+      }
       const conflict = { onConflict: 'hotel_id,report_date,card_id,user_id' };
       let { error: err } = await sb.from('insight_feedback').upsert(row, conflict);
       if (err) ({ error: err } = await sb.from('insight_feedback').upsert({ ...row, card_content: undefined }, conflict));
