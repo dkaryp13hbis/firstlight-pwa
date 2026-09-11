@@ -1,7 +1,7 @@
 /** Portal table kit — Excel-like dense tables: sortable headers, filter bar,
  *  zebra rows, sticky header, horizontal scroll. (User direction 2026-09-11:
  *  "no cards — tables with a filter on every tab".) */
-import { useMemo, useState } from 'react';
+import { Component, useMemo, useState, type ReactNode } from 'react';
 
 export const panel: React.CSSProperties = {
   background: '#fff', borderRadius: 12, padding: 0, marginBottom: 12,
@@ -137,4 +137,19 @@ export function useTextFilter<T>(rows: T[], q: string, keys: (r: T) => string): 
     if (!s) return rows;
     return rows.filter(r => keys(r).toLowerCase().includes(s));
   }, [rows, q, keys]);
+}
+
+
+/** A section crash must never blank the portal — show the error instead. */
+export class Boundary extends Component<{ children: ReactNode }, { err: string | null }> {
+  state = { err: null as string | null };
+  static getDerivedStateFromError(e: unknown) { return { err: String(e) }; }
+  render() {
+    if (this.state.err) return (
+      <div style={{ ...panel, padding: 16, fontSize: 13, fontWeight: 600, color: '#B0433A' }}>
+        This section hit an error: {this.state.err}. Switch tabs and back to retry.
+      </div>
+    );
+    return this.props.children;
+  }
 }

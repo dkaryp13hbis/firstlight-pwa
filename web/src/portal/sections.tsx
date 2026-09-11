@@ -125,8 +125,7 @@ export function HotelsView() {
           <Th label="Token" k="token_present" sort={sort} onSort={toggle} />
         </tr></thead>
         <tbody>
-          {rows.map((h, i) => (
-            <>
+          {rows.flatMap((h, i) => [
               <Tr key={h.id} i={i} clickable onClick={() => setOpenId(openId === h.id ? null : h.id)}>
                 <td style={{ ...tdS, fontWeight: 800, color: '#0F2860' }}>{openId === h.id ? '▾ ' : '▸ '}{h.name}</td>
                 <td style={tdS}><StatusPill s={h.active ? 'active' : 'paused'} /></td>
@@ -140,10 +139,9 @@ export function HotelsView() {
                 <td style={{ ...tdR, color: h.failed_30d ? '#B0433A' : '#9AA4B8' }}>{h.failed_30d}</td>
                 <td style={tdR}>${h.cost_30d_usd.toFixed(2)}</td>
                 <td style={tdS}>{h.token_present ? '✓' : '✗'}</td>
-              </Tr>
-              {openId === h.id && <tr><HotelDetail h={h} onChanged={loadIt} /></tr>}
-            </>
-          ))}
+              </Tr>,
+              ...(openId === h.id ? [<tr key={h.id + ':d'}><HotelDetail h={h} onChanged={loadIt} /></tr>] : []),
+          ])}
         </tbody>
       </TableWrap>
     </div>

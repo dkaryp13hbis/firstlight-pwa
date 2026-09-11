@@ -130,8 +130,7 @@ export function ClientsView() {
           <Th label="Events 30d" k="events_30d" sort={sort} onSort={toggle} right />
         </tr></thead>
         <tbody>
-          {list.map((h, i) => (
-            <>
+          {list.flatMap((h, i) => [
               <Tr key={h.hotel_id} i={i} clickable onClick={() => setOpenId(openId === h.hotel_id ? null : h.hotel_id)}>
                 <td style={{ ...tdS, fontWeight: 800, color: '#0F2860' }}>{openId === h.hotel_id ? '▾ ' : '▸ '}{h.name}</td>
                 <td style={tdS}>{h.plan ? <StatusPill s={h.plan} /> : '—'}</td>
@@ -141,9 +140,9 @@ export function ClientsView() {
                 <td style={tdR}>{h.users_n}</td>
                 <td style={{ ...tdS, color: h.last_seen && Date.now() - new Date(h.last_seen).getTime() < 3 * 86400000 ? '#1A7A50' : '#6E7A96' }}>{relK(h.last_seen)}</td>
                 <td style={tdR}>{h.events_30d.toLocaleString()}</td>
-              </Tr>
-              {openId === h.hotel_id && (
-                <tr><td colSpan={8} style={{ padding: '10px 14px', background: '#F4F7FB', borderTop: '1px solid #D5DCE9' }}>
+              </Tr>,
+              ...(openId === h.hotel_id ? [
+                <tr key={h.hotel_id + ':d'}><td colSpan={8} style={{ padding: '10px 14px', background: '#F4F7FB', borderTop: '1px solid #D5DCE9' }}>
                   <TableWrap minWidth={620}>
                     <thead><tr><Th label="User" /><Th label="Last seen" /><Th label="Opens 30d" right /><Th label="Active days" right /><Th label="Events" right /><Th label="Top actions" /></tr></thead>
                     <tbody>
@@ -162,9 +161,8 @@ export function ClientsView() {
                   </TableWrap>
                   {data.subs_ready && <SubEditor c={h} onSaved={loadIt} />}
                 </td></tr>
-              )}
-            </>
-          ))}
+              ] : []),
+          ])}
         </tbody>
       </TableWrap>
     </div>

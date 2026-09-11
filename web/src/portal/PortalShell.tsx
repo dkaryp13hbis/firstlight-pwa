@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { sessionEmail } from '../api';
 import { ClientsView } from '../components/AdminPortal';
 import { HotelsView, HealthView, FeedbackView, AuditView } from './sections';
+import { Boundary } from './kit';
 
 const ADMIN_EMAILS = ['dk@bi-automations.com', 'd.karypidis@hbis.io'];
 
@@ -130,14 +131,16 @@ export default function PortalShell() {
           color: 'rgba(255,255,255,.6)', textDecoration: 'none',
         }}>← Back to the app</a>
       </nav>
-      <main style={{ flex: 1, minWidth: 0, padding: '22px 26px 60px', maxWidth: 980 }}>
+      <main style={{ flex: 1, minWidth: 0, padding: '22px 26px 60px', maxWidth: 1560 }}>
         <div style={{ fontSize: 21, fontWeight: 800, color: '#0F2860', letterSpacing: '-.02em', marginBottom: 14 }}>{sec}</div>
-        {sec === 'Overview' && <Overview />}
-        {sec === 'Clients' && <ClientsView />}
-        {sec === 'Hotels' && <HotelsView />}
-        {sec === 'Health' && <HealthView />}
-        {sec === 'Feedback' && <FeedbackView />}
-        {sec === 'Audit log' && <AuditView />}
+        <Boundary key={sec}>
+          {sec === 'Overview' && <Overview />}
+          {sec === 'Clients' && <ClientsView />}
+          {sec === 'Hotels' && <HotelsView />}
+          {sec === 'Health' && <HealthView />}
+          {sec === 'Feedback' && <FeedbackView />}
+          {sec === 'Audit log' && <AuditView />}
+        </Boundary>
         {!active.ready && (
           <div style={{ background: '#fff', borderRadius: 16, padding: '22px 22px', maxWidth: 560, boxShadow: '0 1px 3px rgba(10,20,45,.07)' }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: '#0F2860', marginBottom: 6 }}>Being built</div>
