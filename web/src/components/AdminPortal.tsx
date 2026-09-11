@@ -79,73 +79,107 @@ function SubEditor({ c, onSaved }: { c: AdminClient; onSaved: () => void }) {
   );
 }
 
-/** The clients content, embeddable (in-app overlay AND the superadmin
- *  portal's Clients section render this same view). */
+/** The clients content, embeddable (portal Clients tab AND the in-app
+ *  overlay) — Excel-like table with filters (user direction 2026-09-11). */
+import {
+  panel, FilterBar, Search, Pick, Th, Tr, TableWrap, tdS, tdR,
+  StatusPill, rel as relK, useSort, sortRows,
+} from '../portal/kit';
+
 export function ClientsView() {
   const [data, setData] = useState<AdminClients | null>(null);
   const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState('');
+  const [fPlan, setFPlan] = useState('');
+  const [fStatus, setFStatus] = useState('');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const { sort, toggle } = useSort({ k: 'name', dir: 1 });
   const loadIt = () => { setLoading(true); void fetchAdminClients().then(d => { setData(d); setLoading(false); }); };
   useEffect(() => { loadIt(); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
-  const totalUsers = data ? new Set(data.hotels.flatMap(h => h.users.map(u => u.user_id))).size : 0;
-  const mrr = data ? data.hotels.reduce((s, h) =>
-    s + (h.subscription?.status === 'active' && h.subscription.price_eur
-      ? (h.subscription.plan === 'annual' ? h.subscription.price_eur : h.subscription.price_eur) : 0), 0) : 0;
+  if (loading) return <div style={{ fontSize: 13, fontWeight: 600, color: '#6E7A96' }}>Loading clients…</div>;
+  if (!data) return <div style={{ ...panel, padding: 16, fontSize: 13.5, fontWeight: 600, color: '#B0433A' }}>Could not reach the API — check the backend deploy.</div>;
+
+  type Row = AdminClient & { plan: string; sub_status: string; price: number | null; renews: string | null; users_n: number; last_seen: string | null };
+  const rows: Row[] = data.hotels.map(h => ({
+    ...h,
+    plan: h.subscription?.plan ?? '',
+    sub_status: h.subscription?.status ?? '',
+    price: h.subscription?.price_eur ?? null,
+    renews: h.subscription?.renews_on ?? null,
+    users_n: h.users.length,
+    last_seen: h.users.reduce<string | null>((m, u) => (u.last_seen && (!m || u.last_seen > m) ? u.last_seen : m), null),
+  }));
+  let list = rows.filter(r =>
+    (!q || r.name.toLowerCase().includes(q.toLowerCase()) || r.users.some(u => u.email.toLowerCase().includes(q.toLowerCase())))
+    && (!fPlan || r.plan === fPlan)
+    && (!fStatus || r.sub_status === fStatus));
+  list = sortRows(list as unknown as Record<string, unknown>[], sort) as unknown as Row[];
+  const mrr = rows.reduce((s2, h) => s2 + (h.sub_status === 'active' && h.price ? h.price : 0), 0);
+
   return (
-    <div>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: '#6E7A96', marginBottom: 14 }}>
-          {data ? <>{data.hotels.length} hotels · {totalUsers} users{mrr > 0 && <> · €{Math.round(mrr).toLocaleString()}/mo active</>} · usage since {data.since}</>
-            : 'Your whole book of business in one place.'}
+    <div style={panel}>
+      <FilterBar>
+        <Search value={q} onChange={setQ} placeholder="Filter client / user email…" />
+        <Pick value={fPlan} onChange={setFPlan} options={['trial', 'monthly', 'annual']} all="All plans" />
+        <Pick value={fStatus} onChange={setFStatus} options={['active', 'paused', 'cancelled']} all="All statuses" />
+        <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: '#6E7A96' }}>
+          {list.length} of {rows.length}{mrr > 0 && <> · €{Math.round(mrr).toLocaleString()}/mo active</>} · usage since {data.since}
+        </span>
+      </FilterBar>
+      {!data.subs_ready && (
+        <div style={{ background: '#FBF3DF', borderBottom: '1px solid #EDDCA8', color: '#6D4C00', padding: '8px 12px', fontSize: 12, fontWeight: 700 }}>
+          Subscription fields are off until docs/sql/2026-09-11_subscriptions.sql is pasted in Supabase.
         </div>
-        {loading && <div style={{ padding: 20, fontSize: 13.5, fontWeight: 600, color: '#6E7A96' }}>Loading clients…</div>}
-        {!loading && !data && (
-          <div style={{ background: '#fff', borderRadius: 14, padding: 18, fontSize: 13.5, fontWeight: 600, color: '#B0433A' }}>
-            Could not reach the API — pull down to retry or check the backend deploy.
-          </div>
-        )}
-        {!loading && data && !data.subs_ready && (
-          <div style={{ background: '#FBF3DF', border: '1px solid #EDDCA8', color: '#6D4C00', borderRadius: 12, padding: '10px 14px', fontSize: 12.5, fontWeight: 700, marginBottom: 12 }}>
-            Subscription fields are off until docs/sql/2026-09-11_subscriptions.sql is pasted in Supabase.
-          </div>
-        )}
-        {!loading && data && data.hotels.map(h => {
-          const sub = h.subscription;
-          const [pc, pb] = PLAN_COLOR[sub?.plan ?? 'trial'] ?? PLAN_COLOR.trial;
-          return (
-            <div key={h.hotel_id} style={{ background: '#fff', borderRadius: 16, padding: '16px 18px', marginBottom: 12, boxShadow: '0 1px 3px rgba(10,20,45,.07)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 16, fontWeight: 800, color: '#0F2860' }}>{h.name}</span>
-                {sub && <>
-                  <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.05em', textTransform: 'uppercase', color: pc, background: pb, borderRadius: 999, padding: '3px 10px' }}>{sub.plan}</span>
-                  <span style={{ fontSize: 11.5, fontWeight: 800, color: STATUS_COLOR[sub.status] ?? '#6E7A96' }}>● {sub.status}</span>
-                  {sub.price_eur != null && <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1B2A4A' }}>€{sub.price_eur}/mo</span>}
-                  {sub.renews_on && <span style={{ fontSize: 11.5, fontWeight: 600, color: '#6E7A96' }}>renews {sub.renews_on}</span>}
-                </>}
-                {!sub && data.subs_ready && <span style={{ fontSize: 11.5, fontWeight: 700, color: '#9AA4B8' }}>no subscription set</span>}
-                <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 700, color: '#6E7A96' }}>{h.events_30d.toLocaleString()} events / 30d</span>
-              </div>
-              <div style={{ marginTop: 10 }}>
-                {h.users.length === 0 && <div style={{ fontSize: 12.5, fontWeight: 600, color: '#9AA4B8' }}>No users assigned</div>}
-                {h.users.map(u => (
-                  <div key={u.user_id} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '7px 0', borderTop: '1px solid #EEF1F6', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1B2A4A' }}>{u.email}</span>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', color: u.last_seen && Date.now() - new Date(u.last_seen).getTime() < 3 * 86400000 ? '#1A7A50' : '#9AA4B8' }}>{rel(u.last_seen)}</span>
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#6E7A96', marginLeft: 'auto', textAlign: 'right' }}>
-                      {u.opens_30d} opens · {u.days_active} days · {u.events_30d} events
-                      {u.top.length > 0 && <> · {u.top.slice(0, 2).map(([e, n]) => `${EVENT_LABEL[e] ?? e} ${n}`).join(' · ')}</>}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              {data.subs_ready && <SubEditor c={h} onSaved={loadIt} />}
-            </div>
-          );
-        })}
-        {!loading && data && (
-          <div style={{ fontSize: 11.5, fontWeight: 600, color: '#9AA4B8', lineHeight: 1.6, marginTop: 6 }}>
-            All-user tracking started 11 Sep — usage fills in as clients open their apps.<br />
-            Coming with the own-login system: create client, temporary passwords, reset, sign out everywhere, view as client.
-          </div>
-        )}
+      )}
+      <TableWrap minWidth={920}>
+        <thead><tr>
+          <Th label="Client" k="name" sort={sort} onSort={toggle} />
+          <Th label="Plan" k="plan" sort={sort} onSort={toggle} />
+          <Th label="Status" k="sub_status" sort={sort} onSort={toggle} />
+          <Th label="€ / mo" k="price" sort={sort} onSort={toggle} right />
+          <Th label="Renews" k="renews" sort={sort} onSort={toggle} />
+          <Th label="Users" k="users_n" sort={sort} onSort={toggle} right />
+          <Th label="Last activity" k="last_seen" sort={sort} onSort={toggle} />
+          <Th label="Events 30d" k="events_30d" sort={sort} onSort={toggle} right />
+        </tr></thead>
+        <tbody>
+          {list.map((h, i) => (
+            <>
+              <Tr key={h.hotel_id} i={i} clickable onClick={() => setOpenId(openId === h.hotel_id ? null : h.hotel_id)}>
+                <td style={{ ...tdS, fontWeight: 800, color: '#0F2860' }}>{openId === h.hotel_id ? '▾ ' : '▸ '}{h.name}</td>
+                <td style={tdS}>{h.plan ? <StatusPill s={h.plan} /> : '—'}</td>
+                <td style={tdS}>{h.sub_status ? <StatusPill s={h.sub_status} /> : '—'}</td>
+                <td style={tdR}>{h.price != null ? `€${h.price}` : '—'}</td>
+                <td style={tdS}>{h.renews ?? '—'}</td>
+                <td style={tdR}>{h.users_n}</td>
+                <td style={{ ...tdS, color: h.last_seen && Date.now() - new Date(h.last_seen).getTime() < 3 * 86400000 ? '#1A7A50' : '#6E7A96' }}>{relK(h.last_seen)}</td>
+                <td style={tdR}>{h.events_30d.toLocaleString()}</td>
+              </Tr>
+              {openId === h.hotel_id && (
+                <tr><td colSpan={8} style={{ padding: '10px 14px', background: '#F4F7FB', borderTop: '1px solid #D5DCE9' }}>
+                  <TableWrap minWidth={620}>
+                    <thead><tr><Th label="User" /><Th label="Last seen" /><Th label="Opens 30d" right /><Th label="Active days" right /><Th label="Events" right /><Th label="Top actions" /></tr></thead>
+                    <tbody>
+                      {h.users.map((u, j) => (
+                        <Tr key={u.user_id} i={j}>
+                          <td style={tdS}>{u.email}</td>
+                          <td style={{ ...tdS, color: u.last_seen && Date.now() - new Date(u.last_seen).getTime() < 3 * 86400000 ? '#1A7A50' : '#6E7A96' }}>{relK(u.last_seen)}</td>
+                          <td style={tdR}>{u.opens_30d}</td>
+                          <td style={tdR}>{u.days_active}</td>
+                          <td style={tdR}>{u.events_30d}</td>
+                          <td style={tdS}>{u.top.map(([e, n]) => `${EVENT_LABEL[e] ?? e} ${n}`).join(' · ')}</td>
+                        </Tr>
+                      ))}
+                      {h.users.length === 0 && <tr><td style={tdS} colSpan={6}>No users assigned</td></tr>}
+                    </tbody>
+                  </TableWrap>
+                  {data.subs_ready && <SubEditor c={h} onSaved={loadIt} />}
+                </td></tr>
+              )}
+            </>
+          ))}
+        </tbody>
+      </TableWrap>
     </div>
   );
 }
