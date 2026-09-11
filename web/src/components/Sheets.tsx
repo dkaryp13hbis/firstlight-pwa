@@ -1,6 +1,6 @@
 /** Bottom sheets — canon styling from the current app's settings/feedback
  *  sheets (white, 22px top radius, drag handle, navy titles). */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
 export function Sheet(props: { open: boolean; onClose: () => void; children: ReactNode }) {
@@ -43,6 +43,7 @@ export function SettingsSheet(props: {
   textSize: number; onTextSize: (d: number) => void;
   onSignOut: () => void;
   onDataHealth: () => void;
+  onAdmin?: () => void;   // superadmin only — absent for everyone else
 }) {
   const segBtn = (on: boolean): React.CSSProperties => ({
     border: 'none', background: on ? '#0F2860' : 'transparent',
@@ -131,6 +132,14 @@ export function SettingsSheet(props: {
           <button style={tsBtn} onClick={() => props.onTextSize(1)}>A+</button>
         </div>
       </div>
+      {props.onAdmin && (
+        <div style={rowStyle}>
+          <button onClick={props.onAdmin} style={{ border: 'none', background: 'none', padding: 0, fontSize: 14, fontWeight: 700, color: '#0F2860', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 3 7v5c0 5 3.8 8.4 9 9 5.2-.6 9-4 9-9V7z" /><path d="M9 12l2 2 4-4" /></svg>
+            Admin <span style={{ fontWeight: 600, color: '#6E7A96' }}>· usage by hotel &amp; user ›</span>
+          </button>
+        </div>
+      )}
       <div style={rowStyle}>
         <button onClick={props.onDataHealth} style={{ border: 'none', background: 'none', padding: 0, fontSize: 14, fontWeight: 700, color: '#0F2860', display: 'flex', alignItems: 'center', gap: 8 }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
@@ -169,6 +178,72 @@ export function FeedbackSheet(props: {
         background: 'linear-gradient(135deg, #2E7CF7, #38E1F0)', color: '#fff',
         fontSize: 16, fontWeight: 700, letterSpacing: '-.01em',
       }}>Submit</button>
+    </Sheet>
+  );
+}
+
+/* ── Admin: usage per hotel & user (superadmin only, 2026-09-11) ────────── */
+import { fetchAdminUsage, type AdminUsage } from '../api';
+
+function rel(iso: string | null): string {
+  if (!iso) return 'never';
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 60) return `${m}m ago`;
+  if (m < 60 * 24) return `${Math.round(m / 60)}h ago`;
+  return `${Math.round(m / 1440)}d ago`;
+}
+
+const EVENT_LABEL: Record<string, string> = {
+  app_open: 'opens', tab_nav: 'tabs', refresh_tap: 'refreshes', share_tap: 'shares',
+  card_expand: 'cards', hero_expand: 'hero', watch_expand: 'watchlist', watch_tap: 'watch taps',
+  voice_play: 'voice', data_health_open: 'data health', setting_change: 'settings',
+};
+
+export function AdminSheet(props: { open: boolean; onClose: () => void }) {
+  const [data, setData] = useState<AdminUsage | null>(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!props.open) return;
+    setLoading(true);
+    fetchAdminUsage().then(d => { setData(d); setLoading(false); });
+  }, [props.open]);
+  return (
+    <Sheet open={props.open} onClose={props.onClose}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-.02em', color: '#0F2860' }}>Admin</div>
+        <button onClick={props.onClose} style={{ border: 'none', background: '#F1F3F8', borderRadius: '50%', width: 32, height: 32, fontSize: 14, color: '#5A6780' }}>✕</button>
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#6E7A96', marginBottom: 14 }}>
+        Usage since {data?.since ?? '—'} · all-user tracking started 11 Sep (earlier history is the demo account)
+      </div>
+      {loading && <div style={{ padding: '18px 0', fontSize: 13, fontWeight: 600, color: '#6E7A96' }}>Loading usage…</div>}
+      {!loading && !data && <div style={{ padding: '18px 0', fontSize: 13, fontWeight: 600, color: '#6E7A96' }}>Could not load usage — check the API.</div>}
+      {!loading && data && data.hotels.map(h => (
+        <div key={h.hotel_id} style={{ border: '1px solid #E2E7F0', borderRadius: 14, padding: '12px 14px', marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: h.users.length ? 8 : 0 }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#0F2860' }}>{h.name}</span>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#6E7A96' }}>{h.events_30d.toLocaleString()} events</span>
+          </div>
+          {h.users.length === 0 && <div style={{ fontSize: 12, fontWeight: 600, color: '#9AA4B8' }}>No users yet</div>}
+          {h.users.map(u => (
+            <div key={u.user_id} style={{ padding: '8px 0', borderTop: '1px solid #EEF1F6' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1B2A4A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</span>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: u.last_seen && Date.now() - new Date(u.last_seen).getTime() < 3 * 86400000 ? '#1A7A50' : '#9AA4B8', whiteSpace: 'nowrap' }}>{rel(u.last_seen)}</span>
+              </div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: '#6E7A96' }}>
+                {u.opens_30d} opens · {u.days_active} active days · {u.events_30d} events
+                {u.top.length > 0 && <> · {u.top.map(([e, n]) => `${EVENT_LABEL[e] ?? e} ${n}`).join(' · ')}</>}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+      {!loading && data && (
+        <div style={{ fontSize: 11, fontWeight: 600, color: '#9AA4B8', marginTop: 4, lineHeight: 1.5 }}>
+          Client management (create accounts, temporary passwords, reset) arrives with the own-login system.
+        </div>
+      )}
     </Sheet>
   );
 }

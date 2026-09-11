@@ -110,6 +110,34 @@ export async function fetchRuns(hotelId: string): Promise<RefreshRun[] | null> {
   } catch { return null; }
 }
 
+/* ── Admin (superadmin only; served by the Railway API with service role) ── */
+export interface AdminUserUsage {
+  user_id: string; email: string; events_30d: number; opens_30d: number;
+  days_active: number; last_seen: string | null; top: [string, number][];
+}
+export interface AdminUsage {
+  since: string;
+  hotels: { hotel_id: string; name: string; events_30d: number; users: AdminUserUsage[] }[];
+}
+
+export async function sessionEmail(): Promise<string | null> {
+  if (!sb) return null;
+  const { data } = await sb.auth.getSession();
+  return data.session?.user.email?.toLowerCase() ?? null;
+}
+
+export async function fetchAdminUsage(): Promise<AdminUsage | null> {
+  if (!sb || !API) return null;
+  try {
+    const { data } = await sb.auth.getSession();
+    const tok = data.session?.access_token;
+    if (!tok) return null;
+    const r = await fetch(`${API}/admin/usage`, { headers: { Authorization: `Bearer ${tok}` } });
+    if (!r.ok) return null;
+    return await r.json() as AdminUsage;
+  } catch { return null; }
+}
+
 /* ── My Watchlist (Supabase `watchlist`, own rows; demo → localStorage) ── */
 const DEMO_WATCH = 'fl_watch_demo';
 /* fixture mode only (no Supabase): two sample watches until the user edits the list */

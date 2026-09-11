@@ -7,11 +7,12 @@ import { WATCHLIST_EMAILS, WATCH_CAP, itemTitle, monthKey, rangeKey, type WatchI
 import { Shell, type Tab } from './components/Shell';
 import { SmartSummary } from './components/SmartSummary';
 import { SinceYesterday } from './components/SinceYesterday';
+import { sessionEmail } from './api';
 import { KpiRow, MtdStrip, OtbCards } from './components/Overview';
 import { PickupSection } from './components/Pickup';
 import { OtbTab, buildNextPace, setChartTextScale } from './components/Charts';
 import { AiTab, type FeedbackRequest } from './components/AiCards';
-import { DataHealthSheet, FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
+import { DataHealthSheet, FeedbackSheet, SettingsSheet, AdminSheet, Toast } from './components/Sheets';
 import { Login } from './components/Login';
 import { PortfolioView } from './components/Portfolio';
 import { PORTFOLIO_PREVIEW_EMAILS } from './fixtures/portfolio';
@@ -43,6 +44,13 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('Overview');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  /* superadmin gate (v1: founder emails; becomes is_superadmin under C3) */
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  useEffect(() => {
+    void sessionEmail().then(e =>
+      setIsAdmin(!!e && ['dk@bi-automations.com', 'd.karypidis@hbis.io'].includes(e)));
+  }, [session]);
   const [healthOpen, setHealthOpen] = useState(false);
   const [runs, setRuns] = useState<RefreshRun[] | null>(null);
   const [runsLoaded, setRunsLoaded] = useState(false);
@@ -676,8 +684,10 @@ export default function App() {
         year={year} onYear={setYear} comp={comp} onComp={setComp}
         textSize={textSize} onTextSize={d => setTextSize(s => Math.min(5, Math.max(1, s + d)))}
         onDataHealth={openHealth}
+        onAdmin={isAdmin ? () => { setSettingsOpen(false); setAdminOpen(true); } : undefined}
         onSignOut={signOut}
       />
+      <AdminSheet open={adminOpen} onClose={() => setAdminOpen(false)} />
       <FeedbackSheet
         open={!!fb} verdict={fb?.verdict ?? 1}
         onClose={() => setFb(null)} onSubmit={submitFeedback}

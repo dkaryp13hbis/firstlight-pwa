@@ -4,7 +4,7 @@
  *  editing TRACKED_EMAILS (or set it to null to track everyone). */
 import { sb } from './sb';
 
-const TRACKED_EMAILS: string[] | null = ['demo@hbis.io'];
+const TRACKED_EMAILS: string[] | null = null;   // 2026-09-11: everyone (admin usage view)
 
 const sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
 const t0 = Date.now();
