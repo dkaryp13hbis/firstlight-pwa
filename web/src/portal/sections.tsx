@@ -16,6 +16,12 @@ const btn: React.CSSProperties = {
   border: '1px solid #CBDCFB', background: '#fff', color: '#1E5FD0', borderRadius: 8,
   padding: '4px 10px', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
 };
+/* rows_fetched is a per-query breakdown object on newer runs — show the total */
+const rowsOf = (v: number | Record<string, number> | null): string => {
+  if (v == null) return '—';
+  if (typeof v === 'number') return String(v);
+  return String(Object.values(v).reduce((s, n) => s + (Number(n) || 0), 0));
+};
 const dur = (a: string, b: string | null) =>
   b ? `${Math.round((new Date(b).getTime() - new Date(a).getTime()) / 1000)}s` : '…';
 
@@ -69,7 +75,7 @@ function HotelDetail({ h, onChanged }: { h: AdminHotel; onChanged: () => void })
               <td style={tdS}>{r.run_type}</td>
               <td style={tdS}><StatusPill s={r.status} /></td>
               <td style={tdR}>{dur(r.started_at, r.completed_at)}</td>
-              <td style={tdR}>{r.rows_fetched ?? '—'}</td>
+              <td style={tdR} title={typeof r.rows_fetched === 'object' && r.rows_fetched ? Object.entries(r.rows_fetched).map(([k, v]) => `${k}: ${v}`).join(' · ') : undefined}>{rowsOf(r.rows_fetched)}</td>
               <td style={{ ...tdR, color: r.fallbacks ? '#B47D09' : '#1B2A4A' }}>{r.fallbacks || '—'}</td>
               <td style={tdR}>{r.estimated_cost_usd ? `$${Number(r.estimated_cost_usd).toFixed(3)}` : '—'}</td>
               <td style={tdS}>{r.fetch_path ?? '—'}</td>

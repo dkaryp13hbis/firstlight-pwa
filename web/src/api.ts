@@ -176,7 +176,8 @@ export interface AdminHotel {
 }
 export interface AdminRun {
   started_at: string; completed_at: string | null; run_type: string; status: string;
-  error_type: string | null; attempt: number | null; rows_fetched: number | null;
+  error_type: string | null; attempt: number | null;
+  rows_fetched: number | Record<string, number> | null;   // per-query breakdown on newer runs
   estimated_cost_usd: number | null; fetch_path: string | null; fallbacks: number;
 }
 export interface AdminHealth {
