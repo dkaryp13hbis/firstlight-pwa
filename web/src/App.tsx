@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchLatestBriefing, fetchBriefingByDate, fetchDates, fetchPrevBriefing, fetchHistoryRows, fetchWatchlist, addWatch, removeWatch, fetchRuns, type RefreshRun } from './api';
+import { fetchLatestBriefing, fetchBriefingByDate, fetchDates, fetchPrevBriefing, fetchHistoryRows, fetchWatchlist, addWatch, removeWatch, fetchRuns, fetchMyHotels, type RefreshRun } from './api';
 import { sb, demoMode } from './lib/sb';
 import type { Briefing } from './types';
 import { WatchlistSection, WatchSheet, titleCase } from './components/Watchlist';
@@ -108,10 +108,13 @@ export default function App() {
       setHotelId(prev => prev || localStorage.getItem('fl_hotel') || cachedHotels[0].id);
     }
     (async () => {
-      const { data: hu } = await sb.from('hotel_users').select('hotel_id');
-      const ids = (hu ?? []).map(r => r.hotel_id);
-      const { data: hs } = await sb.from('hotels').select('id, name').in('id', ids);
-      const list = hs ?? [];
+      let list = (await fetchMyHotels()) ?? [];
+      if (!list.length) {
+        const { data: hu } = await sb.from('hotel_users').select('hotel_id');
+        const ids = (hu ?? []).map(r => r.hotel_id);
+        const { data: hs } = await sb.from('hotels').select('id, name').in('id', ids);
+        list = hs ?? [];
+      }
       if (!list.length) return;
       setHotels(list);
       writeCache('fl_hotels', list);

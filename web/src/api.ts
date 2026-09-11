@@ -22,6 +22,10 @@ export async function fetchLatestBriefing(hotelId?: string): Promise<Briefing> {
     if (!r.ok) throw new Error(`API ${r.status}`);
     return (await r.json()) as Briefing;
   }
+  if (hotelId && hotelId !== 'demo') {
+    const j = await jwtGet<Briefing>(`/app/briefing/latest?hotel_id=${hotelId}`);
+    if (j) return j;
+  }
   if (sb && hotelId && hotelId !== 'demo') {
     const { data, error } = await sb.from('briefings')
       .select('report_date, generated_at, data, ai_insights')
@@ -37,6 +41,10 @@ export async function fetchLatestBriefing(hotelId?: string): Promise<Briefing> {
 /** One specific day's briefing (history view). Supabase path only — the
  *  Phase A API has no by-date endpoint yet. */
 export async function fetchBriefingByDate(hotelId: string, date: string): Promise<Briefing | null> {
+  if (hotelId && hotelId !== 'demo') {
+    const j = await jwtGet<Briefing>(`/app/briefing/by-date?hotel_id=${hotelId}&date=${date}`);
+    if (j) return j;
+  }
   if (sb && hotelId && hotelId !== 'demo') {
     const { data, error } = await sb.from('briefings')
       .select('report_date, generated_at, data, ai_insights')
@@ -51,6 +59,10 @@ export async function fetchBriefingByDate(hotelId: string, date: string): Promis
 
 /** Last N report dates for the hotel, newest first. */
 export async function fetchDates(hotelId: string, days = 7): Promise<string[]> {
+  if (hotelId && hotelId !== 'demo') {
+    const j = await jwtGet<{ dates: string[] }>(`/app/briefing/dates?hotel_id=${hotelId}&limit=${days}`);
+    if (j?.dates?.length) return j.dates;
+  }
   if (sb && hotelId && hotelId !== 'demo') {
     const { data } = await sb.from('briefings')
       .select('report_date')
@@ -89,6 +101,14 @@ export async function fetchPrevBriefing(hotelId: string, before: string): Promis
 /** Stored briefings for the given report dates (watchlist trend). Missing
  *  days are skipped; fixture mode has no history. */
 export async function fetchHistoryRows(hotelId: string, dates: string[]): Promise<Briefing[]> {
+  if (hotelId && hotelId !== 'demo' && dates.length) {
+    const j = await jwtGet<{ rows: Briefing[] }>(
+      `/app/briefing/history?hotel_id=${hotelId}&limit=${Math.min(Math.max(dates.length, 7), 14)}`);
+    if (j?.rows?.length) {
+      const want = new Set(dates);
+      return j.rows.filter(r => want.has(r.report_date));
+    }
+  }
   const rows = await Promise.all(dates.map(d => fetchBriefingByDate(hotelId, d).catch(() => null)));
   return rows.filter((r): r is Briefing => !!r);
 }
@@ -102,6 +122,8 @@ export interface RefreshRun {
  *  (RLS policy not applied) — the sheet then shows a hint instead. */
 export async function fetchRuns(hotelId: string): Promise<RefreshRun[] | null> {
   if (!sb || hotelId === 'demo') return null;
+  const j = await jwtGet<{ runs: RefreshRun[] }>(`/app/runs?hotel_id=${hotelId}`);
+  if (j?.runs) return j.runs;
   try {
     const since = new Date(Date.now() - 3 * 86400000).toISOString();
     const { data, error } = await sb.from('refresh_runs')
@@ -146,6 +168,32 @@ async function adminGet<T>(path: string): Promise<T | null> {
     if (!r.ok) return null;
     return await r.json() as T;
   } catch { return null; }
+}
+
+/* C2 (2026-09-11): the app's data plane goes THROUGH the API (PG-first
+   server-side); every caller keeps its old Supabase-direct path as an
+   automatic fallback — that is the parallel-run safety net. */
+const jwtGet = adminGet;
+
+async function jwtSend(method: string, path: string, body?: unknown):
+  Promise<{ status: number; data: unknown } | null> {
+  if (!sb) return null;
+  try {
+    const { data } = await sb.auth.getSession();
+    const tok = data.session?.access_token;
+    if (!tok) return null;
+    const r = await fetch(`${API}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return { status: r.status, data: await r.json().catch(() => null) };
+  } catch { return null; }
+}
+
+export async function fetchMyHotels(): Promise<{ id: string; name: string }[] | null> {
+  const r = await jwtGet<{ hotels: { id: string; name: string }[] }>('/app/hotels');
+  return r?.hotels ?? null;
 }
 
 export const fetchAdminClients = () => adminGet<AdminClients>('/admin/clients');
@@ -311,6 +359,8 @@ const WL_COLS_FL = WL_COLS + ', source, flagged_date, first_gap, last_gap';
 /** null = the table isn't there yet (SQL not pasted) → section hidden. */
 export async function fetchWatchlist(hotelId: string): Promise<WatchItem[] | null> {
   if (!sb || hotelId === 'demo') return demoList().filter(w => w.hotel_id === hotelId);
+  const j = await jwtGet<{ items: Omit<WatchItem, 'hotel_id'>[] }>(`/watchlist?hotel_id=${hotelId}`);
+  if (j?.items) return j.items.map(i => ({ ...i, hotel_id: hotelId } as WatchItem));
   let res: { data: unknown; error: unknown } = await sb.from('watchlist').select(WL_COLS_FL)
     .eq('hotel_id', hotelId).order('created_at', { ascending: true });
   if (res.error) {
@@ -330,6 +380,12 @@ export async function addWatch(hotelId: string, kind: WatchKind, key: string, la
     saveDemo([...list, item]);
     return { ok: true, item };
   }
+  const jr = await jwtSend('POST', '/watchlist', { hotel_id: hotelId, kind, key, label: label || null });
+  if (jr) {
+    if (jr.status === 201) return { ok: true, item: { ...(jr.data as WatchItem), hotel_id: hotelId } };
+    const detail = (jr.data as { detail?: string } | null)?.detail ?? '';
+    return { ok: false, msg: detail.includes('full') ? `Watchlist is full (${WATCH_CAP_MSG})` : detail.includes('duplicate') ? 'Already watching this' : (detail || 'Could not save') };
+  }
   const { data, error } = await sb.from('watchlist')
     .insert({ hotel_id: hotelId, kind, key, label: label || null }).select(WL_COLS).single();
   if (error) {
@@ -343,9 +399,13 @@ export async function addWatch(hotelId: string, kind: WatchKind, key: string, la
 
 export async function removeWatch(hotelId: string, id: string): Promise<boolean> {
   if (!sb || hotelId === 'demo') { saveDemo(demoList().filter(w => w.id !== id)); return true; }
+  const jr = await jwtSend('DELETE', `/watchlist/${id}`);
+  if (jr) return jr.status < 300;
   const { error } = await sb.from('watchlist').delete().eq('id', id);
   return !error;
 }
+
+const WATCH_CAP_MSG = 5;
 
 /* formatting helpers — same conventions as the Python side */
 export const euro = (v: number) => `€${Math.round(v).toLocaleString('de-DE')}`;
