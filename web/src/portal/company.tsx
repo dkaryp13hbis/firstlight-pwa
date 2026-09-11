@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import {
   fetchAdminCompanies, saveCompany, fetchAdminHotels,
-  fetchAdminGroups, saveGroup,
+  fetchAdminGroups, saveGroup, setAiToggle,
   type AdminCompany, type AdminHotel, type AdminGroup,
 } from '../api';
 import {
@@ -115,6 +115,18 @@ export function CompanyForm({ initial, onSaved }: {
         <F label="Rate € / month" w={120}><input style={inp} inputMode="decimal" value={f.monthly_eur} onChange={set('monthly_eur')} placeholder="—" /></F>
         <F label="Rate € / year" w={120}><input style={inp} inputMode="decimal" value={f.annual_eur} onChange={set('annual_eur')} placeholder="—" /></F>
         <F label="Notes" w={260}><input style={inp} value={f.notes} onChange={set('notes')} /></F>
+        {c && (
+          <F label="AI insights (all hotels of this company)" w={200}>
+            <select style={inp} defaultValue="" onChange={e => {
+              const v = e.target.value === '' ? null : e.target.value === 'on';
+              void setAiToggle('org', c.id, v);
+            }}>
+              <option value="">Inherit (default on)</option>
+              <option value="on">On</option>
+              <option value="off">Off — deterministic cards, zero tokens</option>
+            </select>
+          </F>
+        )}
       </div>
       <div style={{ marginBottom: 12 }}>
         <span style={lbl}>Hotels in this company</span>

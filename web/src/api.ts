@@ -221,6 +221,7 @@ export interface AdminHotel {
   credentials_present: boolean; token_present: boolean; last_briefing: string | null;
   runs_30d: number; ok_30d: number; degraded_30d: number; failed_30d: number;
   cost_30d_usd: number; last_run_at: string | null; last_status: string | null;
+  ai_enabled: boolean;
 }
 export interface AdminRun {
   started_at: string; completed_at: string | null; run_type: string; status: string;
@@ -244,6 +245,10 @@ export interface AdminAuditRow {
 }
 
 export const fetchAdminHotels = () => adminGet<{ hotels: AdminHotel[] }>('/admin/hotels');
+export async function setAiToggle(scope: 'hotel' | 'org' | 'group', id: string, enabled: boolean | null): Promise<boolean> {
+  const r = await jwtSend('PUT', '/admin/ai-toggle', { scope, id, enabled });
+  return !!r && r.status < 300;
+}
 export const fetchAdminHotelRuns = (id: string) => adminGet<{ runs: AdminRun[] }>(`/admin/hotels/${id}/runs`);
 export const adminHotelRefresh = (id: string) => adminPost<{ queued: boolean }>(`/admin/hotels/${id}/refresh`);
 export const adminHotelToken = (id: string) => adminPost<{ api_token: string }>(`/admin/hotels/${id}/token/rotate`);

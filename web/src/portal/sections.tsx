@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   fetchAdminHotels, fetchAdminHotelRuns, adminHotelRefresh, adminHotelToken,
-  adminHotelActive, fetchAdminHealth, fetchAdminFeedback, fetchAdminAudit,
+  adminHotelActive, fetchAdminHealth, fetchAdminFeedback, fetchAdminAudit, setAiToggle,
   type AdminHotel, type AdminRun, type AdminHealth, type AdminFeedbackRow,
   type AdminAuditRow,
 } from '../api';
@@ -37,7 +37,7 @@ function HotelDetail({ h, onChanged }: { h: AdminHotel; onChanged: () => void })
     setTimeout(() => setMsg(null), 2500);
   };
   return (
-    <td colSpan={12} style={{ padding: '10px 14px', background: '#F4F7FB', borderTop: '1px solid #D5DCE9' }}>
+    <td colSpan={13} style={{ padding: '10px 14px', background: '#F4F7FB', borderTop: '1px solid #D5DCE9' }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
         <button style={btn} onClick={() => void act(() => adminHotelRefresh(h.id), 'refresh queued')}>Refresh now</button>
         <button style={btn} onClick={() => {
@@ -52,9 +52,16 @@ function HotelDetail({ h, onChanged }: { h: AdminHotel; onChanged: () => void })
         ) : (
           <button style={btn} onClick={() => void act(() => adminHotelActive(h.id, true, ''), 'activated')}>Activate</button>
         )}
+        <button style={{ ...btn, color: h.ai_enabled ? '#B47D09' : '#1A7A50', borderColor: h.ai_enabled ? '#EDDCA8' : '#BFE3CD' }}
+          title="AI narration for this hotel (deterministic cards still publish when off)"
+          onClick={() => {
+            const to = !h.ai_enabled;
+            if (confirm(to ? 'Turn AI narration ON for this hotel?' : 'Turn AI narration OFF? Briefings keep publishing with deterministic cards — zero AI cost.'))
+              void act(() => setAiToggle('hotel', h.id, to).then(ok => ok || null), to ? 'AI on' : 'AI off');
+          }}>{h.ai_enabled ? 'Turn AI off' : 'Turn AI on'}</button>
         {msg && <span style={{ fontSize: 12, fontWeight: 700, color: msg === 'failed' ? '#B0433A' : '#1A7A50' }}>{msg}</span>}
         <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: '#6E7A96' }}>
-          tunnel {h.tunnel_hostname ?? '—'} · credentials {h.credentials_present ? '✓' : '✗'}
+          tunnel {h.tunnel_hostname ?? '—'} · credentials {h.credentials_present ? '✓' : '✗'} · AI {h.ai_enabled ? 'on' : 'OFF'}
         </span>
       </div>
       {newToken && (
@@ -128,6 +135,7 @@ export function HotelsView() {
           <Th label="Degr" k="degraded_30d" sort={sort} onSort={toggle} right />
           <Th label="Fail" k="failed_30d" sort={sort} onSort={toggle} right />
           <Th label="AI cost 30d" k="cost_30d_usd" sort={sort} onSort={toggle} right />
+          <Th label="AI" k="ai_enabled" sort={sort} onSort={toggle} />
           <Th label="Token" k="token_present" sort={sort} onSort={toggle} />
         </tr></thead>
         <tbody>
@@ -144,6 +152,9 @@ export function HotelsView() {
                 <td style={{ ...tdR, color: h.degraded_30d ? '#B47D09' : '#9AA4B8' }}>{h.degraded_30d}</td>
                 <td style={{ ...tdR, color: h.failed_30d ? '#B0433A' : '#9AA4B8' }}>{h.failed_30d}</td>
                 <td style={tdR}>${h.cost_30d_usd.toFixed(2)}</td>
+                <td style={tdS}>{h.ai_enabled
+                  ? <span style={{ fontSize: 10, fontWeight: 800, color: '#1A7A50', background: '#E7F5EC', borderRadius: 999, padding: '2px 8px' }}>on</span>
+                  : <span style={{ fontSize: 10, fontWeight: 800, color: '#B47D09', background: '#FBF3DF', borderRadius: 999, padding: '2px 8px' }}>off</span>}</td>
                 <td style={tdS}>{h.token_present ? '✓' : '✗'}</td>
               </Tr>,
               ...(openId === h.id ? [<tr key={h.id + ':d'}><HotelDetail h={h} onChanged={loadIt} /></tr>] : []),
