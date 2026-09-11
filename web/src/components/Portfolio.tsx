@@ -1,5 +1,6 @@
-/** Portfolio view (admin preview, fictional data) — one more entry in the
- *  hotel picker, same chrome and sections as the hotel view. Spec frozen
+/** Portfolio view — one entry per hotel GROUP in the picker (real data from
+ *  GET /app/portfolio, 2026-09-12) plus the admin preview (fictional fixture);
+ *  same chrome and sections as the hotel view. Spec frozen
  *  2026-09-10 (backend ENGINEERING_LOG): Yesterday cards + ONE by-hotel table
  *  (Yesterday / MTD / YTD), pickup boxes as slicer + by-hotel rows, Pace with
  *  a KPI switch + 3-column year table (tap a row → chart it), Calendar 7/14/30
@@ -19,7 +20,7 @@ const KPI_LABEL: Record<Kpi, string> = { rev: 'Revenue', occ: 'Occupancy', adr: 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WDL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const NAVY = '#0F2860', GREY = '#CDD4E0', GREEN = '#1A7A50';
-const NET_F = 1 / 1.13;   // fixture only — production net comes from the PMS
+const NET_F = 1 / 1.13;   // fixture fallback — production uses D.netFactor (net/gross from the PMS)
 
 /* ── segmented control: Settings colours, tab-bar lens movement ── */
 export function Seg<T extends string>({ options, value, onChange }: {
@@ -137,7 +138,8 @@ function Overview({ D, f, onToast }: { D: PortfolioData; f: number; onToast: (m:
     { k: 'adr', label: 'ADR', icon: KIcons.adr }, { k: 'revpar', label: 'REVPAR', icon: KIcons.rooms },
   ];
   const pick = (h: PHotel) => per === 'yd' ? h.yd : per === 'mtd' ? h.mtd : h.ytd;
-  const sub = per === 'yd' ? `${D.reportLabel} vs same day LY` : per === 'mtd' ? `Sep 1–${D.elapsed} vs LY` : `Jan 1 – Sep ${D.elapsed} vs LY`;
+  const curMon = MON[D.cur - 1];
+  const sub = per === 'yd' ? `${D.reportLabel} vs same day LY` : per === 'mtd' ? `${curMon} 1–${D.elapsed} vs LY` : `Jan 1 – ${curMon} ${D.elapsed} vs LY`;
   const rows = D.hotels.map(h => ({ h, k: kp(pick(h), f) }));
   const sv = (r: typeof rows[number]) => sortKey === 'name' ? r.h.short : vOf(r.k[sortKey]);
   rows.sort((a, b) => {
@@ -159,7 +161,7 @@ function Overview({ D, f, onToast }: { D: PortfolioData; f: number; onToast: (m:
       {stale.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#FBEEDC', color: '#6D4C00', borderRadius: 12, padding: '9px 13px', fontSize: 12, fontWeight: 700, marginBottom: 12 }}>
           <span>⚠ {stale.map(h => h.name).join(', ')} has no fresh data since {dShort(stale[0].reportDate)} — left out of the portfolio totals</span>
-          <button onClick={() => onToast('Preview — fictional data')} style={{ border: 'none', background: '#6D4C00', color: '#fff', borderRadius: 999, padding: '4px 11px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>Data health</button>
+          <button onClick={() => onToast(`Last briefing: ${stale.map(h => `${h.short} ${dShort(h.reportDate)}`).join(', ')} — check that hotel's refresh`)} style={{ border: 'none', background: '#6D4C00', color: '#fff', borderRadius: 999, padding: '4px 11px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>Data health</button>
         </div>
       )}
       {f !== 1 && (
@@ -214,12 +216,19 @@ const ringStyle: React.CSSProperties = {
     'linear-gradient(120deg, #0F2860, #2E7CF7, #38E1F0, #2E7CF7, #0F2860) border-box',
   backgroundSize: 'auto, 300% 300%', animation: 'pwring 3.5s ease-in-out infinite',
 };
-const WINS = [
-  { w: 1, title: 'Yesterday', sub: '09 Sep', range: '09 Sep' }, { w: 3, title: '3-Day', sub: '07–09 Sep', range: '07 Sep – 09 Sep' },
-  { w: 7, title: '7-Day', sub: '03–09 Sep', range: '03 Sep – 09 Sep' }, { w: 14, title: '14-Day', sub: '27 Aug–09 Sep', range: '27 Aug – 09 Sep' },
-];
+function winLabels(reportDate: string) {
+  const end = new Date(reportDate + 'T00:00:00Z');
+  const dd = (d: Date) => `${String(d.getUTCDate()).padStart(2, '0')} ${MON[d.getUTCMonth()]}`;
+  const start = (w: number) => { const d = new Date(end); d.setUTCDate(d.getUTCDate() - (w - 1)); return d; };
+  const span = (w: number, sep: string) => `${dd(start(w))}${sep}${dd(end)}`;
+  return [
+    { w: 1, title: 'Yesterday', sub: dd(end), range: dd(end) }, { w: 3, title: '3-Day', sub: span(3, '–'), range: span(3, ' – ') },
+    { w: 7, title: '7-Day', sub: span(7, '–'), range: span(7, ' – ') }, { w: 14, title: '14-Day', sub: span(14, '–'), range: span(14, ' – ') },
+  ];
+}
 function Pickup({ D, f }: { D: PortfolioData; f: number }) {
   const [win, setWin] = useState(7);
+  const WINS = useMemo(() => winLabels(D.reportDate), [D.reportDate]);
   const fresh = D.hotels.filter(h => !h.stale);
   const tot = (w: number) => fresh.reduce((a, h) => { const p = h.pickup[w]; return { rn: a.rn + p.rn, rev: a.rev + p.rev * f, c: a.c + p.cancel, cRev: a.cRev + p.cancelRev * f }; }, { rn: 0, rev: 0, c: 0, cRev: 0 });
   const puLbl: React.CSSProperties = { fontSize: 10, color: 'var(--n500)', textTransform: 'uppercase', letterSpacing: '.05em' };
@@ -373,7 +382,8 @@ const bucket = (occ: number) => { const t = [0.20, 0.35, 0.50, 0.65, 0.78, 0.88]
 function Calendar({ D }: { D: PortfolioData }) {
   const [w, setW] = useState(7);
   const [sel, setSel] = useState<number | null>(null);
-  const inc = D.hotels.filter(h => !h.stale);
+  const inc = D.hotels.filter(h => !h.stale && h.next.length >= 30);
+  if (!inc.length) return null;
   const days = Array.from({ length: w }, (_, d) => {
     let rn = 0, rs = 0, av = 0;
     for (const h of inc) { const x = h.next[d]; rn += x.ty * x.avail; rs += x.st * x.avail; av += x.avail; }
@@ -461,14 +471,31 @@ function Calendar({ D }: { D: PortfolioData }) {
 }
 
 /* ── the view ── */
-export function PortfolioView({ revMode, onToast }: { revMode: 'gross' | 'net'; onToast: (m: string) => void }) {
-  const D = useMemo(() => buildPortfolioFixture(), []);
-  const f = revMode === 'net' ? NET_F : 1;
+export function PortfolioView({ revMode, onToast, data, state = 'idle' }: {
+  revMode: 'gross' | 'net'; onToast: (m: string) => void;
+  data?: PortfolioData | null;             // undefined = admin preview (fixture); null = real view not loaded yet
+  state?: 'idle' | 'loading' | 'error';
+}) {
+  const preview = data === undefined;
+  const fixture = useMemo(() => (preview ? buildPortfolioFixture() : null), [preview]);
+  const D = preview ? fixture : data;
+  if (!D) return (
+    <div className="card" style={{ padding: 22, textAlign: 'center', color: '#6E7A96', fontSize: 13, fontWeight: 600 }}>
+      {state === 'error' ? 'Portfolio unavailable right now — the hotels still open one by one.' : 'Loading portfolio…'}
+    </div>
+  );
+  const f = revMode === 'net' ? (preview ? NET_F : (D.netFactor ?? NET_F)) : 1;
   return (
     <>
-      <div style={{ background: '#FBEEDC', color: '#6D4C00', borderRadius: 12, padding: '7px 13px', fontSize: 10.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', textAlign: 'center', marginBottom: 12 }}>
-        Portfolio preview · fictional data · 8 test hotels · {D.groupName}
-      </div>
+      {preview ? (
+        <div style={{ background: '#FBEEDC', color: '#6D4C00', borderRadius: 12, padding: '7px 13px', fontSize: 10.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', textAlign: 'center', marginBottom: 12 }}>
+          Portfolio preview · fictional data · 8 test hotels · {D.groupName}
+        </div>
+      ) : (
+        <div style={{ fontSize: 10.5, color: '#6E7A96', fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', textAlign: 'center', marginBottom: 12 }}>
+          {D.groupName} · {D.hotels.length} hotels · {D.reportLabel}
+        </div>
+      )}
       <Overview D={D} f={f} onToast={onToast} />
       <div id="sec-pickup" style={{ scrollMarginTop: 46 }} />
       <Pickup D={D} f={f} />
@@ -477,7 +504,9 @@ export function PortfolioView({ revMode, onToast }: { revMode: 'gross' | 'net'; 
       <div id="sec-cal" style={{ scrollMarginTop: 46 }} />
       <Calendar D={D} />
       <div style={{ fontSize: 10.5, color: '#6E7A96', fontWeight: 600, lineHeight: 1.5, margin: '18px 4px 0' }}>
-        Fictional data for eight test hotels. Portara Bay carries a stale briefing (last run 7 Sep); Lefka Ori is closed until November. Net = gross ÷ 1.13 in this preview.
+        {preview
+          ? 'Fictional data for eight test hotels. Portara Bay carries a stale briefing (last run 7 Sep); Lefka Ori is closed until November. Net = gross ÷ 1.13 in this preview.'
+          : 'Each hotel\'s latest briefing, summed. Occupancy = nights ÷ available rooms, ADR = revenue ÷ nights, never averaged percentages. A hotel with an older briefing is marked stale and left out of the totals.'}
       </div>
     </>
   );

@@ -18,6 +18,7 @@ export interface PHotel {
 }
 export interface PortfolioData {
   groupName: string; reportDate: string; reportLabel: string; cur: number; elapsed: number; hotels: PHotel[];
+  netFactor?: number | null;   // production: net/gross of yesterday across the group; absent in the fixture
 }
 
 type Shape = { occ: Record<number, number>; adr: Record<number, number> };

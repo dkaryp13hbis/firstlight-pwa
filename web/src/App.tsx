@@ -16,6 +16,8 @@ import { DataHealthSheet, FeedbackSheet, SettingsSheet, Toast } from './componen
 import { AdminPortal } from './components/AdminPortal';
 import { Login } from './components/Login';
 import { PortfolioView } from './components/Portfolio';
+import { fetchPortfolios, fetchPortfolio, type PortfolioGroup } from './api';
+import type { PortfolioData } from './fixtures/portfolio';
 import { PORTFOLIO_PREVIEW_EMAILS } from './fixtures/portfolio';
 import { registerSW, isSubscribed, subscribe, unsubscribe, getPrefs, setPrefs, DEFAULT_PREFS, type PushPrefs } from './lib/push';
 import { initTracking, setTrackedHotel, track } from './lib/track';
@@ -25,7 +27,9 @@ const TS_ZOOM: Record<number, number> = { 1: 0.85, 2: 1, 3: 1.12, 4: 1.25, 5: 1.
 
 /* Portfolio preview: one more entry in the hotel picker (admin emails only,
    fictional data) — same chrome, four tabs, no FL Pulse. */
-const PORTFOLIO_ID = 'portfolio';
+const PORTFOLIO_ID = 'portfolio';                 // admin preview (fictional)
+const PF_PREFIX = 'portfolio:';                     // real group views: portfolio:<group id>
+const isPortfolioId = (id: string | null | undefined) => !!id && (id === PORTFOLIO_ID || id.startsWith(PF_PREFIX));
 const PORTFOLIO_TABS: readonly Tab[] = ['Overview', 'Pickup', 'Pace', 'Calendar'];
 
 /* Local cache → instant paint on open (stale-while-revalidate). */
@@ -83,7 +87,10 @@ export default function App() {
   const [watchOpen, setWatchOpen] = useState(false);
   const [watchOn, setWatchOn] = useState(demoMode);
   const [portfolioOn, setPortfolioOn] = useState(demoMode);
-  const isPortfolio = hotelId === PORTFOLIO_ID;
+  const isPortfolio = isPortfolioId(hotelId);
+  const [pfGroups, setPfGroups] = useState<PortfolioGroup[]>([]);
+  const [pfData, setPfData] = useState<PortfolioData | null>(null);
+  const [pfState, setPfState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [hist, setHist] = useState<Briefing[] | null>(null);       // last 7 stored rows (watch trend), lazy
   const histFor = useRef<string>('');
 
@@ -118,14 +125,14 @@ export default function App() {
       if (!list.length) return;
       setHotels(list);
       writeCache('fl_hotels', list);
-      setHotelId(prev => (prev && (list.some(h => h.id === prev) || prev === PORTFOLIO_ID)) ? prev
+      setHotelId(prev => (prev && (list.some(h => h.id === prev) || isPortfolioId(prev))) ? prev
         : (list.find(h => h.id === localStorage.getItem('fl_hotel'))?.id ?? list[0].id));
     })();
   }, [session]);
 
   /* briefing */
   const load = useCallback(() => {
-    if (!hotelId || hotelId === PORTFOLIO_ID) return;
+    if (!hotelId || isPortfolioId(hotelId)) return;
     const cached = readCache<Briefing>(`fl_briefing_${hotelId}`);
     if (cached) setBriefing(cached);
     fetchLatestBriefing(hotelId)
@@ -155,8 +162,27 @@ export default function App() {
   }, [session]);
   /* picker list: the admin preview entry sits after the real hotels */
   const shellHotels = useMemo(
-    () => portfolioOn ? [...hotels, { id: PORTFOLIO_ID, name: 'Portfolio · preview' }] : hotels,
-    [hotels, portfolioOn]);
+    () => [
+      ...hotels,
+      ...pfGroups.map(g => ({ id: PF_PREFIX + g.id, name: g.name })),
+      ...(portfolioOn ? [{ id: PORTFOLIO_ID, name: 'Portfolio · preview' }] : []),
+    ],
+    [hotels, pfGroups, portfolioOn]);
+
+  /* real portfolios: which groups the caller can open, and the data of the open one */
+  useEffect(() => {
+    if (!session || !sb) { setPfGroups([]); return; }
+    fetchPortfolios().then(setPfGroups).catch(() => setPfGroups([]));
+  }, [session, hotels]);
+  useEffect(() => {
+    if (!hotelId || !hotelId.startsWith(PF_PREFIX)) { setPfData(null); setPfState('idle'); return; }
+    let live = true;
+    setPfState('loading');
+    fetchPortfolio(hotelId.slice(PF_PREFIX.length))
+      .then(d => { if (!live) return; setPfData(d); setPfState(d ? 'idle' : 'error'); })
+      .catch(() => { if (live) setPfState('error'); });
+    return () => { live = false; };
+  }, [hotelId]);
 
   /* branded share frame: hotel + report date */
   useEffect(() => {
@@ -184,7 +210,7 @@ export default function App() {
     setTab('Overview');          // §8: new hotel starts at the top, nav reset
     setViewDate(null);
     setWatch(null); setPrevB(null);
-    if (id !== PORTFOLIO_ID) { setTrackedHotel(id); track('hotel_switch', {}); }
+    if (!isPortfolioId(id)) { setTrackedHotel(id); track('hotel_switch', {}); }
     setHotelId(id);
     localStorage.setItem('fl_hotel', id);
     window.scrollTo(0, 0);
@@ -431,12 +457,12 @@ export default function App() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  useEffect(() => { if (session && hotelId && hotelId !== PORTFOLIO_ID) isSubscribed(hotelId).then(setBellOn); }, [session, hotelId]);
-  useEffect(() => { if (session && hotelId && hotelId !== PORTFOLIO_ID && bellOn) getPrefs(hotelId).then(setPushPrefs); else setPushPrefs(null); }, [session, hotelId, bellOn]);
+  useEffect(() => { if (session && hotelId && !isPortfolioId(hotelId)) isSubscribed(hotelId).then(setBellOn); }, [session, hotelId]);
+  useEffect(() => { if (session && hotelId && !isPortfolioId(hotelId) && bellOn) getPrefs(hotelId).then(setPushPrefs); else setPushPrefs(null); }, [session, hotelId, bellOn]);
 
   const trackedInit = useRef(false);
   useEffect(() => {
-    if (session && hotelId && hotelId !== PORTFOLIO_ID && !trackedInit.current) { trackedInit.current = true; void initTracking(hotelId); }
+    if (session && hotelId && !isPortfolioId(hotelId) && !trackedInit.current) { trackedInit.current = true; void initTracking(hotelId); }
   }, [session, hotelId]);
 
   const changePushPref = async (k: 'morning' | 'alerts' | 'momentum', v: boolean) => {
@@ -487,12 +513,15 @@ export default function App() {
         textZoom={TS_ZOOM[textSize] ?? 1}
         hotels={shellHotels} hotelId={hotelId} onHotel={changeHotel}
         tab={tab} onTab={nav} tabs={PORTFOLIO_TABS} aiCount={0}
-        refreshState="idle" onRefresh={() => say('Portfolio preview — fictional data, no live refresh')}
+        refreshState={pfState === 'loading' ? 'busy' : 'idle'}
+        onRefresh={() => say(hotelId === PORTFOLIO_ID ? 'Portfolio preview — fictional data, no live refresh' : 'The portfolio follows each hotel\'s own refresh')}
         bellOn={false} onBell={() => say('Notifications stay per hotel')}
         onSettings={() => setSettingsOpen(true)}
       >
         <div id="sec-overview" style={{ scrollMarginTop: 46 }} />
-        <PortfolioView revMode={revMode} onToast={say} />
+        <PortfolioView revMode={revMode} onToast={say}
+          data={hotelId === PORTFOLIO_ID ? undefined : pfData}
+          state={hotelId === PORTFOLIO_ID ? 'idle' : pfState} />
       </Shell>
       <SettingsSheet
         open={settingsOpen} onClose={() => setSettingsOpen(false)}

@@ -196,6 +196,17 @@ export async function fetchMyHotels(): Promise<{ id: string; name: string }[] | 
   return r?.hotels ?? null;
 }
 
+/* Multi-property portfolio (2026-09-12): one picker entry per group with >= 2
+   of the caller's hotels; the view is built server-side from every member
+   hotel's latest stored briefing (backend briefing/portfolio.py). */
+export interface PortfolioGroup { id: string; name: string; hotels: number }
+export async function fetchPortfolios(): Promise<PortfolioGroup[]> {
+  const r = await jwtGet<{ groups: PortfolioGroup[] }>('/app/portfolios');
+  return r?.groups ?? [];
+}
+export const fetchPortfolio = (groupId: string) =>
+  jwtGet<import('./fixtures/portfolio').PortfolioData>(`/app/portfolio?group_id=${encodeURIComponent(groupId)}`);
+
 export const fetchAdminClients = () => adminGet<AdminClients>('/admin/clients');
 
 async function adminPost<T>(path: string, body?: unknown): Promise<T | null> {
