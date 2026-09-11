@@ -12,7 +12,8 @@ import { KpiRow, MtdStrip, OtbCards } from './components/Overview';
 import { PickupSection } from './components/Pickup';
 import { OtbTab, buildNextPace, setChartTextScale } from './components/Charts';
 import { AiTab, type FeedbackRequest } from './components/AiCards';
-import { DataHealthSheet, FeedbackSheet, SettingsSheet, AdminSheet, Toast } from './components/Sheets';
+import { DataHealthSheet, FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
+import { AdminPortal } from './components/AdminPortal';
 import { Login } from './components/Login';
 import { PortfolioView } from './components/Portfolio';
 import { PORTFOLIO_PREVIEW_EMAILS } from './fixtures/portfolio';
@@ -687,7 +688,7 @@ export default function App() {
         onAdmin={isAdmin ? () => { setSettingsOpen(false); setAdminOpen(true); } : undefined}
         onSignOut={signOut}
       />
-      <AdminSheet open={adminOpen} onClose={() => setAdminOpen(false)} />
+      <AdminPortal open={adminOpen} onClose={() => setAdminOpen(false)} />
       <FeedbackSheet
         open={!!fb} verdict={fb?.verdict ?? 1}
         onClose={() => setFb(null)} onSubmit={submitFeedback}
