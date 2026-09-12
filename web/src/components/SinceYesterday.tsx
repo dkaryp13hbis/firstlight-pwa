@@ -30,11 +30,21 @@ const Dn = (p: { children: React.ReactNode }) =>
 const daysBetween = (a: string, b: string) =>
   Math.round((new Date(b + 'T00:00:00Z').getTime() - new Date(a + 'T00:00:00Z').getTime()) / 86400000);
 
-export function SinceYesterday({ briefing, prev, watch, net }: {
+export function SinceYesterday({ briefing, prev, watch, net, loading }: {
   briefing: Briefing; prev: Briefing | null;
   watch: WatchItem[] | null;
   net: boolean;   // net revenue mode: lead with rooms, omit gross € figures
+  loading?: boolean;   // prev briefing still in flight (no cache yet) —
+                       // hold the space so the section never shoves the
+                       // page down when it arrives
 }) {
+  if (loading) {
+    return (
+      <div style={{ margin: '0 0 14px' }}>
+        <div className="fl-skel" style={{ height: 118, borderRadius: 16, marginBottom: 0 }} />
+      </div>
+    );
+  }
   if (!prev) return null;
   const gap = daysBetween(prev.report_date, briefing.report_date);
   if (gap < 1 || gap > 3) return null;   // stale comparison is worse than none

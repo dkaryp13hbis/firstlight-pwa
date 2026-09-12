@@ -84,6 +84,7 @@ export default function App() {
   /* My Watchlist: items, yesterday's row (for "since yesterday"), sheet, gate */
   const [watch, setWatch] = useState<WatchItem[] | null>(null);   // null = table missing / not loaded
   const [prevB, setPrevB] = useState<Briefing | null>(null);
+  const [prevLoaded, setPrevLoaded] = useState(false);   // Since Yesterday skeleton gate
   const [watchOpen, setWatchOpen] = useState(false);
   const [watchOn, setWatchOn] = useState(demoMode);
   const [portfolioOn, setPortfolioOn] = useState(demoMode);
@@ -135,10 +136,17 @@ export default function App() {
     if (!hotelId || isPortfolioId(hotelId)) return;
     const cached = readCache<Briefing>(`fl_briefing_${hotelId}`);
     if (cached) setBriefing(cached);
+    /* yesterday's briefing is cached too, so Since Yesterday paints on the
+       first frame instead of popping in when the fetch lands */
+    const cachedPrev = readCache<Briefing>(`fl_prev_${hotelId}`);
+    if (cachedPrev) setPrevB(cachedPrev);
+    setPrevLoaded(!!cachedPrev);
     fetchLatestBriefing(hotelId)
       .then(b => {
         setBriefing(b); setError(null); setOfflineAt(null); writeCache(`fl_briefing_${hotelId}`, b);
-        fetchPrevBriefing(hotelId, b.report_date).then(setPrevB).catch(() => setPrevB(null));
+        fetchPrevBriefing(hotelId, b.report_date)
+          .then(p2 => { setPrevB(p2); setPrevLoaded(true); if (p2) writeCache(`fl_prev_${hotelId}`, p2); })
+          .catch(() => { setPrevB(null); setPrevLoaded(true); });
       })
       .catch(e => {
         if (cached) setOfflineAt(cached.data.generated_at || '');   // §7 offline
@@ -364,7 +372,7 @@ export default function App() {
 
   const signOut = async () => {
     setSettingsOpen(false);
-    Object.keys(localStorage).filter(k => k.startsWith('fl_briefing_') || k === 'fl_hotels').forEach(k => localStorage.removeItem(k));
+    Object.keys(localStorage).filter(k => k.startsWith('fl_briefing_') || k.startsWith('fl_prev_') || k === 'fl_hotels').forEach(k => localStorage.removeItem(k));
     setBriefing(null); setHotels([]); setHotelId('');
     if (sb) await sb.auth.signOut();
   };
@@ -657,7 +665,7 @@ export default function App() {
         <SmartSummary briefing={viewBriefing ?? briefing} />
         {!viewDate && (
           <SinceYesterday briefing={briefing} prev={prevB} watch={watch}
-            net={revMode === 'net' && netAvailable} />
+            net={revMode === 'net' && netAvailable} loading={!prevLoaded && !prevB} />
         )}
         {revMode === 'net' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-6px 0 14px', fontSize: 12, fontWeight: 600, color: '#5A6780' }}>
