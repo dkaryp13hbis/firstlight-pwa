@@ -133,10 +133,10 @@ export function Shell(props: {
   return (
     <div>
       <div id="fl-sticky" style={{ position: 'sticky', top: 0, zIndex: 999 }}>
-      <header style={{ background: 'var(--app-top)', padding: 'calc(10px + env(safe-area-inset-top)) 16px 10px' }}>
+      <header style={{ position: 'relative', background: 'var(--app-top)', padding: 'calc(10px + env(safe-area-inset-top)) 16px 10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: collapsed ? 48 : undefined }}>
           {collapsed ? (
-            <span onClick={() => { if (props.hotels.length > 1) { window.scrollTo({ top: 0, behavior: 'smooth' }); setPickOpen(true); } }}
+            <span onClick={() => props.hotels.length > 1 && setPickOpen(!pickOpen)}
               style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: props.hotels.length > 1 ? 'pointer' : 'default', minWidth: 0 }}>
               <svg width="22" height="22" viewBox="0 0 100 100" fill="none" style={{ flexShrink: 0 }}>
                 <g transform="translate(50,50) scale(.78) translate(-52,-50)">
@@ -190,7 +190,7 @@ export function Shell(props: {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, position: 'relative',
           marginTop: collapsed ? 0 : 12, maxHeight: collapsed ? 0 : 44, opacity: collapsed ? 0 : 1,
-          overflow: pickOpen ? 'visible' : 'hidden', transition: 'max-height .25s ease, opacity .25s ease, margin .25s ease',
+          overflow: 'hidden', transition: 'max-height .25s ease, opacity .25s ease, margin .25s ease',
           pointerEvents: collapsed ? 'none' : undefined,
         }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.7)' }}>Hotel</span>
@@ -202,22 +202,6 @@ export function Shell(props: {
           }}>
             <span>{current}</span>{props.hotels.length > 1 && <span>▾</span>}
           </div>
-          {pickOpen && (
-            <div style={{
-              position: 'absolute', top: 'calc(100% + 6px)', left: 40, zIndex: 1001,
-              background: '#0A1F4D', border: '1px solid rgba(255,255,255,.12)',
-              borderRadius: 10, overflow: 'hidden', minWidth: 190, boxShadow: '0 8px 32px rgba(0,0,0,.5)',
-            }}>
-              {props.hotels.map(h => (
-                <button key={h.id} onClick={() => { setPickOpen(false); props.onHotel(h.id); }} style={{
-                  display: 'block', width: '100%', background: 'none', border: 'none',
-                  borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'left',
-                  color: h.id === props.hotelId ? '#38E1F0' : 'rgba(255,255,255,.8)',
-                  fontSize: 12, fontWeight: h.id === props.hotelId ? 700 : 500, padding: '12px 14px',
-                }}>{h.name}</button>
-              ))}
-            </div>
-          )}
           <button onClick={props.onRefresh} disabled={busy} style={{
             padding: '7px 16px', borderRadius: 8, whiteSpace: 'nowrap',
             border: busy ? '1px solid rgba(56,225,240,.35)' : '1px solid rgba(255,255,255,.13)',
@@ -226,6 +210,27 @@ export function Shell(props: {
             opacity: busy ? 1 : undefined,
           }}>{busy ? '↻ Refreshing…' : '↻ Refresh'}</button>
         </div>
+        {pickOpen && (
+          <>
+            {createPortal(
+              <div onClick={() => setPickOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />,
+              document.body)}
+            <div style={{
+              position: 'absolute', top: 'calc(100% - 4px)', left: 16, zIndex: 1001,
+              background: '#0A1F4D', border: '1px solid rgba(255,255,255,.12)',
+              borderRadius: 10, overflow: 'hidden', minWidth: 210, boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+            }}>
+              {props.hotels.map(h => (
+                <button key={h.id} onClick={() => { setPickOpen(false); props.onHotel(h.id); }} style={{
+                  display: 'block', width: '100%', background: 'none', border: 'none',
+                  borderBottom: '1px solid rgba(255,255,255,.06)', textAlign: 'left',
+                  color: h.id === props.hotelId ? '#38E1F0' : 'rgba(255,255,255,.8)',
+                  fontSize: 12.5, fontWeight: h.id === props.hotelId ? 700 : 500, padding: '13px 15px',
+                }}>{h.name}</button>
+              ))}
+            </div>
+          </>
+        )}
       </header>
 
       </div>
