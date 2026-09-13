@@ -98,11 +98,12 @@ function roundTopBar(x: number, yTop: number, w: number, h: number, bot: number)
          `L${(x + w - r).toFixed(1)},${yTop} Q${x + w},${yTop} ${x + w},${(yTop + r).toFixed(1)} L${x + w},${bot} Z`;
 }
 
-export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, tall }: {
+export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, tall, open }: {
   months: PaceMonth[]; field: 'rev' | 'adr'; fieldStly: 'rev_stly' | 'adr_stly';
   fieldFinal: 'rev_final' | 'adr_final_ly'; fmt: (v: number) => string;
   fmtFull: (v: number) => string;
   tall?: boolean;   // portfolio: 12 months in one row, taller plot
+  open?: boolean;   // next-year view: no month is closed yet — every month is OTB vs STLY (+ final reference)
 }) {
   const H = tall ? H1 : H0, BOT = tall ? BOT1 : BOT0, CH = tall ? CH1 : CH0;
   const n = months.length, step = (W - 82) / n, bw = tall ? 10 : n > 6 ? 13 : 15;
@@ -110,8 +111,11 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, ta
      a tight pill keeps its text large (12.5px) and only trims its box */
   const pw = Math.min(54 * TXS, step - 3), tight = pw < 54 * TXS;
   const ph = (tight ? 20 : 22) * TXS, pf = (tight ? 12.5 : 14.5) * TXS, mz = TXS * (n > 8 ? 0.85 : 1);
-  const curM = new Date().getMonth() + 1;
-  const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, (m[fieldFinal] as number) || 0))) * 1.08;
+  const curM = open ? 0 : new Date().getMonth() + 1;
+  /* next-year view: the axis is scaled to OTB vs STLY only — a closed month's
+     final (a full month, 20× the next-year bars) would squash them to slivers;
+     the dashed final line is drawn only when it fits, the tooltip always has it */
+  const mx = Math.max(1, ...months.map(m => Math.max(m[field] as number, m[fieldStly] as number, open ? 0 : (m[fieldFinal] as number) || 0))) * 1.08;
   const [tip, setTip] = useState<number | null>(null);
   /* new hotel/briefing = new months array — an open tooltip must not carry
      over to another hotel's chart (same bug class as DemandHeat sel reset) */
@@ -139,7 +143,7 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, ta
             <path d={roundTopBar(x - bw - 1, BOT - vTy, bw, vTy, BOT)}
               fill={(m[field] as number) >= ((m[fieldFinal] as number) || Infinity) ? GREEN : NAVY} />
             <path d={roundTopBar(x + 1, BOT - vLy, bw, vLy, BOT)} fill={GREY} />
-            {(m[fieldFinal] as number) > 0 && m.month_num >= curM && (
+            {(m[fieldFinal] as number) > 0 && (m[fieldFinal] as number) <= mx && m.month_num >= curM && (
               <line x1={x - bw - 7} y1={BOT - (m[fieldFinal] as number) / mx * CH}
                 x2={x + bw + 7} y2={BOT - (m[fieldFinal] as number) / mx * CH}
                 stroke={GREEN} strokeWidth={2.5} strokeDasharray="4,3" />
@@ -200,13 +204,13 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, ta
   );
 }
 
-export function OccPace({ months, tall }: { months: PaceMonth[]; tall?: boolean }) {
+export function OccPace({ months, tall, open }: { months: PaceMonth[]; tall?: boolean; open?: boolean }) {
   const H = tall ? H1 : H0, BOT = tall ? BOT1 : BOT0, CH = tall ? CH1 : CH0;
   const n = months.length, step = (W - 82) / n;
   const pw = Math.min(54 * TXS, step - 3), tight = pw < 54 * TXS;   // see BarPace
   const ph = (tight ? 20 : 22) * TXS, pf = (tight ? 12.5 : 14.5) * TXS, mz = TXS * (n > 8 ? 0.85 : 1);
   const cw = Math.min(44 * TXS, step - 3), chh = (tight ? 18 : 19) * TXS, cf = (tight ? 12 : 13.5) * TXS;   // occupancy chips
-  const curM = new Date().getMonth() + 1;
+  const curM = open ? 0 : new Date().getMonth() + 1;   // see BarPace `open`
   const x = (i: number) => 62 + i * step + step / 2;
   const y = (v: number) => BOT - Math.min(v, 1.05) * CH;
   /* monotone-style smoothing: Catmull-Rom -> cubic Bezier, tension .5 —
@@ -598,8 +602,15 @@ interface NextYearRow {
 
 const DIM = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-/** comp: 'this' = vs this year at same stage; 'prev' = vs last completed year
- *  (two-year stage + that year's FINAL, taken from the pace table). */
+/** comp: 'this' = vs this year at the same booking stage (STLY is ALWAYS the
+ *  same-stage value — closed months of this year additionally expose their
+ *  actual as the FINAL reference; open months have no final yet);
+ *  'prev' = vs last completed year (two-year stage + that year's FINAL, taken
+ *  from the pace table).
+ *  2026-09-13 (City Hotel, user: "2027 vs 2026 STLY looks very big"): closed
+ *  months used to put this year's ACTUAL in the STLY slot (Jan 2026 final
+ *  275,470 € against 85 rn of 2027 OTB) — the adapter's real same-stage
+ *  value (15,386 €) was never shown. */
 export function buildNextPace(briefing: Briefing, comp: 'this' | 'prev' = 'this'): PaceMonth[] {
   const rooms = briefing.data.total_rooms || 1;
   const rows = ((briefing.data as unknown as { pace_next_year?: NextYearRow[] }).pace_next_year ?? []);
@@ -607,25 +618,27 @@ export function buildNextPace(briefing: Briefing, comp: 'this' | 'prev' = 'this'
   const curM = new Date().getMonth() + 1;
   return rows.map(r => {
     const thisRow = paceByMonth.get(r.month_num);
-    // vs this (unfinished) year: closed months use their ACTUALS (their final),
-    // current + future months use the same-booking-stage value
-    const cmpRn = comp === 'this'
-      ? (r.month_num < curM && thisRow ? thisRow.rn : r.rn_stly)
-      : (r.rn_stly2 ?? 0);
-    const cmpRev = comp === 'this'
-      ? (r.month_num < curM && thisRow ? thisRow.rev : r.rev_stly)
-      : (r.rev_stly2 ?? 0);
-    const fin = comp === 'prev' ? thisRow : undefined;
+    const cmpRn = comp === 'this' ? r.rn_stly : (r.rn_stly2 ?? 0);
+    const cmpRev = comp === 'this' ? r.rev_stly : (r.rev_stly2 ?? 0);
+    const days = rooms * DIM[r.month_num - 1];
+    // FINAL reference: vs this year → this year's actual, closed months only
+    // (the this-year pace row's OTB IS the actual once the month has closed);
+    // vs last completed year → that year's final from the pace table.
+    const closed = comp === 'this' && thisRow !== undefined && r.month_num < curM && thisRow.rn > 0 ? thisRow : undefined;
+    const finRn = comp === 'prev' ? (thisRow?.rn_final_ly ?? 0) : (closed?.rn ?? 0);
+    const finRev = comp === 'prev' ? (thisRow?.rev_final ?? 0) : (closed?.rev ?? 0);
+    const finAdr = comp === 'prev' ? (thisRow?.adr_final_ly ?? 0) : finRn ? finRev / finRn : 0;
+    const finOcc = comp === 'prev' ? (thisRow?.final ?? 0) : finRn / days;
     return {
       month: r.month, month_num: r.month_num,
-      rn: r.rn, rn_stly: cmpRn, rn_final_ly: fin?.rn_final_ly ?? 0,
-      rev: r.rev, rev_stly: cmpRev, rev_final: fin?.rev_final ?? 0,
+      rn: r.rn, rn_stly: cmpRn, rn_final_ly: finRn,
+      rev: r.rev, rev_stly: cmpRev, rev_final: finRev,
       adr: r.rn ? r.rev / r.rn : 0,
       adr_stly: cmpRn ? cmpRev / cmpRn : 0,
-      adr_final_ly: fin?.adr_final_ly ?? 0,
-      occ: r.rn / (rooms * DIM[r.month_num - 1]),
-      stly: cmpRn / (rooms * DIM[r.month_num - 1]),
-      final: fin?.final ?? 0,
+      adr_final_ly: finAdr,
+      occ: r.rn / days,
+      stly: cmpRn / days,
+      final: finOcc,
       status: r.rn >= cmpRn ? 'ahead' : 'behind',
     };
   });
@@ -644,7 +657,7 @@ export function OtbTab({ briefing, year, comp, onWatchRange, watchedRanges }: {
       <SectionLabel icon="pace" info="pace" title="Pace">
         {year === 'this'
           ? 'Pace — OTB vs STLY vs Final LY'
-          : 'Pace — ' + String(thisYear + 1) + ' OTB vs ' + String(comp === 'this' ? thisYear : thisYear - 1) + (comp === 'prev' ? ' (same stage & final)' : ' same stage')}
+          : 'Pace — ' + String(thisYear + 1) + ' OTB vs ' + String(comp === 'this' ? thisYear : thisYear - 1) + ' same stage' + (comp === 'prev' ? ' & final' : ' (closed months: + final)')}
       </SectionLabel>
       {year === 'next' && paceAll.every(m => m.rn === 0) && (
         <div className="card" style={{ padding: '12px 16px', fontSize: 12, fontWeight: 600, color: 'var(--n600)', marginBottom: 12 }}>
@@ -652,13 +665,13 @@ export function OtbTab({ briefing, year, comp, onWatchRange, watchedRanges }: {
         </div>
       )}
       <ChartCard inner title="Revenue OTB" icon="euro" legend={PACE_LEGEND} info="crev">
-        <BarPace months={paceAll} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} fmtFull={v => euro(v)} />
+        <BarPace months={paceAll} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} fmtFull={v => euro(v)} open={year === 'next'} />
       </ChartCard>
       <ChartCard inner title="Occupancy" icon="occ" legend={PACE_LEGEND} info="cocc">
-        <OccPace months={paceAll} />
+        <OccPace months={paceAll} open={year === 'next'} />
       </ChartCard>
       <ChartCard inner title="ADR" icon="adr" legend={PACE_LEGEND} info="cadr">
-        <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} />
+        <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} open={year === 'next'} />
       </ChartCard>
       </div>
 

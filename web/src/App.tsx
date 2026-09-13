@@ -685,7 +685,7 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-2px 0 14px', fontSize: 12, fontWeight: 600, color: '#5A6780' }}>
             <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.08em', color: '#0F2860', background: '#E9EDF4', borderRadius: 999, padding: '3px 9px' }}>{new Date().getFullYear() + 1}</span>
             Reporting year {new Date().getFullYear() + 1} vs {new Date().getFullYear() - (comp === 'prev' ? 1 : 0)}
-            {comp === 'prev' ? ' — same stage & final' : ' — closed months final · open months same stage'} · change in Settings
+            {comp === 'prev' ? ' — same stage & final' : ' — same stage · closed months also show their final'} · change in Settings
           </div>
         )}
         <OtbCards briefing={viewBriefing ?? briefing} year={year} nextPace={buildNextPace(viewBriefing ?? briefing, comp)}

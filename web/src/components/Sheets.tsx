@@ -100,7 +100,7 @@ export function SettingsSheet(props: {
           {props.year === 'this'
             ? 'Same time last year & final ' + (Y - 1) + ' on every chart'
             : props.comp === 'prev' ? 'Same stage & final ' + (Y - 1)
-            : 'Closed months: final ' + Y + ' · open months: same stage ' + Y}
+            : 'Same stage ' + Y + ' on every month · closed months also show their ' + Y + ' final'}
         </span>
       </div>
       <div style={{ ...rowStyle, display: 'block' }}>
