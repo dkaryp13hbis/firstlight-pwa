@@ -106,7 +106,9 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, ta
   open?: boolean;   // next-year view: no month is closed yet — every month is OTB vs STLY (+ final reference)
 }) {
   const H = tall ? H1 : H0, BOT = tall ? BOT1 : BOT0, CH = tall ? CH1 : CH0;
-  const n = months.length, step = (W - 82) / n, bw = tall ? 10 : n > 6 ? 13 : 15;
+  /* bar width follows the month step (12 months → 10px, ≤7 → 15px) so the
+     tall layout works for seasonal hotels and the 12-month portfolio alike */
+  const n = months.length, step = (W - 82) / n, bw = Math.min(15, Math.max(10, Math.round(step * 0.22)));
   /* the 54px variance pills never exceed the month step (12 months → 40px);
      a tight pill keeps its text large (12.5px) and only trims its box */
   const pw = Math.min(54 * TXS, step - 3), tight = pw < 54 * TXS;
@@ -664,14 +666,22 @@ export function OtbTab({ briefing, year, comp, onWatchRange, watchedRanges }: {
           No {thisYear + 1} bookings on the books yet — the grey STLY bars show where {thisYear} stood at this date last year.
         </div>
       )}
+      {/* portfolio-style layout (user 2026-09-20): taller plot + the chart
+          bleeds into the card padding so the columns get every pixel */}
       <ChartCard inner title="Revenue OTB" icon="euro" legend={PACE_LEGEND} info="crev">
-        <BarPace months={paceAll} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} fmtFull={v => euro(v)} open={year === 'next'} />
+        <div style={{ margin: '0 -10px' }}>
+          <BarPace months={paceAll} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} fmtFull={v => euro(v)} open={year === 'next'} tall />
+        </div>
       </ChartCard>
       <ChartCard inner title="Occupancy" icon="occ" legend={PACE_LEGEND} info="cocc">
-        <OccPace months={paceAll} open={year === 'next'} />
+        <div style={{ margin: '0 -10px' }}>
+          <OccPace months={paceAll} open={year === 'next'} tall />
+        </div>
       </ChartCard>
       <ChartCard inner title="ADR" icon="adr" legend={PACE_LEGEND} info="cadr">
-        <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} open={year === 'next'} />
+        <div style={{ margin: '0 -10px' }}>
+          <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} open={year === 'next'} tall />
+        </div>
       </ChartCard>
       </div>
 
