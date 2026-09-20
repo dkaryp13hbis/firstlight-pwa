@@ -71,6 +71,9 @@ const W = 560, H0 = 268, BOT0 = 200, CH0 = 172;
 /* `tall` (portfolio, 12 months in one row): plot ~1.9× taller so the bars
    carry the detail that the narrow month step cannot */
 const H1 = 360, BOT1 = 292, CH1 = 262;
+/* `mid` (single-hotel pace tab): the tall plot trimmed 15% (user 2026-09-20
+   "reduce a bit the height around 15%"); top margin 30 + under-axis 68 kept */
+const CH2 = 223, BOT2 = CH2 + 30, H2 = BOT2 + 68;
 
 /* body zoom cannot reach inside width-constrained SVGs — the app sets this
    from the text-size setting and chart text multiplies by it */
@@ -98,14 +101,15 @@ function roundTopBar(x: number, yTop: number, w: number, h: number, bot: number)
          `L${(x + w - r).toFixed(1)},${yTop} Q${x + w},${yTop} ${x + w},${(yTop + r).toFixed(1)} L${x + w},${bot} Z`;
 }
 
-export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, tall, open }: {
+export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, tall, mid, open }: {
   months: PaceMonth[]; field: 'rev' | 'adr'; fieldStly: 'rev_stly' | 'adr_stly';
   fieldFinal: 'rev_final' | 'adr_final_ly'; fmt: (v: number) => string;
   fmtFull: (v: number) => string;
   tall?: boolean;   // portfolio: 12 months in one row, taller plot
+  mid?: boolean;    // single-hotel pace tab: tall minus 15%
   open?: boolean;   // next-year view: no month is closed yet — every month is OTB vs STLY (+ final reference)
 }) {
-  const H = tall ? H1 : H0, BOT = tall ? BOT1 : BOT0, CH = tall ? CH1 : CH0;
+  const H = mid ? H2 : tall ? H1 : H0, BOT = mid ? BOT2 : tall ? BOT1 : BOT0, CH = mid ? CH2 : tall ? CH1 : CH0;
   /* bar width follows the month step (12 months → 10px, ≤7 → 15px) so the
      tall layout works for seasonal hotels and the 12-month portfolio alike */
   const n = months.length, step = (W - 82) / n, bw = Math.min(15, Math.max(10, Math.round(step * 0.22)));
@@ -206,8 +210,8 @@ export function BarPace({ months, field, fieldStly, fieldFinal, fmt, fmtFull, ta
   );
 }
 
-export function OccPace({ months, tall, open }: { months: PaceMonth[]; tall?: boolean; open?: boolean }) {
-  const H = tall ? H1 : H0, BOT = tall ? BOT1 : BOT0, CH = tall ? CH1 : CH0;
+export function OccPace({ months, tall, mid, open }: { months: PaceMonth[]; tall?: boolean; mid?: boolean; open?: boolean }) {
+  const H = mid ? H2 : tall ? H1 : H0, BOT = mid ? BOT2 : tall ? BOT1 : BOT0, CH = mid ? CH2 : tall ? CH1 : CH0;
   const n = months.length, step = (W - 82) / n;
   const pw = Math.min(54 * TXS, step - 3), tight = pw < 54 * TXS;   // see BarPace
   const ph = (tight ? 20 : 22) * TXS, pf = (tight ? 12.5 : 14.5) * TXS, mz = TXS * (n > 8 ? 0.85 : 1);
@@ -670,17 +674,17 @@ export function OtbTab({ briefing, year, comp, onWatchRange, watchedRanges }: {
           bleeds into the card padding so the columns get every pixel */}
       <ChartCard inner title="Revenue OTB" icon="euro" legend={PACE_LEGEND} info="crev">
         <div style={{ margin: '0 -10px' }}>
-          <BarPace months={paceAll} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} fmtFull={v => euro(v)} open={year === 'next'} tall />
+          <BarPace months={paceAll} field="rev" fieldStly="rev_stly" fieldFinal="rev_final" fmt={v => kilo(v)} fmtFull={v => euro(v)} open={year === 'next'} mid />
         </div>
       </ChartCard>
       <ChartCard inner title="Occupancy" icon="occ" legend={PACE_LEGEND} info="cocc">
         <div style={{ margin: '0 -10px' }}>
-          <OccPace months={paceAll} open={year === 'next'} tall />
+          <OccPace months={paceAll} open={year === 'next'} mid />
         </div>
       </ChartCard>
       <ChartCard inner title="ADR" icon="adr" legend={PACE_LEGEND} info="cadr">
         <div style={{ margin: '0 -10px' }}>
-          <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} open={year === 'next'} tall />
+          <BarPace months={paceAll} field="adr" fieldStly="adr_stly" fieldFinal="adr_final_ly" fmt={v => `€${Math.round(v)}`} fmtFull={v => `€${Math.round(v)}`} open={year === 'next'} mid />
         </div>
       </ChartCard>
       </div>
