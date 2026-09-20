@@ -14,11 +14,11 @@ function b64ToUint8(b64: string): Uint8Array {
   return Uint8Array.from(raw, c => c.charCodeAt(0));
 }
 
-export function registerSW(onNavigate: (sectionId: string) => void) {
+export function registerSW(onNavigate: (sectionId: string, hotelId?: string | null) => void) {
   if (!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('/sw.js').catch(e => console.warn('[sw]', e));
   navigator.serviceWorker.addEventListener('message', ev => {
-    if (ev.data?.type === 'NAVIGATE') onNavigate(String(ev.data.sectionId));
+    if (ev.data?.type === 'NAVIGATE') onNavigate(String(ev.data.sectionId), ev.data.hotelId ?? null);
   });
 }
 

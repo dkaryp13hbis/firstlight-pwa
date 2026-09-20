@@ -25,6 +25,16 @@ import { setShareMeta } from './lib/shareImage';
 
 const TS_ZOOM: Record<number, number> = { 1: 0.85, 2: 1, 3: 1.12, 4: 1.25, 5: 1.4 };
 
+/* Notification deep link, cold start: the SW opens '/#sec-ai&h=<hotelId>'.
+   Consumed at module load — before the app restores the last-browsed hotel —
+   so a Pome notification opens Pome, not whatever was open last. */
+(() => {
+  const m = window.location.hash.match(/[#&]h=([\w-]+)/);
+  if (!m) return;
+  try { localStorage.setItem('fl_hotel', m[1]); } catch { /* private mode */ }
+  history.replaceState(null, '', window.location.pathname);
+})();
+
 /* Portfolio preview: one more entry in the hotel picker (admin emails only,
    fictional data) — same chrome, four tabs, no FL Pulse. */
 const PORTFOLIO_ID = 'portfolio';                 // admin preview (fictional)
@@ -458,10 +468,16 @@ export default function App() {
 
   /* Web Push: service worker + honest bell state (browser subscription AND server row). */
   const [pushMsg, setPushMsg] = useState<string | null>(null);
+  /* the SW message handler is registered ONCE — reach current state via refs */
+  const swRef = useRef({ hotels, changeHotel: (id: string) => { void id; }, nav: (t: Tab) => { void t; } });
+  swRef.current.hotels = hotels;
   useEffect(() => {
-    registerSW(sectionId => {
+    registerSW((sectionId, hid) => {
+      /* deep link: the notification names its hotel — switch before scrolling
+         (a Pome push must not open on the last-browsed hotel) */
+      if (hid && swRef.current.hotels.some(h => h.id === hid)) swRef.current.changeHotel(hid);
       const t = ({ 'sec-overview': 'Overview', 'sec-pickup': 'Pickup', 'sec-pace': 'Pace', 'sec-cal': 'Calendar', 'sec-ai': 'FL Pulse' } as Record<string, Tab>)[sectionId];
-      if (t) setTimeout(() => nav(t), 400);
+      if (t) setTimeout(() => swRef.current.nav(t), 400);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -513,6 +529,8 @@ export default function App() {
     const y = el.getBoundingClientRect().top + window.scrollY - stickyH - 6;
     window.scrollTo({ top: Math.max(y, 0), behavior: 'smooth' });
   };
+  swRef.current.changeHotel = changeHotel;
+  swRef.current.nav = nav;
 
   if (!session) return <Login />;
   if (isPortfolio) return (
