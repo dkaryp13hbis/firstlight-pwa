@@ -179,7 +179,10 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
         const cardId = ins.id || `card_${i + 1}`;
         const voted = localStorage.getItem(`fl_fb_${hotelId}_${briefing.report_date}_${cardId}`);
         const watchKey = onWatch ? monthKeyFromCardId(ins.id) : null;
-        return <Card key={cardId} ins={ins} cardId={cardId} voted={voted} onFeedback={onFeedback}
+        /* key scoped to the hotel: card ids repeat across hotels (every hotel
+           has e.g. proj_september_2026), and a bare cardId key made React keep
+           the expanded state when switching hotels (user 2026-09-22) */
+        return <Card key={`${hotelId}_${cardId}`} ins={ins} cardId={cardId} voted={voted} onFeedback={onFeedback}
           watchKey={watchKey} watched={!!(watchKey && watched?.has(watchKey))} onWatch={onWatch} />;
       })}
     </div>
