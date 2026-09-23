@@ -519,6 +519,7 @@ export default function App() {
     } catch { say('Could not load that day'); }
   };
 
+  const spyMuteUntil = useRef(0);   // tap-to-scroll mutes the spy while gliding
   const nav = (t: Tab) => {
     track('tab_nav', { tab: t });
     setTab(t);
@@ -527,10 +528,44 @@ export default function App() {
     if (!el) return;
     const stickyH = document.getElementById('fl-sticky')?.offsetHeight ?? 46;
     const y = el.getBoundingClientRect().top + window.scrollY - stickyH - 6;
+    spyMuteUntil.current = Date.now() + 900;   // smooth scroll passes other sections
     window.scrollTo({ top: Math.max(y, 0), behavior: 'smooth' });
   };
   swRef.current.changeHotel = changeHotel;
   swRef.current.nav = nav;
+
+  /* Scroll spy: the bottom nav follows manual scrolling (user 2026-09-23,
+     "when i scroll down to specific section the navigation doesnt change").
+     Active tab = the last section anchor at/above the reading line (sticky
+     header + 70px); page bottom counts as the last rendered section. Muted
+     during tap-driven smooth scrolls so the lens doesn't hop through the
+     sections in between. */
+  useEffect(() => {
+    const SECS: [string, Tab][] = [['sec-overview', 'Overview'], ['sec-pickup', 'Pickup'],
+      ['sec-pace', 'Pace'], ['sec-cal', 'Calendar'], ['sec-ai', 'FL Pulse']];
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        if (Date.now() < spyMuteUntil.current) return;
+        const line = (document.getElementById('fl-sticky')?.offsetHeight ?? 46) + 70;
+        let cur: Tab = 'Overview';
+        for (const [id, t] of SECS) {
+          const el = document.getElementById(id);
+          if (el && el.getBoundingClientRect().top <= line) cur = t;
+        }
+        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8) {
+          for (let i = SECS.length - 1; i >= 0; i--) {
+            if (document.getElementById(SECS[i][0])) { cur = SECS[i][1]; break; }
+          }
+        }
+        setTab(prev => (prev === cur ? prev : cur));
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, []);
 
   if (!session) return <Login />;
   if (isPortfolio) return (
