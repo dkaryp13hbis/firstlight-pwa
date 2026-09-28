@@ -152,7 +152,11 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
 }) {
   const insights = briefing.ai_insights?.insights ?? [];
   const closures = briefing.ai_insights?.watch_closures ?? [];
-  if (!insights.length && !closures.length) {
+  /* Still open (2026-09-28): repeats the novelty gate held back today. The
+     analyst's memory used to live only in the payload, so a quiet day read as
+     "No insights for today." while e.g. October sat 54% behind on the list. */
+  const openItems = briefing.ai_insights?.open_items ?? [];
+  if (!insights.length && !closures.length && !openItems.length) {
     return <p style={{ textAlign: 'center', color: 'var(--n500)', padding: 24, fontSize: 13 }}>No insights for today.</p>;
   }
   return (
@@ -165,6 +169,11 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
           alignItems: 'center', justifyContent: 'center', padding: '0 5px',
         }}>{insights.length}</span>
       </SectionLabel>
+      {!insights.length && (
+        <p style={{ color: 'var(--n500)', fontSize: 13, margin: '0 0 12px', lineHeight: 1.45 }}>
+          Nothing new today. The items below are still open and being watched.
+        </p>
+      )}
       {/* follow-up engine closings: one green line, then gone tomorrow */}
       {closures.map(c => (
         <div key={c.key} style={{
@@ -185,6 +194,46 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
         return <Card key={`${hotelId}_${cardId}`} ins={ins} cardId={cardId} voted={voted} onFeedback={onFeedback}
           watchKey={watchKey} watched={!!(watchKey && watched?.has(watchKey))} onWatch={onWatch} />;
       })}
+      {openItems.length > 0 && (
+        <div style={{ marginTop: insights.length ? 14 : 0 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, margin: '0 2px 8px',
+            fontSize: 11, fontWeight: 800, letterSpacing: '.06em', textTransform: 'uppercase', color: '#6E7A96',
+          }}>
+            Still open
+            <span style={{
+              background: '#E2E7F0', color: '#3D4A66', fontSize: 10.5, fontWeight: 700,
+              minWidth: 18, height: 18, borderRadius: 999, display: 'inline-flex',
+              alignItems: 'center', justifyContent: 'center', padding: '0 5px',
+            }}>{openItems.length}</span>
+          </div>
+          <div style={{ borderRadius: 16, background: '#fff', boxShadow: '0 1px 2px rgba(15,27,52,.05)', overflow: 'hidden' }}>
+            {openItems.map((o, i) => {
+              const tag = TAG_STYLE[o.tag] ?? TAG_STYLE.MONITOR;
+              return (
+                <div key={`${hotelId}_open_${o.id}`} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+                  borderTop: i ? '1px solid #EEF1F6' : 'none',
+                }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 13, fontWeight: 600, lineHeight: 1.35, color: '#0f1b34', textWrap: 'pretty' as never }}>
+                      <SignedText text={o.title} />
+                    </span>
+                    {o.first_flagged && (
+                      <span style={{ display: 'block', fontSize: 11.5, color: '#6E7A96', marginTop: 2 }}>since {o.first_flagged}</span>
+                    )}
+                  </span>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, letterSpacing: '.03em', padding: '5px 10px',
+                    borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
+                    color: tag.fg, background: tag.bg, border: '1px solid ' + tag.bd,
+                  }}>{tag.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

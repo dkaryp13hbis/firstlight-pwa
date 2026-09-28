@@ -97,6 +97,9 @@ export interface Briefing {
   generated_at: string;   // ISO
   data: BriefingData;
   ai_insights: { executive_summary?: string; insights?: Insight[];
-    watch_closures?: { key: string; kind: 'resolve' | 'retire'; title: string; text: string }[] };
+    watch_closures?: { key: string; kind: 'resolve' | 'retire'; title: string; text: string }[];
+    /** repeats held back by the novelty gate today — the Pulse watchlist (2026-09-28) */
+    open_items?: { id: string; tag: string; title: string; first_flagged?: string | null; first_flagged_iso?: string | null }[];
+    quiet_day?: boolean };
   kpi_summary?: unknown;
 }
