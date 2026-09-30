@@ -5,11 +5,10 @@ import type { Briefing } from './types';
 import type { WatchItem, WatchKind } from './lib/watch';
 import fixture from './fixtures/briefing.json';
 import { sb } from './lib/sb';
+import { API, getToken, ownUser, ownSessionExpired } from './lib/session';
 
 /* Production API base is a public URL — hardcoded fallback so the portal
    works without a Pages env var (override with VITE_API_URL for dev). */
-const API = (import.meta.env.VITE_API_URL as string | undefined)
-  ?? 'https://web-cloudflare.up.railway.app';
 const TOKEN = import.meta.env.VITE_API_TOKEN as string | undefined;
 
 /** Read chain: FastAPI (Phase A endpoints) -> Supabase (current-app path)
@@ -146,6 +145,8 @@ export interface AdminUsage {
 }
 
 export async function sessionEmail(): Promise<string | null> {
+  const own = ownUser();
+  if (own) return own.email.toLowerCase();
   if (!sb) return null;
   const { data } = await sb.auth.getSession();
   return data.session?.user.email?.toLowerCase() ?? null;
@@ -159,12 +160,11 @@ export interface AdminClient {
 export interface AdminClients extends AdminUsage { hotels: AdminClient[]; subs_ready: boolean }
 
 async function adminGet<T>(path: string): Promise<T | null> {
-  if (!sb) return null;
   try {
-    const { data } = await sb.auth.getSession();
-    const tok = data.session?.access_token;
+    const tok = await getToken();
     if (!tok) return null;
     const r = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${tok}` } });
+    if (r.status === 401) ownSessionExpired();
     if (!r.ok) return null;
     return await r.json() as T;
   } catch { return null; }
@@ -177,10 +177,8 @@ export const jwtGet = adminGet;
 
 export async function jwtSend(method: string, path: string, body?: unknown):
   Promise<{ status: number; data: unknown } | null> {
-  if (!sb) return null;
   try {
-    const { data } = await sb.auth.getSession();
-    const tok = data.session?.access_token;
+    const tok = await getToken();
     if (!tok) return null;
     const r = await fetch(`${API}${path}`, {
       method,
@@ -210,10 +208,8 @@ export const fetchPortfolio = (groupId: string) =>
 export const fetchAdminClients = () => adminGet<AdminClients>('/admin/clients');
 
 async function adminPost<T>(path: string, body?: unknown): Promise<T | null> {
-  if (!sb) return null;
   try {
-    const { data } = await sb.auth.getSession();
-    const tok = data.session?.access_token;
+    const tok = await getToken();
     if (!tok) return null;
     const r = await fetch(`${API}${path}`, {
       method: 'POST',
@@ -284,10 +280,8 @@ export const fetchAdminFinance = () => adminGet<AdminFinance>('/admin/finance');
 export interface AdminGroup { id: string; name: string; companies: number }
 export const fetchAdminGroups = () => adminGet<{ groups: AdminGroup[] }>('/admin/groups');
 export async function saveGroup(name: string): Promise<{ id: string } | null> {
-  if (!sb) return null;
   try {
-    const { data } = await sb.auth.getSession();
-    const tok = data.session?.access_token;
+    const tok = await getToken();
     if (!tok) return null;
     const r = await fetch(`${API}/admin/groups`, {
       method: 'POST',
@@ -313,10 +307,8 @@ export const fetchAdminCompanies = () =>
   adminGet<{ companies: AdminCompany[]; since: string }>('/admin/companies');
 
 export async function saveCompany(body: Record<string, unknown>): Promise<{ ok: boolean; error: string }> {
-  if (!sb) return { ok: false, error: 'no session' };
   try {
-    const { data } = await sb.auth.getSession();
-    const tok = data.session?.access_token;
+    const tok = await getToken();
     if (!tok) return { ok: false, error: 'no session' };
     const r = await fetch(`${API}/admin/companies`, {
       method: 'POST',
@@ -330,10 +322,8 @@ export async function saveCompany(body: Record<string, unknown>): Promise<{ ok: 
 }
 
 export async function saveSubscription(hotelId: string, sub: Record<string, unknown>): Promise<boolean> {
-  if (!sb) return false;
   try {
-    const { data } = await sb.auth.getSession();
-    const tok = data.session?.access_token;
+    const tok = await getToken();
     if (!tok) return false;
     const r = await fetch(`${API}/admin/subscription/${hotelId}`, {
       method: 'PUT',
@@ -345,10 +335,8 @@ export async function saveSubscription(hotelId: string, sub: Record<string, unkn
 }
 
 export async function fetchAdminUsage(): Promise<AdminUsage | null> {
-  if (!sb || !API) return null;
   try {
-    const { data } = await sb.auth.getSession();
-    const tok = data.session?.access_token;
+    const tok = await getToken();
     if (!tok) return null;
     const r = await fetch(`${API}/admin/usage`, { headers: { Authorization: `Bearer ${tok}` } });
     if (!r.ok) return null;

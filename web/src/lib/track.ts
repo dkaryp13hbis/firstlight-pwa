@@ -3,6 +3,7 @@
  *  break the app. GATED: only the demo account is tracked for now; widen by
  *  editing TRACKED_EMAILS (or set it to null to track everyone). */
 import { sb } from './sb';
+import { getUserId, getEmail } from './session';
 import { jwtSend } from '../api';
 
 const TRACKED_EMAILS: string[] | null = null;   // 2026-09-11: everyone (admin usage view)
@@ -31,10 +32,9 @@ export async function initTracking(currentHotelId: string | undefined) {
   hotelId = currentHotelId;
   if (!sb) return;
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) return;
-    uid = session.user.id;
-    const email = (session.user.email ?? '').toLowerCase();
+    uid = await getUserId();
+    if (!uid) return;
+    const email = (await getEmail()) ?? '';
     enabled = TRACKED_EMAILS === null || TRACKED_EMAILS.includes(email);
     if (!enabled) return;
     const standalone = window.matchMedia?.('(display-mode: standalone)').matches

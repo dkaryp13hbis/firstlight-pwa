@@ -5,6 +5,7 @@
  *  Manrope everywhere, Outfit 700 for the wordmark only. */
 import { useState } from 'react';
 import { sb } from '../lib/sb';
+import { ownLogin } from '../lib/session';
 
 const KEYFRAMES = `
 @keyframes flSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
@@ -23,20 +24,24 @@ export function Login() {
   const [busy, setBusy] = useState(false);
 
   const go = async () => {
-    if (!sb || busy) return;
+    if (busy) return;
     setBusy(true); setErr(''); setNote('');
-    const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) setErr(error.message === 'Invalid login credentials'
-      ? 'Wrong email or password.' : error.message);
+    /* C3 (2026-09-30): FirstLight's own login first; accounts not moved off
+       Supabase Auth yet still sign in there (parallel-run). */
+    const r = await ownLogin(email, pw);
+    if (r.ok) { setBusy(false); return; }
+    if (r.status === 401 && sb) {
+      const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (error) setErr(error.message === 'Invalid login credentials'
+        ? 'Wrong email or password.' : error.message);
+    } else setErr(r.msg);
     setBusy(false);
   };
 
-  const forgot = async () => {
-    if (!sb) return;
-    if (!email) { setErr('Type your email first, then tap "Forgot password?".'); return; }
+  /* No email channel exists (decision 2026-09-10): resets are done by phone. */
+  const forgot = () => {
     setErr('');
-    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-    setNote(error ? error.message : 'Password reset email sent — check your inbox.');
+    setNote('Call HBIS and we reset it with you on the phone.');
   };
 
   const input: React.CSSProperties = {
@@ -100,7 +105,7 @@ export function Login() {
           boxShadow: '0 0 34px rgba(56,225,240,.35)', opacity: busy ? .6 : 1,
         }}>{busy ? 'Signing in…' : 'Sign in'}</button>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
-          <a href="#" onClick={e => { e.preventDefault(); void forgot(); }}
+          <a href="#" onClick={e => { e.preventDefault(); forgot(); }}
             style={{ font: "600 13px Manrope, sans-serif", color: '#7fd9ff', textDecoration: 'none' }}>
             Forgot password?
           </a>

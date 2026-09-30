@@ -3,6 +3,7 @@
  *  the backend sender (briefing/cloud_push.py). Bell state is derived from
  *  the browser subscription + server rows, never from a local flag. */
 import { sb } from './sb';
+import { getUserId } from './session';
 import { jwtGet, jwtSend } from '../api';
 
 export const VAPID_PUBLIC_KEY =
@@ -60,9 +61,8 @@ export async function subscribe(hotelId: string, hotelName: string): Promise<{ o
     sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToUint8(VAPID_PUBLIC_KEY) as BufferSource });
   }
   if (!sb) return { ok: true, msg: 'Notifications on (demo)' };
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) return { ok: false, msg: 'Not signed in — cannot save the subscription.' };
-  const uid = session.user.id;
+  const uid = await getUserId();
+  if (!uid) return { ok: false, msg: 'Not signed in — cannot save the subscription.' };
   const jr = await jwtSend('POST', '/push/subscribe', { hotel_id: hotelId, subscription: sub.toJSON() });
   if (jr && jr.status < 300) return { ok: true, msg: `Notifications on — morning briefing for ${hotelName}` };
   /* fallback: delete-then-insert for THIS hotel: works with or without the
@@ -81,10 +81,10 @@ export async function subscribe(hotelId: string, hotelName: string): Promise<{ o
 
 export async function unsubscribe(hotelId: string, hotelName: string): Promise<string> {
   if (sb) {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session) {
+    const uid = await getUserId();
+    if (uid) {
       const jr = await jwtSend('POST', '/push/unsubscribe', { hotel_id: hotelId });
-      if (!jr) await sb.from('push_subscriptions').delete().eq('user_id', session.user.id).eq('hotel_id', hotelId);
+      if (!jr) await sb.from('push_subscriptions').delete().eq('user_id', uid).eq('hotel_id', hotelId);
       const { data: left } = await sb.from('push_subscriptions').select('id').limit(1);
       if (left && left.length) return `Notifications off for ${hotelName}`;
     }
@@ -117,13 +117,13 @@ export async function getPrefs(hotelId: string): Promise<PushPrefs | null> {
 export async function setPrefs(hotelId: string, prefs: PushPrefs): Promise<boolean> {
   if (!sb) return true;
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) return false;
+    const uid = await getUserId();
+    if (!uid) return false;
     const jr = await jwtSend('PUT', '/push/prefs', { hotel_id: hotelId, notification_prefs: prefs });
     if (jr) return jr.status < 300;
     const { error } = await sb.from('push_subscriptions')
       .update({ notification_prefs: prefs })
-      .eq('user_id', session.user.id).eq('hotel_id', hotelId);
+      .eq('user_id', uid).eq('hotel_id', hotelId);
     return !error;
   } catch { return false; }
 }

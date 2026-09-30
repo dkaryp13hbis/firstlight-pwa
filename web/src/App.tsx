@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchLatestBriefing, fetchBriefingByDate, fetchDates, fetchPrevBriefing, fetchHistoryRows, fetchWatchlist, addWatch, removeWatch, fetchRuns, fetchMyHotels, type RefreshRun } from './api';
 import { sb, demoMode } from './lib/sb';
+import { hasOwnSession, ownUser, ownLogout, onSessionChange } from './lib/session';
 import type { Briefing } from './types';
 import { WatchlistSection, WatchSheet, titleCase } from './components/Watchlist';
 import { WATCHLIST_EMAILS, WATCH_CAP, itemTitle, monthKey, rangeKey, type WatchItem, type WatchKind } from './lib/watch';
@@ -15,6 +16,7 @@ import { AiTab, type FeedbackRequest } from './components/AiCards';
 import { DataHealthSheet, FeedbackSheet, SettingsSheet, Toast } from './components/Sheets';
 import { AdminPortal } from './components/AdminPortal';
 import { Login } from './components/Login';
+import { ChangePassword } from './components/ChangePassword';
 import { PortfolioView } from './components/Portfolio';
 import { fetchPortfolios, fetchPortfolio, type PortfolioGroup } from './api';
 import type { PortfolioData } from './fixtures/portfolio';
@@ -51,8 +53,12 @@ function writeCache(key: string, v: unknown) {
 }
 
 export default function App() {
-  const [session, setSession] = useState<boolean>(() => demoMode
+  const [session, setSession] = useState<boolean>(() => demoMode || hasOwnSession()
     || Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token')));
+  /* own login (C3): re-render when the session or the user record changes */
+  const [ownTick, setOwnTick] = useState(0);
+  const own = useMemo(() => ownUser(), [ownTick]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const sbSession = useRef(false);
   const [hotels, setHotels] = useState<{ id: string; name: string }[]>([]);
   const [hotelId, setHotelId] = useState<string>('');
   const [briefing, setBriefing] = useState<Briefing | null>(null);
@@ -64,7 +70,8 @@ export default function App() {
   const [adminOpen, setAdminOpen] = useState(false);
   useEffect(() => {
     void sessionEmail().then(e =>
-      setIsAdmin(!!e && ['dk@bi-automations.com', 'd.karypidis@hbis.io'].includes(e)));
+      setIsAdmin((!!e && ['dk@bi-automations.com', 'd.karypidis@hbis.io'].includes(e))
+        || !!ownUser()?.is_platform_admin));
   }, [session]);
   const [healthOpen, setHealthOpen] = useState(false);
   const [runs, setRuns] = useState<RefreshRun[] | null>(null);
@@ -111,10 +118,11 @@ export default function App() {
 
   /* auth + hotels */
   useEffect(() => {
-    if (!sb) return;
-    sb.auth.getSession().then(({ data }) => setSession(!!data.session));
-    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => setSession(!!s));
-    return () => sub.subscription.unsubscribe();
+    const off = onSessionChange(() => { setOwnTick(t => t + 1); setSession(hasOwnSession() || sbSession.current); });
+    if (!sb) return off;
+    sb.auth.getSession().then(({ data }) => { sbSession.current = !!data.session; setSession(hasOwnSession() || !!data.session); });
+    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => { sbSession.current = !!s; setSession(hasOwnSession() || !!s); });
+    return () => { off(); sub.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -127,7 +135,7 @@ export default function App() {
     }
     (async () => {
       let list = (await fetchMyHotels()) ?? [];
-      if (!list.length) {
+      if (!list.length && !hasOwnSession()) {   // legacy Supabase-direct fallback
         const { data: hu } = await sb.from('hotel_users').select('hotel_id');
         const ids = (hu ?? []).map(r => r.hotel_id);
         const { data: hs } = await sb.from('hotels').select('id, name').in('id', ids);
@@ -172,8 +180,8 @@ export default function App() {
   useEffect(() => {
     if (!sb) { setWatchOn(true); return; }
     if (!session) { setWatchOn(false); return; }
-    sb.auth.getSession().then(({ data }) => {
-      const email = (data.session?.user.email ?? '').toLowerCase();
+    sessionEmail().then(e => {
+      const email = e ?? '';
       setWatchOn(WATCHLIST_EMAILS === null || WATCHLIST_EMAILS.includes(email));
       setPortfolioOn(PORTFOLIO_PREVIEW_EMAILS.includes(email));
     }).catch(() => { setWatchOn(false); setPortfolioOn(false); });
@@ -384,7 +392,9 @@ export default function App() {
     setSettingsOpen(false);
     Object.keys(localStorage).filter(k => k.startsWith('fl_briefing_') || k.startsWith('fl_prev_') || k === 'fl_hotels').forEach(k => localStorage.removeItem(k));
     setBriefing(null); setHotels([]); setHotelId('');
+    await ownLogout();
     if (sb) await sb.auth.signOut();
+    setSession(false);
   };
 
   const netAvailable = (briefing?.data.mtd as unknown as { revenueNet?: number } | undefined)?.revenueNet != null;
@@ -568,6 +578,7 @@ export default function App() {
   }, []);
 
   if (!session) return <Login />;
+  if (own?.must_change_password) return <ChangePassword />;
   if (isPortfolio) return (
     <>
       <Shell
