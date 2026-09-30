@@ -9,6 +9,8 @@ import { sessionEmail } from '../api';
 import { ClientsView } from '../components/AdminPortal';
 import { HotelsView, HealthView, FeedbackView, AuditView, FinanceView } from './sections';
 import { CompaniesView, OnboardingView } from './company';
+import { UsersView } from './users';
+import { ownUser } from '../lib/session';
 import { Boundary } from './kit';
 
 const ADMIN_EMAILS = ['dk@bi-automations.com', 'd.karypidis@hbis.io'];
@@ -23,7 +25,7 @@ const SECTIONS: { name: Section; ready: boolean; soon: string }[] = [
   { name: 'Onboarding', ready: true, soon: '' },
   { name: 'Clients', ready: true, soon: '' },
   { name: 'Finance', ready: true, soon: '' },
-  { name: 'Users', ready: false, soon: 'Create with temporary password, reset, lock, sessions, impersonation — arrives with the own-login system (C3)' },
+  { name: 'Users', ready: true, soon: '' },
   { name: 'Health', ready: true, soon: '' },
   { name: 'Feedback', ready: true, soon: '' },
   { name: 'Notifications', ready: false, soon: 'Per-hotel schedules, delivery stats, test push — portal step 11' },
@@ -79,7 +81,7 @@ export default function PortalShell() {
   useEffect(() => { void sessionEmail().then(e => setEmail(e)); }, []);
 
   if (email === undefined) return null;
-  if (!email || !ADMIN_EMAILS.includes(email)) {
+  if (!email || (!ADMIN_EMAILS.includes(email) && !ownUser()?.is_platform_admin)) {
     return (
       <div style={{ minHeight: '100vh', background: '#EAEDF1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ background: '#fff', borderRadius: 18, padding: '26px 28px', maxWidth: 360, textAlign: 'center', boxShadow: '0 8px 30px rgba(10,20,45,.1)' }}>
@@ -144,6 +146,7 @@ export default function PortalShell() {
           {sec === 'Health' && <HealthView />}
           {sec === 'Feedback' && <FeedbackView />}
           {sec === 'Audit log' && <AuditView />}
+          {sec === 'Users' && <UsersView />}
         </Boundary>
         {!active.ready && (
           <div style={{ background: '#fff', borderRadius: 16, padding: '22px 22px', maxWidth: 560, boxShadow: '0 1px 3px rgba(10,20,45,.07)' }}>
