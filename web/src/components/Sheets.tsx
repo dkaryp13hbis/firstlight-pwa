@@ -44,6 +44,7 @@ export function SettingsSheet(props: {
   onSignOut: () => void;
   onDataHealth: () => void;
   onAdmin?: () => void;   // superadmin only — absent for everyone else
+  onChangePassword?: () => void;   // own-login accounts only (C3)
 }) {
   const segBtn = (on: boolean): React.CSSProperties => ({
     border: 'none', background: on ? '#0F2860' : 'transparent',
@@ -137,6 +138,14 @@ export function SettingsSheet(props: {
           <button onClick={props.onAdmin} style={{ border: 'none', background: 'none', padding: 0, fontSize: 14, fontWeight: 700, color: '#0F2860', display: 'flex', alignItems: 'center', gap: 8 }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 3 7v5c0 5 3.8 8.4 9 9 5.2-.6 9-4 9-9V7z" /><path d="M9 12l2 2 4-4" /></svg>
             Admin <span style={{ fontWeight: 600, color: '#6E7A96' }}>· usage by hotel &amp; user ›</span>
+          </button>
+        </div>
+      )}
+      {props.onChangePassword && (
+        <div style={rowStyle}>
+          <button onClick={props.onChangePassword} style={{ border: 'none', background: 'none', padding: 0, fontSize: 14, fontWeight: 700, color: '#0F2860', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E7CF7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+            Change password <span style={{ fontWeight: 600, color: '#6E7A96' }}>· signs out your other devices ›</span>
           </button>
         </div>
       )}

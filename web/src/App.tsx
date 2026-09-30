@@ -65,6 +65,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('Overview');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);   // voluntary change-password (own login)
   /* superadmin gate (v1: founder emails; becomes is_superadmin under C3) */
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -579,6 +580,7 @@ export default function App() {
 
   if (!session) return <Login />;
   if (own?.must_change_password) return <ChangePassword />;
+  if (pwOpen) return <ChangePassword voluntary onDone={() => { setPwOpen(false); say('Password changed'); }} />;
   if (isPortfolio) return (
     <>
       <Shell
@@ -801,6 +803,7 @@ export default function App() {
         textSize={textSize} onTextSize={d => setTextSize(s => Math.min(5, Math.max(1, s + d)))}
         onDataHealth={openHealth}
         onAdmin={isAdmin ? () => { setSettingsOpen(false); setAdminOpen(true); } : undefined}
+        onChangePassword={own ? () => { setSettingsOpen(false); setPwOpen(true); } : undefined}
         onSignOut={signOut}
       />
       <AdminPortal open={adminOpen} onClose={() => setAdminOpen(false)} />

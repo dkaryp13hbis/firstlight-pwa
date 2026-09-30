@@ -11,7 +11,9 @@ const KEYFRAMES = `
 .fl-submit:active{transform:translateY(1px)}
 `;
 
-export function ChangePassword() {
+/** `voluntary`: opened from Settings (Cancel instead of Sign out, `onDone`
+ *  after success); otherwise the forced first-login flow. */
+export function ChangePassword({ voluntary = false, onDone }: { voluntary?: boolean; onDone?: () => void } = {}) {
   const [cur, setCur] = useState('');
   const [next, setNext] = useState('');
   const [again, setAgain] = useState('');
@@ -27,8 +29,9 @@ export function ChangePassword() {
     if (next !== again) { setErr('The two new passwords do not match.'); return; }
     setBusy(true);
     const r = await ownChangePassword(cur, next);
-    if (!r.ok) setErr(r.msg);
     setBusy(false);
+    if (!r.ok) { setErr(r.msg); return; }
+    onDone?.();
   };
 
   const input: React.CSSProperties = {
@@ -52,17 +55,18 @@ export function ChangePassword() {
           First<b style={{ color: '#38E1F0', fontWeight: 700 }}>Light</b>
         </div>
         <div style={{ font: "600 12px/1 Manrope, sans-serif", letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,.5)', marginTop: 10 }}>
-          Choose your password
+          {voluntary ? 'Change your password' : 'Choose your password'}
         </div>
         <div style={{ font: "500 14px/1.5 Manrope, sans-serif", color: 'rgba(255,255,255,.7)', marginTop: 16, maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>
-          {user?.display_name ? `Welcome, ${user.display_name}. ` : ''}
-          You signed in with a temporary password. Pick your own to continue — at least 10 characters, letters and numbers.
+          {voluntary
+            ? 'At least 10 characters, letters and numbers. Your other devices will be signed out.'
+            : <>{user?.display_name ? `Welcome, ${user.display_name}. ` : ''}You signed in with a temporary password. Pick your own to continue — at least 10 characters, letters and numbers.</>}
         </div>
       </div>
 
       <form style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 420, margin: '0 auto' }}
         onSubmit={e => { e.preventDefault(); void go(); }}>
-        <input className="fl-input" style={input} type="password" placeholder="Temporary password" autoComplete="current-password" required
+        <input className="fl-input" style={input} type="password" placeholder={voluntary ? 'Current password' : 'Temporary password'} autoComplete="current-password" required
           value={cur} onChange={e => setCur(e.target.value)} />
         <input className="fl-input" style={input} type="password" placeholder="New password" autoComplete="new-password" required
           value={next} onChange={e => setNext(e.target.value)} />
@@ -78,9 +82,9 @@ export function ChangePassword() {
           {err && <span style={{ color: '#FFB4A3' }}>{err}</span>}
         </div>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <a href="#" onClick={e => { e.preventDefault(); void ownLogout(); }}
+          <a href="#" onClick={e => { e.preventDefault(); if (voluntary) onDone?.(); else void ownLogout(); }}
             style={{ font: "600 13px Manrope, sans-serif", color: 'rgba(255,255,255,.5)', textDecoration: 'none' }}>
-            Sign out
+            {voluntary ? 'Cancel' : 'Sign out'}
           </a>
         </div>
       </form>
