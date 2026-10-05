@@ -144,7 +144,7 @@ export function ClientsView() {
               ...(openId === h.hotel_id ? [
                 <tr key={h.hotel_id + ':d'}><td colSpan={8} style={{ padding: '10px 14px', background: '#F4F7FB', borderTop: '1px solid #D5DCE9' }}>
                   <TableWrap minWidth={620}>
-                    <thead><tr><Th label="User" /><Th label="Last seen" /><Th label="Opens 30d" right /><Th label="Active days" right /><Th label="Events" right /><Th label="Top actions" /></tr></thead>
+                    <thead><tr><Th label="User" /><Th label="Last seen" /><Th label="Opens 30d" right /><Th label="Active days" right /><Th label="Minutes 30d" right /><Th label="Events" right /><Th label="Top actions" /></tr></thead>
                     <tbody>
                       {h.users.map((u, j) => (
                         <Tr key={u.user_id} i={j}>
@@ -152,6 +152,7 @@ export function ClientsView() {
                           <td style={{ ...tdS, color: u.last_seen && Date.now() - new Date(u.last_seen).getTime() < 3 * 86400000 ? '#1A7A50' : '#6E7A96' }}>{relK(u.last_seen)}</td>
                           <td style={tdR}>{u.opens_30d}</td>
                           <td style={tdR}>{u.days_active}</td>
+                          <td style={tdR}>{u.minutes_30d ?? '—'}</td>
                           <td style={tdR}>{u.events_30d}</td>
                           <td style={tdS}>{u.top.map(([e, n]) => `${EVENT_LABEL[e] ?? e} ${n}`).join(' · ')}</td>
                         </Tr>

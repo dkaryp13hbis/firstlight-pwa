@@ -9,7 +9,11 @@ import { jwtSend } from '../api';
 const TRACKED_EMAILS: string[] | null = null;   // 2026-09-11: everyone (admin usage view)
 
 const sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-const t0 = Date.now();
+/* Active time only (2026-10-05): seconds the app was actually VISIBLE since
+   the last session_end — a tab left open in the background used to report
+   days of "usage" (87 h in one event). */
+let visibleSince: number | null = document.visibilityState === 'visible' ? Date.now() : null;
+let activeMs = 0;
 let uid: string | null = null;
 let enabled = false;
 let hotelId: string | undefined;
@@ -49,8 +53,14 @@ export async function initTracking(currentHotelId: string | undefined) {
     /* session end: duration in seconds, flushed while the page can still send */
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
-        track('session_end', { seconds: Math.round((Date.now() - t0) / 1000) });
+        if (visibleSince != null) activeMs += Date.now() - visibleSince;
+        visibleSince = null;
+        const seconds = Math.round(activeMs / 1000);
+        activeMs = 0;
+        if (seconds > 0) track('session_end', { seconds });
         void flush();
+      } else if (visibleSince == null) {
+        visibleSince = Date.now();
       }
     });
   } catch { /* tracking is best-effort */ }

@@ -223,7 +223,7 @@ export function CompaniesView() {
             ...(openId === cp.id ? [
               <tr key={cp.id + ':d'}><td colSpan={12} style={{ padding: 0, background: '#F4F7FB', borderTop: '1px solid #D5DCE9' }}>
                 <TableWrap minWidth={620}>
-                  <thead><tr><Th label="Hotel user" /><Th label="Last seen" /><Th label="Opens 30d" right /><Th label="Active days" right /><Th label="Events" right /></tr></thead>
+                  <thead><tr><Th label="Hotel user" /><Th label="Last seen" /><Th label="Opens 30d" right /><Th label="Active days" right /><Th label="Minutes 30d" right /><Th label="Events" right /></tr></thead>
                   <tbody>
                     {cp.hotels.flatMap(h => h.users.map((u, j) => (
                       <Tr key={h.hotel_id + u.user_id} i={j}>
@@ -231,6 +231,7 @@ export function CompaniesView() {
                         <td style={{ ...tdS, color: u.last_seen && Date.now() - new Date(u.last_seen).getTime() < 3 * 86400000 ? '#1A7A50' : '#6E7A96' }}>{rel(u.last_seen)}</td>
                         <td style={tdR}>{u.opens_30d}</td>
                         <td style={tdR}>{u.days_active}</td>
+                        <td style={tdR}>{u.minutes_30d ?? '—'}</td>
                         <td style={tdR}>{u.events_30d}</td>
                       </Tr>
                     )))}

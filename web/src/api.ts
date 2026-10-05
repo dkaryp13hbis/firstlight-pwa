@@ -136,7 +136,7 @@ export async function fetchRuns(hotelId: string): Promise<RefreshRun[] | null> {
 
 /* ── Admin (superadmin only; served by the Railway API with service role) ── */
 export interface AdminUserUsage {
-  user_id: string; email: string; events_30d: number; opens_30d: number;
+  user_id: string; email: string; events_30d: number; opens_30d: number; minutes_30d?: number;
   days_active: number; last_seen: string | null; top: [string, number][];
 }
 export interface AdminUsage {
