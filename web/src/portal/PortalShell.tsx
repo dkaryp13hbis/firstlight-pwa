@@ -10,13 +10,14 @@ import { ClientsView } from '../components/AdminPortal';
 import { HotelsView, HealthView, FeedbackView, AuditView, FinanceView } from './sections';
 import { CompaniesView, OnboardingView } from './company';
 import { UsersView } from './users';
+import { UsageView } from './usage';
 import { ownUser } from '../lib/session';
 import { Boundary } from './kit';
 
 const ADMIN_EMAILS = ['dk@bi-automations.com', 'd.karypidis@hbis.io'];
 
 type Section =
-  | 'Overview' | 'Hotels' | 'Onboarding' | 'Clients' | 'Finance' | 'Users' | 'Health'
+  | 'Overview' | 'Hotels' | 'Onboarding' | 'Clients' | 'Usage' | 'Finance' | 'Users' | 'Health'
   | 'Feedback' | 'Notifications' | 'Kill switches' | 'Audit log' | 'Security';
 
 const SECTIONS: { name: Section; ready: boolean; soon: string }[] = [
@@ -24,6 +25,7 @@ const SECTIONS: { name: Section; ready: boolean; soon: string }[] = [
   { name: 'Hotels', ready: true, soon: '' },
   { name: 'Onboarding', ready: true, soon: '' },
   { name: 'Clients', ready: true, soon: '' },
+  { name: 'Usage', ready: true, soon: '' },
   { name: 'Finance', ready: true, soon: '' },
   { name: 'Users', ready: true, soon: '' },
   { name: 'Health', ready: true, soon: '' },
@@ -147,6 +149,7 @@ export default function PortalShell() {
           {sec === 'Feedback' && <FeedbackView />}
           {sec === 'Audit log' && <AuditView />}
           {sec === 'Users' && <UsersView />}
+          {sec === 'Usage' && <UsageView />}
         </Boundary>
         {!active.ready && (
           <div style={{ background: '#fff', borderRadius: 16, padding: '22px 22px', maxWidth: 560, boxShadow: '0 1px 3px rgba(10,20,45,.07)' }}>

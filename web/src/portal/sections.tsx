@@ -320,7 +320,7 @@ export function AuditView() {
 /* ── Finance: daily AI cost + data volume, revenue by plan (2026-09-11) ── */
 import { fetchAdminFinance, type AdminFinance } from '../api';
 
-function Bars({ data, fmt, color, title }: {
+export function Bars({ data, fmt, color, title }: {
   data: { day: string; v: number }[]; fmt: (v: number) => string;
   color: string; title: string;
 }) {

@@ -277,6 +277,14 @@ export interface AdminFinance {
 }
 export const fetchAdminFinance = () => adminGet<AdminFinance>('/admin/finance');
 
+export interface AdminUsageDaily {
+  days: number;
+  rows: { day: string; user_id: string; hotel_id: string | null; event: string; n: number; seconds: number }[];
+  users: Record<string, string>;
+  hotels: Record<string, string>;
+}
+export const fetchAdminUsageDaily = (days: number) => adminGet<AdminUsageDaily>(`/admin/usage/daily?days=${days}`);
+
 export interface AdminGroup { id: string; name: string; companies: number }
 export const fetchAdminGroups = () => adminGet<{ groups: AdminGroup[] }>('/admin/groups');
 export async function saveGroup(name: string): Promise<{ id: string } | null> {
