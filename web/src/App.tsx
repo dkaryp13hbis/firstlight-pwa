@@ -781,7 +781,7 @@ export default function App() {
               <rect x="62" y="50" width="8" height="36" rx="4" fill="#0A1F4D" />
               <rect x="62" y="78" width="24" height="8" rx="4" fill="#0A1F4D" />
             </svg>
-            <span style={{ font: "700 14px/1 'Outfit', sans-serif", letterSpacing: '-.02em', color: '#3D4C6F' }}>
+            <span style={{ font: "700 14px/1 'Quicksand', sans-serif", color: '#3D4C6F' }}>
               First<span style={{ color: 'var(--blue)', opacity: .85 }}>Light</span>
             </span>
           </span>

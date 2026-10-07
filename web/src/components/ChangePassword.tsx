@@ -51,7 +51,7 @@ export function ChangePassword({ voluntary = false, onDone }: { voluntary?: bool
       <div style={{ position: 'absolute', top: 120, right: -120, width: 320, height: 320, background: 'radial-gradient(circle, rgba(56,225,240,.22), transparent 66%)', filter: 'blur(16px)' }} />
 
       <div style={{ position: 'relative', textAlign: 'center', marginBottom: 28 }}>
-        <div style={{ font: "700 30px/1 Outfit, sans-serif", letterSpacing: '-.02em', color: '#fff' }}>
+        <div style={{ font: "700 30px/1 Quicksand, sans-serif", color: '#fff' }}>
           First<b style={{ color: '#38E1F0', fontWeight: 700 }}>Light</b>
         </div>
         <div style={{ font: "600 12px/1 Manrope, sans-serif", letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,.5)', marginTop: 10 }}>

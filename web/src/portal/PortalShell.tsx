@@ -111,7 +111,7 @@ export default function PortalShell() {
             <rect x="18" y="50" width="8" height="36" rx="4" fill="#fff" /><rect x="18" y="50" width="26" height="8" rx="4" fill="#fff" /><rect x="18" y="64" width="19" height="8" rx="4" fill="#fff" />
             <rect x="62" y="50" width="8" height="36" rx="4" fill="#fff" /><rect x="62" y="78" width="24" height="8" rx="4" fill="#fff" />
           </svg>
-          <span style={{ font: "700 15px 'Outfit', 'Manrope', sans-serif", color: '#fff', letterSpacing: '-.02em' }}>
+          <span style={{ font: "700 15px 'Quicksand', 'Manrope', sans-serif", color: '#fff' }}>
             First<span style={{ color: '#38E1F0' }}>Light</span>
           </span>
         </div>

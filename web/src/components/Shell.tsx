@@ -32,7 +32,7 @@ export function LogoLockup() {
         </g>
       </svg>
       <span style={{
-        font: "700 19px/1 'Outfit', sans-serif", letterSpacing: '-.02em',
+        font: "700 19px/1 'Quicksand', sans-serif",
         color: '#fff', marginTop: 2,
       }}>
         First<span style={{ color: 'var(--cyan)' }}>Light</span>

@@ -1,4 +1,4 @@
-/* Self-hosted Manrope (all subsets incl. Greek) + Outfit 700 for the wordmark.
+/* Self-hosted Manrope (all subsets incl. Greek) + Quicksand 700 for the wordmark (brand assets 2026-10-07).
    Fonts ship WITH the app - identical typography everywhere, no external dependency. */
 /* cyrillic-ext */
 @font-face {
@@ -218,7 +218,7 @@
 }
 /* latin-ext */
 @font-face {
-  font-family: 'Outfit';
+  font-family: 'Quicksand';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
@@ -227,7 +227,7 @@
 }
 /* latin */
 @font-face {
-  font-family: 'Outfit';
+  font-family: 'Quicksand';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
