@@ -462,7 +462,9 @@ function DemandHeat({ briefing, onWatch, watched }: {
 
 interface ConsumedRow { period: 'TY' | 'LY'; source: string; rn: number; rev: number; }
 
-function AdrBridge({ briefing }: { briefing: Briefing }) {
+// ON HOLD 2026-10-11 (user: "remove the adr bridge from the actual app"): not rendered
+// anywhere; kept (exported) so the planned rethink can start from it.
+export function AdrBridge({ briefing }: { briefing: Briefing }) {
   const rows = (briefing.data as unknown as { consumed_by_source?: ConsumedRow[] }).consumed_by_source ?? [];
   const model = useMemo(() => {
     // zero-night rows (pure revenue adjustments) can't be decomposed —
@@ -691,7 +693,6 @@ export function OtbTab({ briefing, year, comp, onWatchRange, watchedRanges }: {
 
       <div id="sec-cal" style={{ scrollMarginTop: 46 }} />
       <DemandHeat briefing={briefing} onWatch={onWatchRange} watched={watchedRanges} />
-      {year === 'this' && <AdrBridge briefing={briefing} />}
       {year === 'this' && <TopSources briefing={briefing} />}
     </>
   );
