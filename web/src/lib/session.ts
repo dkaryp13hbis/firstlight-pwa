@@ -2,10 +2,9 @@
  *
  *  The session is an opaque token from POST /auth/login, kept in localStorage
  *  (`fl_session`) next to the public user record (`fl_user`). Every API call
- *  takes the token through getToken(); accounts that have not been moved off
- *  Supabase Auth yet still sign in there, and getToken() falls back to that
- *  JWT — the parallel-run. Nothing here ever sends email. */
-import { sb } from './sb';
+ *  takes the token through getToken(). Since 2026-10-28 this is the ONLY
+ *  login: Supabase Auth is retired (API AUTH=own), so there is no JWT
+ *  fallback any more. Nothing here ever sends email. */
 
 export const API = (import.meta.env.VITE_API_URL as string | undefined)
   ?? 'https://web-cloudflare.up.railway.app';
@@ -51,35 +50,17 @@ export function onSessionChange(cb: () => void): () => void {
   return () => window.removeEventListener(EVT, cb);
 }
 
-/** Bearer for API calls: own session first, Supabase JWT as the fallback. */
+/** Bearer for API calls (own session; null when signed out). */
 export async function getToken(): Promise<string | null> {
-  const t = ownToken();
-  if (t) return t;
-  if (!sb) return null;
-  try {
-    const { data } = await sb.auth.getSession();
-    return data.session?.access_token ?? null;
-  } catch { return null; }
+  return ownToken();
 }
 
 export async function getUserId(): Promise<string | null> {
-  const u = ownUser();
-  if (u) return u.id;
-  if (!sb) return null;
-  try {
-    const { data } = await sb.auth.getSession();
-    return data.session?.user.id ?? null;
-  } catch { return null; }
+  return ownUser()?.id ?? null;
 }
 
 export async function getEmail(): Promise<string | null> {
-  const u = ownUser();
-  if (u) return u.email.toLowerCase();
-  if (!sb) return null;
-  try {
-    const { data } = await sb.auth.getSession();
-    return data.session?.user.email?.toLowerCase() ?? null;
-  } catch { return null; }
+  return ownUser()?.email.toLowerCase() ?? null;
 }
 
 type LoginResult = { ok: true } | { ok: false; status: number; msg: string };

@@ -4,7 +4,6 @@
  *  handoff; TYPE follows the app's one-type-system rule (user 2026-09-04):
  *  Manrope everywhere, Quicksand 700 for the wordmark only (brand assets 2026-10-07). */
 import { useState } from 'react';
-import { sb } from '../lib/sb';
 import { ownLogin } from '../lib/session';
 
 const KEYFRAMES = `
@@ -26,15 +25,9 @@ export function Login() {
   const go = async () => {
     if (busy) return;
     setBusy(true); setErr(''); setNote('');
-    /* C3 (2026-09-30): FirstLight's own login first; accounts not moved off
-       Supabase Auth yet still sign in there (parallel-run). */
+    /* FirstLight's own login only — Supabase Auth retired 2026-10-28 (AUTH=own) */
     const r = await ownLogin(email, pw);
-    if (r.ok) { setBusy(false); return; }
-    if (r.status === 401 && sb) {
-      const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-      if (error) setErr(error.message === 'Invalid login credentials'
-        ? 'Wrong email or password.' : error.message);
-    } else setErr(r.msg);
+    if (!r.ok) setErr(r.msg);
     setBusy(false);
   };
 

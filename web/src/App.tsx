@@ -53,12 +53,12 @@ function writeCache(key: string, v: unknown) {
 }
 
 export default function App() {
-  const [session, setSession] = useState<boolean>(() => demoMode || hasOwnSession()
-    || Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token')));
+  /* own login only since 2026-10-28 (AUTH=own): a Supabase session left in
+     storage no longer counts — it is signed out below and Login shows */
+  const [session, setSession] = useState<boolean>(() => demoMode || hasOwnSession());
   /* own login (C3): re-render when the session or the user record changes */
   const [ownTick, setOwnTick] = useState(0);
   const own = useMemo(() => ownUser(), [ownTick]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const sbSession = useRef(false);
   const [hotels, setHotels] = useState<{ id: string; name: string }[]>([]);
   const [hotelId, setHotelId] = useState<string>('');
   const [briefing, setBriefing] = useState<Briefing | null>(null);
@@ -119,11 +119,10 @@ export default function App() {
 
   /* auth + hotels */
   useEffect(() => {
-    const off = onSessionChange(() => { setOwnTick(t => t + 1); setSession(hasOwnSession() || sbSession.current); });
-    if (!sb) return off;
-    sb.auth.getSession().then(({ data }) => { sbSession.current = !!data.session; setSession(hasOwnSession() || !!data.session); });
-    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => { sbSession.current = !!s; setSession(hasOwnSession() || !!s); });
-    return () => { off(); sub.subscription.unsubscribe(); };
+    const off = onSessionChange(() => { setOwnTick(t => t + 1); setSession(hasOwnSession()); });
+    /* retire a leftover Supabase session once (the API rejects its JWT) */
+    if (sb) void sb.auth.getSession().then(({ data }) => { if (data.session) void sb?.auth.signOut(); });
+    return off;
   }, []);
 
   useEffect(() => {
