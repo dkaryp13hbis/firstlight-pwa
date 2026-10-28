@@ -67,8 +67,11 @@ export interface Insight {
   at_stake?: { value: string };
   evidence?: { label: string; value: string; sub?: string }[];
   kpis?: { label: string; value: string; sub?: string; direction?: string }[];
-  /* follow-up engine: present from day 2 on a card whose month is being watched */
-  follow_up?: { flagged: string; day: number; first_gap?: number | null; last_gap?: number | null };
+  /* follow-up engine: present from day 2 on a card whose month is being watched.
+     flagged = the day watching began; first_seen = the card's first sighting,
+     sent only when earlier (backend 2026-10-28: "two clocks" made visible) */
+  follow_up?: { flagged: string; day: number; first_gap?: number | null; last_gap?: number | null;
+                first_seen?: string | null };
 }
 
 /* Signal-query rows (fail-open on the backend — always optional here) */

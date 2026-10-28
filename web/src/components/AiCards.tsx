@@ -40,6 +40,13 @@ function statColor(v: string): string {
   return '#0f1b34';
 }
 
+/* "Sep 29" — same order as the dates inside card text (follow-up label) */
+function shortDay(iso: string): string {
+  const d = new Date(iso.slice(0, 10) + 'T00:00:00Z');
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
+
 function Card({ ins, cardId, voted, onFeedback, watchKey, watched, onWatch }: {
   ins: Insight; cardId: string; voted: string | null;
   onFeedback: (r: FeedbackRequest) => void;
@@ -90,10 +97,11 @@ function Card({ ins, cardId, voted, onFeedback, watchKey, watched, onWatch }: {
                 fontSize: 10, fontWeight: 800, letterSpacing: '.06em', textTransform: 'uppercase',
                 color: '#8A6D1F', background: '#FBF3DF', border: '1px solid #EDDCA8',
                 borderRadius: 999, padding: '3px 9px',
-              }}>Watching · day {ins.follow_up.day}</span>
+              }}>Watching since {shortDay(ins.follow_up.flagged)}
+                {ins.follow_up.first_seen ? ` (first flagged ${shortDay(ins.follow_up.first_seen)})` : ''}</span>
               {ins.follow_up.first_gap != null && ins.follow_up.last_gap != null && (
                 <span style={{ color: '#6E7A96', fontWeight: 600 }}>
-                  gap {Math.abs(Math.round(ins.follow_up.first_gap))}% → {Math.abs(Math.round(ins.follow_up.last_gap))}% since flagged
+                  gap {Math.abs(Math.round(ins.follow_up.first_gap))}% → {Math.abs(Math.round(ins.follow_up.last_gap))}% since watching
                 </span>
               )}
             </div>
