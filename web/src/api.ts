@@ -144,12 +144,10 @@ export interface AdminUsage {
   hotels: { hotel_id: string; name: string; events_30d: number; users: AdminUserUsage[] }[];
 }
 
+/** Signed-in email — own login only (AUTH=own, 2026-10-28). A leftover
+ *  Supabase session must not open the portal: its API calls carry no token. */
 export async function sessionEmail(): Promise<string | null> {
-  const own = ownUser();
-  if (own) return own.email.toLowerCase();
-  if (!sb) return null;
-  const { data } = await sb.auth.getSession();
-  return data.session?.user.email?.toLowerCase() ?? null;
+  return ownUser()?.email.toLowerCase() ?? null;
 }
 
 export interface AdminClient {
