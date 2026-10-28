@@ -3,8 +3,11 @@
  *  GET /portfolio when the backend aggregation lands (spec: ENGINEERING_LOG
  *  2026-09-10 "MULTIPROPERTY PORTFOLIO VIEW — SPEC FROZEN"). */
 
-/* who sees the "Portfolio · preview" entry in the hotel picker */
-export const PORTFOLIO_PREVIEW_EMAILS: string[] = ['dk@bi-automations.com', 'demo@hbis.io'];
+/* who sees the "Portfolio · preview" entry in the hotel picker. The demo
+   login left on 2026-10-28: it now has a real portfolio (the Aurora Hotels
+   demo group = anonymized Tor twins), so the fictional preview would be a
+   second, contradicting group entry. */
+export const PORTFOLIO_PREVIEW_EMAILS: string[] = ['dk@bi-automations.com'];
 
 export interface PMonth { m: number; open: boolean; avail: number; rnLY: number; revLY: number; rnTY: number; revTY: number; rnST: number; revST: number }
 export interface PBlock { rnTY: number; revTY: number; rnLY: number; revLY: number; avail: number }
