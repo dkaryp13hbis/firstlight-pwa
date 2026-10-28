@@ -4,7 +4,7 @@
  *  2026-09-10 "MULTIPROPERTY PORTFOLIO VIEW — SPEC FROZEN"). */
 
 /* who sees the "Portfolio · preview" entry in the hotel picker. The demo
-   login left on 2026-10-28: it now has a real portfolio (the Aurora Hotels
+   login left on 2026-10-28: it now has a real portfolio (the HBIS Hotels
    demo group = anonymized Tor twins), so the fictional preview would be a
    second, contradicting group entry. */
 export const PORTFOLIO_PREVIEW_EMAILS: string[] = ['dk@bi-automations.com'];
