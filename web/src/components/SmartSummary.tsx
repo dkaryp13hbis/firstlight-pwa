@@ -235,6 +235,10 @@ export function SmartSummary({ briefing }: { briefing: Briefing }) {
           <div style={{ fontSize: 14.5, lineHeight: 1.65, color: 'rgba(255,255,255,.85)', marginTop: 10 }}>
             <Rich text={hero} />
           </div>
+          {/* AI disclaimer (user 2026-10-30) */}
+          <div style={{ fontSize: 11.5, lineHeight: 1.45, color: 'rgba(255,255,255,.55)', marginTop: 8 }}>
+            This summary is written by AI and can make mistakes. Please double-check it before you make changes.
+          </div>
           <button onClick={() => setOpen(false)} style={{
             border: 'none', background: 'none', color: 'var(--cyan)',
             fontSize: 13.5, fontWeight: 700, marginTop: 8, padding: 0,

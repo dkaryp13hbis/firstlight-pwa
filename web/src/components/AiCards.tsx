@@ -242,6 +242,11 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
           </div>
         </div>
       )}
+      {/* AI disclaimer (user 2026-10-30) — inside the share root, so a shared
+         image of FL Pulse carries it too */}
+      <p style={{ fontSize: 11.5, color: '#6E7A96', lineHeight: 1.45, margin: '14px 2px 0', textAlign: 'center' }}>
+        FL Pulse is AI and can make mistakes. Please double-check its findings before you make changes.
+      </p>
     </div>
   );
 }
