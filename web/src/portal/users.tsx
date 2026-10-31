@@ -258,7 +258,7 @@ export function UsersView() {
           <Pick value={fState} onChange={setFState} options={['active', 'temporary password', 'inactive']} all="All states" />
           <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: '#6E7A96' }}>{list.length} of {rows.length} users</span>
         </FilterBar>
-        <TableWrap minWidth={980}>
+        <TableWrap minWidth={1080}>
           <thead><tr>
             <Th label="Email" k="email" sort={sort} onSort={toggle} />
             <Th label="Name" k="display_name" sort={sort} onSort={toggle} />
@@ -266,6 +266,7 @@ export function UsersView() {
             <Th label="State" k="state" sort={sort} onSort={toggle} />
             <Th label="Last login" k="last_login_at" sort={sort} onSort={toggle} />
             <Th label="Sessions" k="sessions_live" sort={sort} onSort={toggle} right />
+            <Th label="Notifications" k="push_devices" sort={sort} onSort={toggle} />
             <Th label="Created" k="created_at" sort={sort} onSort={toggle} />
           </tr></thead>
           <tbody>
@@ -281,10 +282,14 @@ export function UsersView() {
                 </td>
                 <td style={{ ...tdS, color: u.last_login_at && Date.now() - new Date(u.last_login_at).getTime() < 3 * 86400000 ? '#1A7A50' : '#6E7A96' }}>{rel(u.last_login_at)}</td>
                 <td style={tdR}>{u.sessions_live}</td>
+                <td style={{ ...tdS, color: u.push_devices ? '#1A7A50' : '#6E7A96' }}>
+                  {u.push_devices == null ? '—' : u.push_devices === 0 ? 'off'
+                    : `${u.push_devices} device${u.push_devices === 1 ? '' : 's'} · ${u.push_hotels ?? 0} hotel${u.push_hotels === 1 ? '' : 's'}`}
+                </td>
                 <td style={tdS}>{u.created_at ? u.created_at.slice(0, 10) : '—'}</td>
               </Tr>,
               ...(openId === u.id ? [
-                <tr key={u.id + ':d'}><td colSpan={7} style={{ padding: 0 }}>
+                <tr key={u.id + ':d'}><td colSpan={8} style={{ padding: 0 }}>
                   <UserDetail u={u} scopes={scopes} onChanged={loadIt} />
                 </td></tr>,
               ] : []),

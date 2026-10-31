@@ -164,7 +164,10 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
      analyst's memory used to live only in the payload, so a quiet day read as
      "No insights for today." while e.g. October sat 54% behind on the list. */
   const openItems = briefing.ai_insights?.open_items ?? [];
-  if (!insights.length && !closures.length && !openItems.length) {
+  /* Since this morning (2026-10-31): what the daytime alert / good-news pushes
+     announced — FL Pulse's own checks on today-so-far. Newest first. */
+  const sinceMorning = [...(briefing.ai_insights?.since_morning ?? [])].reverse();
+  if (!insights.length && !closures.length && !openItems.length && !sinceMorning.length) {
     return <p style={{ textAlign: 'center', color: 'var(--n500)', padding: 24, fontSize: 13 }}>No insights for today.</p>;
   }
   return (
@@ -177,6 +180,36 @@ export function AiTab({ briefing, hotelId, onFeedback, watched, onWatch }: {
           alignItems: 'center', justifyContent: 'center', padding: '0 5px',
         }}>{insights.length}</span>
       </SectionLabel>
+      {sinceMorning.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{
+            margin: '0 2px 8px', fontSize: 11, fontWeight: 800, letterSpacing: '.06em',
+            textTransform: 'uppercase', color: '#6E7A96',
+          }}>Since this morning</div>
+          {sinceMorning.map((e, i) => {
+            const tag = e.type === 'alerts' ? TAG_STYLE.ALERT : TAG_STYLE.OPPORTUNITY;
+            return (
+              <div key={`${hotelId}_sm_${i}`} style={{
+                borderRadius: 16, background: '#fff', boxShadow: '0 1px 2px rgba(15,27,52,.05)',
+                padding: '13px 16px', marginBottom: 8,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 700, lineHeight: 1.35, color: '#0f1b34' }}>{e.title}</span>
+                  {e.at && <span style={{ fontSize: 11.5, fontWeight: 700, color: '#6E7A96', flexShrink: 0 }}>{e.at}</span>}
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, letterSpacing: '.03em', padding: '5px 10px',
+                    borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
+                    color: tag.fg, background: tag.bg, border: '1px solid ' + tag.bd,
+                  }}>{e.type === 'alerts' ? 'Alert' : 'Good news'}</span>
+                </div>
+                <p style={{ fontSize: 13, lineHeight: 1.5, color: '#3D4A66', marginTop: 6, textWrap: 'pretty' as never }}>
+                  <SignedText text={e.body} />
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {!insights.length && (
         <p style={{ color: 'var(--n500)', fontSize: 13, margin: '0 0 12px', lineHeight: 1.45 }}>
           Nothing new today. The items below are still open and being watched.

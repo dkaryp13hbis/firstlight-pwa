@@ -21,7 +21,7 @@ import { PortfolioView } from './components/Portfolio';
 import { fetchPortfolios, fetchPortfolio, type PortfolioGroup } from './api';
 import type { PortfolioData } from './fixtures/portfolio';
 import { PORTFOLIO_PREVIEW_EMAILS } from './fixtures/portfolio';
-import { registerSW, isSubscribed, subscribe, unsubscribe, getPrefs, setPrefs, DEFAULT_PREFS, type PushPrefs } from './lib/push';
+import { registerSW, isSubscribed, subscribe, unsubscribe, getPrefs, setPrefs, DEFAULT_PREFS, pushSupported, isIOS, type PushPrefs } from './lib/push';
 import { initTracking, setTrackedHotel, track } from './lib/track';
 import { setShareMeta } from './lib/shareImage';
 
@@ -83,6 +83,11 @@ export default function App() {
   const [textSize, setTextSize] = useState<number>(() => Number(localStorage.getItem('fl_textsize') || 2));
   const [refreshState, setRefreshState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const [bellOn, setBellOn] = useState(false);
+  /* notifications invite (2026-10-31): one card for people never asked yet;
+     "Not now" hides it on this device */
+  const [inviteOff, setInviteOff] = useState<boolean>(() => {
+    try { return localStorage.getItem('fl_push_invite') === 'off'; } catch { return false; }
+  });
   const [toast, setToast] = useState<string | null>(null);
   const [revMode, setRevMode] = useState<'gross' | 'net'>(
     () => (localStorage.getItem('fl_revmode') as 'gross' | 'net') || 'gross');
@@ -510,11 +515,20 @@ export default function App() {
   const toggleBell = async () => {
     track('bell_toggle', { to: bellOn ? 'off' : 'on' });
     const name = hotels.find(h => h.id === hotelId)?.name ?? 'this hotel';
-    if (bellOn) { const m = await unsubscribe(hotelId, name); setBellOn(false); say(m); return; }
+    if (bellOn) { const u = await unsubscribe(hotelId, name); if (u.ok) setBellOn(false); say(u.msg); return; }
     const r = await subscribe(hotelId, name);
     setBellOn(r.ok);
     if (r.ok) say(r.msg); else setPushMsg(r.msg);
   };
+  const hideInvite = () => {
+    setInviteOff(true);
+    try { localStorage.setItem('fl_push_invite', 'off'); } catch { /* private mode: hidden for this visit */ }
+  };
+  const inviteKind: 'ask' | 'ios' | null = (() => {
+    if (inviteOff || bellOn || demoMode || !session || !hotelId || isPortfolioId(hotelId) || viewDate) return null;
+    if (pushSupported().ok) return typeof Notification !== 'undefined' && Notification.permission === 'default' ? 'ask' : null;
+    return isIOS() ? 'ios' : null;
+  })();
 
   const selectDate = async (d: string | null) => {
     if (d === null || d === dates[0]) {
@@ -665,6 +679,33 @@ export default function App() {
         )}
         <div style={skel ? { display: 'none' } : undefined}>
         <div id="sec-overview" style={{ scrollMarginTop: 46 }} />
+        {inviteKind && (
+          <div style={{
+            background: '#fff', borderRadius: 16, boxShadow: '0 1px 2px rgba(15,27,52,.05)',
+            padding: '14px 16px', marginBottom: 12,
+          }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0F2860' }}>
+              {inviteKind === 'ask' ? 'Get the morning briefing on this phone' : 'Get notifications on your iPhone'}
+            </div>
+            <div style={{ fontSize: 12.5, fontWeight: 500, color: '#4D5A74', lineHeight: 1.5, marginTop: 4 }}>
+              {inviteKind === 'ask'
+                ? `Every day at 06:30, with the top FL Pulse finding for ${hotels.find(h => h.id === hotelId)?.name ?? 'your hotel'}. Choose what else reaches you in Settings.`
+                : 'Add FirstLight to your Home Screen first: tap Share, then Add to Home Screen. Open it from there and tap the bell 🔔.'}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              {inviteKind === 'ask' && (
+                <button onClick={() => { track('push_invite', { action: 'on' }); void toggleBell(); }} style={{
+                  border: 'none', background: '#0F2860', color: '#fff', borderRadius: 999,
+                  padding: '7px 14px', fontSize: 12.5, fontWeight: 700,
+                }}>Turn on</button>
+              )}
+              <button onClick={() => { track('push_invite', { action: 'later' }); hideInvite(); }} style={{
+                border: '1px solid #CDD4E0', background: '#fff', color: '#4D5A74', borderRadius: 999,
+                padding: '7px 14px', fontSize: 12.5, fontWeight: 700,
+              }}>{inviteKind === 'ask' ? 'Not now' : 'Got it'}</button>
+            </div>
+          </div>
+        )}
         {offlineAt && (
           <div style={{
             background: '#E8EBF2', border: '1px solid #D5DCE9', color: '#4D5A74',

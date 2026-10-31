@@ -13,9 +13,10 @@ self.addEventListener('push', event => {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       data: { sectionId: data.sectionId || 'sec-ai', hotelId: data.hotelId || null },
-      /* tag per hotel: with one shared tag, a multi-hotel user's morning
-         notifications replaced each other and only the last hotel survived */
-      tag: 'firstlight-' + (data.hotelId || 'briefing'),
+      /* tag per hotel AND type (backend sends it since 2026-10-31): one tag
+         per hotel let an afternoon alert replace the unread morning briefing.
+         Older payloads without a tag keep the per-hotel tag. */
+      tag: data.tag || ('firstlight-' + (data.hotelId || 'briefing')),
       renotify: true,
       requireInteraction: false,
     })

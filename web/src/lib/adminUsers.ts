@@ -11,6 +11,8 @@ export interface AdminUser {
   is_platform_admin: boolean; must_change_password: boolean; active: boolean;
   failed_logins: number; locked_until: string | null; created_at: string | null;
   last_login_at: string | null; sessions_live: number; memberships: AdminMembership[];
+  /** devices with the notification bell on, and for how many hotels (2026-10-31; older API: absent) */
+  push_devices?: number; push_hotels?: number;
 }
 
 type Res<T> = { ok: true; data: T } | { ok: false; error: string };

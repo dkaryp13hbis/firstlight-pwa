@@ -1,8 +1,12 @@
-/** Web Push subscribe / unsubscribe — same server contract as the legacy PWA:
- *  one row per (user, hotel) in `push_subscriptions`, VAPID key shared with
- *  the backend sender (briefing/cloud_push.py). Bell state is derived from
- *  the browser subscription + server rows, never from a local flag. */
-import { sb } from './sb';
+/** Web Push subscribe / unsubscribe — one server row per hotel PER DEVICE
+ *  (2026-10-31, backend docs/sql/pg/2026-10-31_push_devices.sql): every phone
+ *  or tablet where the bell is on gets the notification. Per-type choices are
+ *  per person per hotel on the server (push_prefs), so they survive the bell
+ *  going off and on. VAPID key shared with the backend sender
+ *  (briefing/cloud_push.py). Everything goes through our own API — the old
+ *  direct Supabase reads are gone (our login has no Supabase session, so they
+ *  always read "nothing left" and turning one hotel off silenced them all). */
+import { demoMode } from './sb';
 import { getUserId } from './session';
 import { jwtGet, jwtSend } from '../api';
 
@@ -23,31 +27,40 @@ export function registerSW(onNavigate: (sectionId: string, hotelId?: string | nu
   });
 }
 
+export function isIOS(): boolean {
+  return /iP(hone|ad|od)/.test(navigator.userAgent);
+}
+
 export function pushSupported(): { ok: boolean; why?: string } {
   if (!('serviceWorker' in navigator)) return { ok: false, why: 'Notifications are not supported in this browser.' };
   if (!('Notification' in window) || !('PushManager' in window)) {
-    const ios = /iP(hone|ad|od)/.test(navigator.userAgent);
-    return { ok: false, why: ios
+    return { ok: false, why: isIOS()
       ? 'On iPhone, add FirstLight to your Home Screen first (Share → Add to Home Screen), then open it from there and tap the bell.'
       : 'Push notifications are not supported in this browser.' };
   }
   return { ok: true };
 }
 
-/** True when this device has a live browser subscription AND the server has
- *  a row for THIS hotel (bell state is per hotel, not per device). */
-export async function isSubscribed(hotelId: string): Promise<boolean> {
+/** This device's browser push subscription, or null. */
+async function deviceSub(): Promise<PushSubscription | null> {
   try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
     const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if (!sub) return false;
-    if (!sb) return true;
-    const j = await jwtGet<{ subscribed: boolean }>(`/push/status?hotel_id=${hotelId}`);
-    if (j) return j.subscribed;
-    const { data } = await sb.from('push_subscriptions').select('id').eq('hotel_id', hotelId).limit(1);
-    return !!(data && data.length);
-  } catch { return false; }
+    return await reg.pushManager.getSubscription();
+  } catch { return null; }
+}
+
+const statusUrl = (hotelId: string, endpoint?: string) =>
+  `/push/status?hotel_id=${encodeURIComponent(hotelId)}` + (endpoint ? `&endpoint=${encodeURIComponent(endpoint)}` : '');
+
+/** True when THIS device is subscribed for THIS hotel (bell state per device
+ *  and per hotel — another phone of the same person does not light it). */
+export async function isSubscribed(hotelId: string): Promise<boolean> {
+  const sub = await deviceSub();
+  if (!sub) return false;
+  if (demoMode) return true;
+  const j = await jwtGet<{ subscribed: boolean }>(statusUrl(hotelId, sub.endpoint));
+  return !!j?.subscribed;
 }
 
 export async function subscribe(hotelId: string, hotelName: string): Promise<{ ok: boolean; msg: string }> {
@@ -60,70 +73,43 @@ export async function subscribe(hotelId: string, hotelName: string): Promise<{ o
   if (!sub) {
     sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToUint8(VAPID_PUBLIC_KEY) as BufferSource });
   }
-  if (!sb) return { ok: true, msg: 'Notifications on (demo)' };
-  const uid = await getUserId();
-  if (!uid) return { ok: false, msg: 'Not signed in — cannot save the subscription.' };
+  if (demoMode) return { ok: true, msg: 'Notifications on (demo)' };
+  if (!(await getUserId())) return { ok: false, msg: 'Not signed in — cannot save the subscription.' };
   const jr = await jwtSend('POST', '/push/subscribe', { hotel_id: hotelId, subscription: sub.toJSON() });
-  if (jr && jr.status < 300) return { ok: true, msg: `Notifications on — morning briefing for ${hotelName}` };
-  /* fallback: delete-then-insert for THIS hotel: works with or without the
-     (user_id,hotel_id) unique index. */
-  await sb.from('push_subscriptions').delete().eq('user_id', uid).eq('hotel_id', hotelId);
-  const { error } = await sb.from('push_subscriptions')
-    .insert({ hotel_id: hotelId, user_id: uid, subscription: sub.toJSON() });
-  if (error) {
-    const dup = /duplicate key|23505/.test(error.message);
-    return { ok: false, msg: dup
-      ? 'The database still allows only one subscription per user — the (user_id, hotel_id) SQL fix has to be applied before a second hotel can be added.'
-      : 'Could not save the subscription — notifications are NOT on. ' + error.message };
-  }
-  return { ok: true, msg: `Notifications on — morning briefing for ${hotelName}` };
+  if (jr && jr.status < 300) return { ok: true, msg: `Notifications on for ${hotelName} on this device` };
+  const detail = (jr?.data as { detail?: string } | null)?.detail;
+  return { ok: false, msg: 'Could not save the subscription — notifications are NOT on.' + (detail ? ` ${detail}` : '') };
 }
 
-export async function unsubscribe(hotelId: string, hotelName: string): Promise<string> {
-  if (sb) {
-    const uid = await getUserId();
-    if (uid) {
-      const jr = await jwtSend('POST', '/push/unsubscribe', { hotel_id: hotelId });
-      if (!jr) await sb.from('push_subscriptions').delete().eq('user_id', uid).eq('hotel_id', hotelId);
-      const { data: left } = await sb.from('push_subscriptions').select('id').limit(1);
-      if (left && left.length) return `Notifications off for ${hotelName}`;
-    }
+/** Bell off for this hotel on THIS device. The browser subscription is
+ *  dropped only when the server says this device has no other hotel left. */
+export async function unsubscribe(hotelId: string, hotelName: string): Promise<{ ok: boolean; msg: string }> {
+  const sub = await deviceSub();
+  let left = false;
+  if (!demoMode && sub) {
+    const jr = await jwtSend('POST', '/push/unsubscribe', { hotel_id: hotelId, endpoint: sub.endpoint });
+    if (!jr || jr.status >= 300) return { ok: false, msg: `Could not turn notifications off for ${hotelName} — try again.` };
+    left = !!(jr.data as { device_left?: boolean } | null)?.device_left;
   }
-  /* no hotel left on this account → drop the browser subscription too */
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if (sub) await sub.unsubscribe();
-  } catch (e) { console.warn('[push] unsubscribe', e); }
-  return `Notifications off for ${hotelName}`;
+  if (sub && !left) {
+    try { await sub.unsubscribe(); } catch (e) { console.warn('[push] unsubscribe', e); }
+  }
+  return { ok: true, msg: `Notifications off for ${hotelName} on this device` };
 }
 
 export type PushPrefs = { morning: boolean; alerts: boolean; momentum: boolean };
 export const DEFAULT_PREFS: PushPrefs = { morning: true, alerts: true, momentum: true };
 
-/** Per-type preferences for THIS hotel's subscription row (null = not subscribed). */
+/** This person's per-type choices for this hotel (they apply to every device
+ *  of theirs). null = could not read. */
 export async function getPrefs(hotelId: string): Promise<PushPrefs | null> {
-  if (!sb) return DEFAULT_PREFS;
-  try {
-    const j = await jwtGet<{ subscribed: boolean; notification_prefs: Partial<PushPrefs> | null }>(`/push/status?hotel_id=${hotelId}`);
-    if (j) return j.subscribed ? { ...DEFAULT_PREFS, ...(j.notification_prefs ?? {}) } : null;
-    const { data, error } = await sb.from('push_subscriptions')
-      .select('notification_prefs').eq('hotel_id', hotelId).limit(1);
-    if (error || !data?.length) return null;
-    return { ...DEFAULT_PREFS, ...(data[0].notification_prefs ?? {}) };
-  } catch { return null; }
+  if (demoMode) return DEFAULT_PREFS;
+  const j = await jwtGet<{ subscribed: boolean; notification_prefs: Partial<PushPrefs> | null }>(statusUrl(hotelId));
+  return j ? { ...DEFAULT_PREFS, ...(j.notification_prefs ?? {}) } : null;
 }
 
 export async function setPrefs(hotelId: string, prefs: PushPrefs): Promise<boolean> {
-  if (!sb) return true;
-  try {
-    const uid = await getUserId();
-    if (!uid) return false;
-    const jr = await jwtSend('PUT', '/push/prefs', { hotel_id: hotelId, notification_prefs: prefs });
-    if (jr) return jr.status < 300;
-    const { error } = await sb.from('push_subscriptions')
-      .update({ notification_prefs: prefs })
-      .eq('user_id', uid).eq('hotel_id', hotelId);
-    return !error;
-  } catch { return false; }
+  if (demoMode) return true;
+  const jr = await jwtSend('PUT', '/push/prefs', { hotel_id: hotelId, notification_prefs: prefs });
+  return !!jr && jr.status < 300;
 }

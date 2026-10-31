@@ -103,6 +103,9 @@ export interface Briefing {
     watch_closures?: { key: string; kind: 'resolve' | 'retire'; title: string; text: string }[];
     /** repeats held back by the novelty gate today — the Pulse watchlist (2026-09-28) */
     open_items?: { id: string; tag: string; title: string; first_flagged?: string | null; first_flagged_iso?: string | null }[];
+    /** daytime events found by FL Pulse's own checks on today-so-far — the
+     *  same ones the alert / good-news pushes announce (backend 2026-10-31) */
+    since_morning?: { type: 'alerts' | 'momentum'; card_id?: string; month?: string; title: string; body: string; at?: string }[];
     quiet_day?: boolean };
   kpi_summary?: unknown;
 }

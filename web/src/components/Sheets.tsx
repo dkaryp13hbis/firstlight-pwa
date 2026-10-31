@@ -107,21 +107,33 @@ export function SettingsSheet(props: {
       <div style={{ ...rowStyle, display: 'block' }}>
         <div style={{ ...labelStyle, marginBottom: 8 }}>Notifications</div>
         {props.bellOn && props.pushPrefs ? (
-          (['morning', 'alerts', 'momentum'] as const).map(k => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0' }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#4D5A74' }}>
-                {k === 'morning' ? 'Morning briefing' : k === 'alerts' ? 'Intraday alerts' : 'Momentum'}
-              </span>
-              <div style={{ display: 'flex', background: '#F1F3F8', borderRadius: 10, padding: 3 }}>
-                <button style={segBtn(props.pushPrefs![k])} onClick={() => props.onPushPref(k, true)}>On</button>
-                <button style={segBtn(!props.pushPrefs![k])} onClick={() => props.onPushPref(k, false)}>Off</button>
+          <>
+            {(['morning', 'alerts', 'momentum'] as const).map(k => (
+              <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '5px 0' }}>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#4D5A74' }}>
+                    {k === 'morning' ? 'Morning briefing' : k === 'alerts' ? 'Alerts during the day' : 'Good news during the day'}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9AA4B8', lineHeight: 1.4 }}>
+                    {k === 'morning' ? 'Every morning, with the top FL Pulse finding'
+                      : k === 'alerts' ? 'A burst of cancellations — at most one a day'
+                      : 'A strong booking day — at most one a day'}
+                  </span>
+                </span>
+                <div style={{ display: 'flex', background: '#F1F3F8', borderRadius: 10, padding: 3, flexShrink: 0 }}>
+                  <button style={segBtn(props.pushPrefs![k])} onClick={() => props.onPushPref(k, true)}>On</button>
+                  <button style={segBtn(!props.pushPrefs![k])} onClick={() => props.onPushPref(k, false)}>Off</button>
+                </div>
               </div>
+            ))}
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#9AA4B8', lineHeight: 1.5, marginTop: 6 }}>
+              For this hotel, on every device where your bell is on. Nothing during the day between 22:00 and 08:00.
             </div>
-          ))
+          </>
         ) : (
           <div style={{ fontSize: 12, fontWeight: 600, color: '#6E7A96', lineHeight: 1.5 }}>
             Turn on the bell 🔔 first — then choose which moments reach your phone:
-            the morning briefing, intraday alerts, and momentum highlights.
+            the morning briefing, alerts during the day, and good news.
           </div>
         )}
       </div>
@@ -302,7 +314,7 @@ export function DataHealthSheet(props: {
         ))
       )}
       <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9AA4B8', lineHeight: 1.5, marginTop: 10 }}>
-        Scheduled refreshes: morning briefing 06:30, data refreshes 14:00 and 20:00 (Athens time). Times shown in your local time.
+        Scheduled refreshes: morning briefing 06:30 (Athens time), then five data refreshes during the day, every three hours. Times shown in your local time.
       </div>
     </Sheet>
   );
